@@ -7,7 +7,6 @@ import ReferenceState
 from Variables import GridMeanVariables
 from NetCDFIO import NetCDFIO_Stats
 from EDMF_Environment import EnvironmentVariables
-# from libc.math import fmax, fmin
 import pylab as plt
 
 
@@ -46,7 +45,6 @@ class UpdraftVariable:
                 for i in range(n_updrafts):
                     self.values[i,start_high + k +1] = self.values[i,start_high  - k]
                     self.values[i,start_low - k] = self.values[i,start_low + 1 + k]
-
         return
 
 
@@ -61,14 +59,14 @@ class UpdraftVariables:
         self.QT = UpdraftVariable(nu, nzg, 'half', 'scalar', 'qt','kg/kg' )
         self.QL = UpdraftVariable(nu, nzg, 'half', 'scalar', 'ql','kg/kg' )
         self.QR = UpdraftVariable(nu, nzg, 'half', 'scalar', 'qr','kg/kg' )
+        self.THL = UpdraftVariable(nu, nzg, 'half', 'scalar', 'thetal', 'K')
+        self.T = UpdraftVariable(nu, nzg, 'half', 'scalar', 'temperature','K' )
+        self.B = UpdraftVariable(nu, nzg, 'half', 'scalar', 'buoyancy','m^2/s^3' )
         if namelist['thermodynamics']['thermal_variable'] == 'entropy':
             self.H = UpdraftVariable(nu, nzg, 'half', 'scalar', 's','J/kg/K' )
         elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
             self.H = UpdraftVariable(nu, nzg, 'half', 'scalar', 'thetal','K' )
 
-        self.THL = UpdraftVariable(nu, nzg, 'half', 'scalar', 'thetal', 'K')
-        self.T = UpdraftVariable(nu, nzg, 'half', 'scalar', 'temperature','K' )
-        self.B = UpdraftVariable(nu, nzg, 'half', 'scalar', 'buoyancy','m^2/s^3' )
 
         if namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':
             try:

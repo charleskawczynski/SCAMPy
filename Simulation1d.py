@@ -35,6 +35,7 @@ class Simulation1d:
         return
 
     def run(self):
+        sol = type('', (), {})()
 
         while self.TS.t <= self.TS.t_max:
             self.GMV.zero_tendencies()
@@ -48,7 +49,42 @@ class Simulation1d:
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
 
-        return
+        sol.z = self.Gr.z
+        sol.z_half = self.Gr.z_half
+
+        sol.e_W = self.Turb.EnvVar.W.values
+        sol.e_QT = self.Turb.EnvVar.QT.values
+        sol.e_QL = self.Turb.EnvVar.QL.values
+        sol.e_QR = self.Turb.EnvVar.QR.values
+        sol.e_H = self.Turb.EnvVar.H.values
+        sol.e_THL = self.Turb.EnvVar.THL.values
+        sol.e_T = self.Turb.EnvVar.T.values
+        sol.e_B = self.Turb.EnvVar.B.values
+        sol.e_CF = self.Turb.EnvVar.CF.values
+        sol.e_TKE = self.Turb.EnvVar.TKE.values
+        sol.e_Hvar = self.Turb.EnvVar.Hvar.values
+        sol.e_QTvar = self.Turb.EnvVar.QTvar.values
+        sol.e_HQTcov = self.Turb.EnvVar.HQTcov.values
+
+        sol.ud_W = self.Turb.UpdVar.W.values[0]
+        sol.ud_Area = self.Turb.UpdVar.Area.values[0]
+        sol.ud_QT = self.Turb.UpdVar.QT.values[0]
+        sol.ud_QL = self.Turb.UpdVar.QL.values[0]
+        sol.ud_QR = self.Turb.UpdVar.QR.values[0]
+        sol.ud_THL = self.Turb.UpdVar.THL.values[0]
+        sol.ud_T = self.Turb.UpdVar.T.values[0]
+        sol.ud_B = self.Turb.UpdVar.B.values[0]
+
+        sol.gm_QT = self.GMV.QT.values
+        sol.gm_U = self.GMV.U.values
+        sol.gm_H = self.GMV.H.values
+        sol.gm_T = self.GMV.T.values
+        sol.gm_THL = self.GMV.THL.values
+        sol.gm_V = self.GMV.V.values
+        sol.gm_QL = self.GMV.QL.values
+        sol.gm_B = self.GMV.B.values
+
+        return sol
 
     def initialize_io(self):
 

@@ -2,7 +2,6 @@ import numpy as np
 from parameters import *
 from Variables import GridMeanVariables, VariablePrognostic
 from forcing_functions import  convert_forcing_entropy, convert_forcing_thetal
-# from libc.math import cbrt, sqrt, log, fabs,atan, exp, fmax, pow, fmin
 
 class ForcingBase:
     def __init__(self):
@@ -48,8 +47,6 @@ class ForcingNone(ForcingBase):
         return
     def io(self, Stats):
         return
-
-
 
 class ForcingStandard(ForcingBase):
     def __init__(self):

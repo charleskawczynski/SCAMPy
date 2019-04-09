@@ -1,5 +1,4 @@
 import numpy as np
-# from libc.math import sqrt, log, fabs,atan, exp, fmax, pow
 from parameters import *
 
 def sd_c(pd, T):

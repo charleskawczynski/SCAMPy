@@ -1,6 +1,5 @@
 import numpy as np
 import copy
-# from libc.math import cbrt, sqrt, log, fabs,atan, exp, fmax, pow, fmin, tanh
 from parameters import *
 from thermodynamic_functions import *
 

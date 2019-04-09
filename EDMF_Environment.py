@@ -5,7 +5,6 @@ from Grid import  Grid
 from TimeStepping import TimeStepping
 from ReferenceState import ReferenceState
 from Variables import VariableDiagnostic, GridMeanVariables
-# from libc.math import fmax, fmin, sqrt, exp, erf
 from thermodynamic_functions import  *
 from microphysics_functions import *
 
@@ -247,8 +246,8 @@ class EnvironmentThermodynamics:
         env_len = 10
         src_len = 6
 
-        sqpi_inv = 1.0/sqrt(pi)
-        sqrt2 = sqrt(2.0)
+        sqpi_inv = 1.0/np.sqrt(pi)
+        sqrt2 = np.sqrt(2.0)
 
         if EnvVar.H.name != 'thetal':
             sys.exit('EDMF_Environment: rain source terms are only defined for thetal as model variable')
@@ -279,15 +278,15 @@ class EnvironmentThermodynamics:
 
         for k in range(gw, self.Gr.nzg-gw):
             if EnvVar.QTvar.values[k] != 0.0 and EnvVar.Hvar.values[k] != 0.0 and EnvVar.HQTcov.values[k] != 0.0:
-                sd_q = sqrt(EnvVar.QTvar.values[k])
-                sd_h = sqrt(EnvVar.Hvar.values[k])
-                corr = fmax(fmin(EnvVar.HQTcov.values[k]/fmax(sd_h*sd_q, 1e-13),1.0),-1.0)
+                sd_q = np.sqrt(EnvVar.QTvar.values[k])
+                sd_h = np.sqrt(EnvVar.Hvar.values[k])
+                corr = np.fmax(np.fmin(EnvVar.HQTcov.values[k]/np.fmax(sd_h*sd_q, 1e-13),1.0),-1.0)
 
                 # limit sd_q to prevent negative qt_hat
                 sd_q_lim = (1e-10 - EnvVar.QT.values[k])/(sqrt2 * abscissas[0])
-                sd_q = fmin(sd_q, sd_q_lim)
+                sd_q = np.fmin(sd_q, sd_q_lim)
                 qt_var = sd_q * sd_q
-                sigma_h_star = sqrt(fmax(1.0-corr*corr,0.0)) * sd_h
+                sigma_h_star = np.sqrt(np.fmax(1.0-corr*corr,0.0)) * sd_h
 
                 # zero outer quadrature points
                 for idx in range(env_len):
@@ -398,7 +397,7 @@ class EnvironmentThermodynamics:
                 # see if there is another way to calculate dq/dT from scmapy
                 sigma1 = EnvVar.QTvar.values[k]-2*alpha1*EnvVar.HQTcov.values[k]+alpha1**2*EnvVar.Hvar.values[k] # eq. (18) in SD , with r from (11)
                 Q1 = (EnvVar.QT.values[k]-q_sl)/sigma1 # eq. (17) in SD
-                R = 0.5*(1+erf(Q1/sqrt(2.0))) # approximation in eq. (16) in SD
+                R = 0.5*(1+np.erf(Q1/np.sqrt(2.0))) # approximation in eq. (16) in SD
                 #R1 = 0.5*(1+Q1/1.6) # approximation in eq. (22) in SD
                 C0 = 1.0+0.61*q_sl-alpha1*lambda1*EnvVar.THL.values[k]*(Lv/cp/Tl*(1.0+0.61*q_sl)-1.61) # eq. (37) in SD
                 C1 = (1.0-R)*(1+0.61*q_sl)+R*C0 # eq. (42a) in SD
@@ -409,7 +408,7 @@ class EnvironmentThermodynamics:
                 # i.e. applying eq. (41) twice. The resulting expression yields: C1^2*THL_var+2*C1*C2*THL_var*QT_var+C2^2**QT_var
                 EnvVar.THVvar.values[k] = C1**2*EnvVar.Hvar.values[k] + 2*C1*C2_THL*EnvVar.HQTcov.values[k]+ C2_THL**2*EnvVar.QTvar.values[k]
                 # equation (19) exact form for QL
-                EnvVar.QL.values[k] = 1.0/(1.0+beta1*q_sl)*(R*(EnvVar.QT.values[k]-q_sl)+sigma1/sqrt(6.14)*exp(-((EnvVar.QT.values[k]-q_sl)*(EnvVar.QT.values[k]-q_sl)/(2.0*sigma1*sigma1))))
+                EnvVar.QL.values[k] = 1.0/(1.0+beta1*q_sl)*(R*(EnvVar.QT.values[k]-q_sl)+sigma1/np.sqrt(6.14)*exp(-((EnvVar.QT.values[k]-q_sl)*(EnvVar.QT.values[k]-q_sl)/(2.0*sigma1*sigma1))))
                 EnvVar.T.values[k] = Tl + Lv/cp*EnvVar.QL.values[k] # should this be the differnece in ql - would it work for evaporation as well ?
                 EnvVar.CF.values[k] = R
                 qv = EnvVar.QT.values[k] - EnvVar.QL.values[k]

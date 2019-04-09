@@ -10,7 +10,6 @@ import Forcing
 from NetCDFIO import NetCDFIO_Stats
 from thermodynamic_functions import *
 import math as mt
-# from libc.math import sqrt, log, fabs,atan, exp, fmax
 
 def CasesFactory(namelist, paramlist):
     if namelist['meta']['casename'] == 'Soares':

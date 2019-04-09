@@ -18,3 +18,15 @@ class Grid:
             self.z_half[count] = (i+0.5)*self.dz
             count += 1
         return
+
+    def over_points_full(self):
+        return range(-self.gw, self.nz+self.gw,1)
+
+    def over_points_full_real(self):
+        return range(-self.gw,self.nz+self.gw,1)
+
+    def over_points_half(self):
+        return range(self.nzg)
+
+    def over_points_half_real(self):
+        return range(self.gw, self.nzg-self.gw)

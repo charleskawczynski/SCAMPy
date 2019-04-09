@@ -17,7 +17,7 @@ from utility_functions import *
 def ParameterizationFactory(namelist, paramlist, Gr, Ref):
     scheme = namelist['turbulence']['scheme']
     if scheme == 'EDMF_PrognosticTKE':
-        return  EDMF_PrognosticTKE(namelist, paramlist, Gr, Ref)
+        return EDMF_PrognosticTKE(namelist, paramlist, Gr, Ref)
     elif scheme == 'SimilarityED':
         return SimilarityED(namelist, paramlist, Gr, Ref)
     else:

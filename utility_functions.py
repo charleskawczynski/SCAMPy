@@ -1,6 +1,5 @@
 import numpy as np
 import scipy.special as sp
-# from libc.math import exp, log
 from scipy.stats import norm
 
 # compute the mean of the values above a given percentile (0 to 1) for a standard normal distribution
