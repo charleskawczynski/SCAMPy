@@ -1,24 +1,14 @@
-#!python
-#cython: boundscheck=False
-#cython: wraparound=False
-#cython: initializedcheck=False
-#cython: cdivision=True
-
-#Adapated from PyCLES: https://github.com/pressel/pycles
-
 import netCDF4 as nc
 import os
 import shutil
 
-from TimeStepping cimport TimeStepping
+from TimeStepping import TimeStepping
 
-from Grid cimport Grid
+from Grid import Grid
 import numpy as np
-cimport numpy as np
-import cython
 
-cdef class NetCDFIO_Stats:
-    def __init__(self, namelist, paramlist, Grid Gr):
+class NetCDFIO_Stats:
+    def __init__(self, namelist, paramlist, Gr):
         self.root_grp = None
         self.profiles_grp = None
         self.ts_grp = None
@@ -50,7 +40,7 @@ cdef class NetCDFIO_Stats:
         if os.path.exists(self.path_plus_file):
             for i in range(100):
                 res_name = 'Restart_'+str(i)
-                print "Here " + res_name
+                print("Here " + res_name)
                 if os.path.exists(self.path_plus_file):
                     self.path_plus_file = str( self.stats_path + '/' + 'Stats.' + namelist['meta']['simname']
                            + '.' + res_name + '.nc')
@@ -67,20 +57,19 @@ cdef class NetCDFIO_Stats:
         self.setup_stats_file()
         return
 
-    cpdef open_files(self):
+    def open_files(self):
         self.root_grp = nc.Dataset(self.path_plus_file, 'r+', format='NETCDF4')
         self.profiles_grp = self.root_grp.groups['profiles']
         self.ts_grp = self.root_grp.groups['timeseries']
         return
 
-    cpdef close_files(self):
+    def close_files(self):
         self.root_grp.close()
         return
 
-    cpdef setup_stats_file(self):
-        cdef:
-            Py_ssize_t kmin = self.Gr.gw
-            Py_ssize_t kmax = self.Gr.nzg-self.Gr.gw
+    def setup_stats_file(self):
+        kmin = self.Gr.gw
+        kmax = self.Gr.nzg-self.Gr.gw
 
         root_grp = nc.Dataset(self.path_plus_file, 'w', format='NETCDF4')
 
@@ -112,7 +101,7 @@ cdef class NetCDFIO_Stats:
         root_grp.close()
         return
 
-    cpdef add_profile(self, var_name):
+    def add_profile(self, var_name):
 
         root_grp = nc.Dataset(self.path_plus_file, 'r+', format='NETCDF4')
         profile_grp = root_grp.groups['profiles']
@@ -122,7 +111,7 @@ cdef class NetCDFIO_Stats:
 
         return
 
-    cpdef add_reference_profile(self, var_name):
+    def add_reference_profile(self, var_name):
         root_grp = nc.Dataset(self.path_plus_file, 'r+', format='NETCDF4')
         reference_grp = root_grp.groups['reference']
         new_var = reference_grp.createVariable(var_name, 'f8', ('z',))
@@ -130,7 +119,7 @@ cdef class NetCDFIO_Stats:
 
         return
 
-    cpdef add_ts(self, var_name):
+    def add_ts(self, var_name):
 
         root_grp = nc.Dataset(self.path_plus_file, 'r+', format='NETCDF4')
         ts_grp = root_grp.groups['timeseries']
@@ -139,13 +128,12 @@ cdef class NetCDFIO_Stats:
         root_grp.close()
         return
 
-    @cython.wraparound(True)
-    cpdef write_profile(self, var_name, double[:] data):
+    def write_profile(self, var_name, data):
         var = self.profiles_grp.variables[var_name]
         var[-1, :] = np.array(data)
         return
 
-    cpdef write_reference_profile(self, var_name, double[:] data):
+    def write_reference_profile(self, var_name, data):
         '''
         Writes a profile to the reference group NetCDF Stats file. The variable must have already been
         added to the NetCDF file using add_reference_profile
@@ -161,16 +149,12 @@ cdef class NetCDFIO_Stats:
         root_grp.close()
         return
 
-    @cython.wraparound(True)
-    cpdef write_ts(self, var_name, double data):
+    def write_ts(self, var_name, data):
         var = self.ts_grp.variables[var_name]
         var[-1] = data
         return
 
-    cpdef write_simulation_time(self, double t):
-
-
-
+    def write_simulation_time(self, t):
         # Write to profiles group
         profile_t = self.profiles_grp.variables['t']
         profile_t[profile_t.shape[0]] = t

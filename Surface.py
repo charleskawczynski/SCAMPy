@@ -1,58 +1,46 @@
-#!python
-#cython: boundscheck=False
-#cython: wraparound=False
-#cython: initializedcheck=True
-#cython: cdivision=False
-
 import numpy as np
-include "parameters.pxi"
-import cython
-from thermodynamic_functions cimport *
-from surface_functions cimport entropy_flux, compute_ustar, buoyancy_flux, exchange_coefficients_byun
-from turbulence_functions cimport get_wstar, get_inversion
-from Variables cimport GridMeanVariables
-from libc.math cimport cbrt, fabs, sqrt
+from parameters import *
+from thermodynamic_functions import *
+from surface_functions import entropy_flux, compute_ustar, buoyancy_flux, exchange_coefficients_byun
+from turbulence_functions import get_wstar, get_inversion
+from Variables import GridMeanVariables
+# from libc.math import cbrt, fabs, sqrt
 
-
-
-cdef class SurfaceBase:
+class SurfaceBase:
     def __init__(self, paramlist):
         self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']
         return
-    cpdef initialize(self):
+    def initialize(self):
         return
 
-    cpdef update(self, GridMeanVariables GMV):
+    def update(self, GMV):
         return
-    cpdef free_convection_windspeed(self, GridMeanVariables GMV):
-        cdef:
-            Py_ssize_t k, gw = self.Gr.gw
-            Py_ssize_t kmin = gw, kmax = self.Gr.nzg-gw
-            double zi, wstar, qv
-            double [:] theta_rho = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
+    def free_convection_windspeed(self, GMV):
+        gw = self.Gr.gw
+        kmin = gw
+        kmax = self.Gr.nzg-gw
+        theta_rho = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
 
         # Need to get theta_rho
-        with nogil:
-            for k in xrange(self.Gr.nzg):
-                qv = GMV.QT.values[k] - GMV.QL.values[k]
-                theta_rho[k] = theta_rho_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
-        zi = get_inversion(&theta_rho[0], &GMV.U.values[0], &GMV.V.values[0], &self.Gr.z_half[0], kmin, kmax, self.Ri_bulk_crit)
+        for k in range(self.Gr.nzg):
+            qv = GMV.QT.values[k] - GMV.QL.values[k]
+            theta_rho[k] = theta_rho_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
+        zi = get_inversion(theta_rho[0], GMV.U.values[0], GMV.V.values[0], self.Gr.z_half[0], kmin, kmax, self.Ri_bulk_crit)
         wstar = get_wstar(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
         return
 
 
-cdef class SurfaceFixedFlux(SurfaceBase):
+class SurfaceFixedFlux(SurfaceBase):
     def __init__(self,paramlist):
         SurfaceBase.__init__(self, paramlist)
         return
-    cpdef initialize(self):
+    def initialize(self):
         return
 
-    cpdef update(self, GridMeanVariables GMV):
-        cdef:
-            Py_ssize_t k, gw = self.Gr.gw
-            double rho_tflux =  self.shf /(cpm_c(self.qsurface))
+    def update(self, GMV):
+        gw = self.Gr.gw
+        rho_tflux =  self.shf /(cpm_c(self.qsurface))
 
         self.windspeed = np.sqrt(GMV.U.values[gw]*GMV.U.values[gw] + GMV.V.values[gw] * GMV.V.values[gw])
         self.rho_qtflux = self.lhf/(latent_heat(self.Tsurface))
@@ -86,32 +74,28 @@ cdef class SurfaceFixedFlux(SurfaceBase):
         self.rho_uflux = - self.Ref.rho0[gw-1] *  self.ustar * self.ustar / self.windspeed * GMV.U.values[gw]
         self.rho_vflux = - self.Ref.rho0[gw-1] *  self.ustar * self.ustar / self.windspeed * GMV.V.values[gw]
         return
-    cpdef free_convection_windspeed(self, GridMeanVariables GMV):
+    def free_convection_windspeed(self, GMV):
         SurfaceBase.free_convection_windspeed(self, GMV)
         return
 
 
 # Cases such as Rico which provide values of transfer coefficients
-cdef class SurfaceFixedCoeffs(SurfaceBase):
+class SurfaceFixedCoeffs(SurfaceBase):
     def __init__(self, paramlist):
         SurfaceBase.__init__(self, paramlist)
         return
-    cpdef initialize(self):
-        cdef:
-            double pvg = pv_star(self.Tsurface)
-            double pdg = self.Ref.Pg - pvg
+    def initialize(self):
+        pvg = pv_star(self.Tsurface)
+        pdg = self.Ref.Pg - pvg
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
         self.s_surface = (1.0-self.qsurface) * sd_c(pdg, self.Tsurface) + self.qsurface * sv_c(pvg,self.Tsurface)
         return
 
-    cpdef update(self, GridMeanVariables GMV):
-        cdef:
-            Py_ssize_t gw = self.Gr.gw
-            double windspeed = np.maximum(np.sqrt(GMV.U.values[gw]*GMV.U.values[gw] + GMV.V.values[gw] * GMV.V.values[gw]), 0.01)
-            double cp_ = cpm_c(GMV.QT.values[gw])
-            double lv = latent_heat(GMV.T.values[gw])
-            double pv, pd, sv, sd
-
+    def update(self, GMV):
+        gw = self.Gr.gw
+        windspeed = np.maximum(np.sqrt(GMV.U.values[gw]*GMV.U.values[gw] + GMV.V.values[gw] * GMV.V.values[gw]), 0.01)
+        cp_ = cpm_c(GMV.QT.values[gw])
+        lv = latent_heat(GMV.T.values[gw])
 
         self.rho_qtflux = -self.cq * windspeed * (GMV.QT.values[gw] - self.qsurface) * self.Ref.rho0[gw-1]
         self.lhf = lv * self.rho_qtflux
@@ -141,27 +125,23 @@ cdef class SurfaceFixedCoeffs(SurfaceBase):
         self.rho_uflux = - self.Ref.rho0[gw-1] *  self.ustar * self.ustar / windspeed * GMV.U.values[gw]
         self.rho_vflux = - self.Ref.rho0[gw-1] *  self.ustar * self.ustar / windspeed * GMV.V.values[gw]
         return
-    cpdef free_convection_windspeed(self, GridMeanVariables GMV):
+    def free_convection_windspeed(self, GMV):
         SurfaceBase.free_convection_windspeed(self, GMV)
         return
 
-cdef class SurfaceMoninObukhov(SurfaceBase):
+class SurfaceMoninObukhov(SurfaceBase):
     def __init__(self, paramlist):
         SurfaceBase.__init__(self, paramlist)
         return
-    cpdef initialize(self):
+    def initialize(self):
         return
-    cpdef update(self, GridMeanVariables GMV):
+    def update(self, GMV):
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
-        cdef:
-            Py_ssize_t k, gw = self.Gr.gw
-            double zb = self.Gr.z_half[gw]
-            double theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
-            double theta_rho_b = theta_rho_c(self.Ref.p0_half[gw], GMV.T.values[gw], self.qsurface, self.qsurface)
-            double Nb2,
-            double h_star
-            double pv, pd, sv, sd
-            double lv = latent_heat(GMV.T.values[gw])
+        gw = self.Gr.gw
+        zb = self.Gr.z_half[gw]
+        theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
+        theta_rho_b = theta_rho_c(self.Ref.p0_half[gw], GMV.T.values[gw], self.qsurface, self.qsurface)
+        lv = latent_heat(GMV.T.values[gw])
 
         if GMV.H.name == 'thetal':
             h_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
@@ -173,7 +153,7 @@ cdef class SurfaceMoninObukhov(SurfaceBase):
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/zb
         Ri = Nb2 * zb * zb/(self.windspeed * self.windspeed)
 
-        exchange_coefficients_byun(Ri, self.Gr.z_half[gw], self.zrough, &self.cm, &self.ch, &self.obukhov_length)
+        exchange_coefficients_byun(Ri, self.Gr.z_half[gw], self.zrough, self.cm, self.ch, self.obukhov_length)
         self.rho_uflux = -self.cm * self.windspeed * (GMV.U.values[gw] ) * self.Ref.rho0[gw-1]
         self.rho_vflux = -self.cm * self.windspeed * (GMV.V.values[gw] ) * self.Ref.rho0[gw-1]
 
@@ -201,29 +181,25 @@ cdef class SurfaceMoninObukhov(SurfaceBase):
 
         return
 
-    cpdef free_convection_windspeed(self, GridMeanVariables GMV):
+    def free_convection_windspeed(self, GMV):
         SurfaceBase.free_convection_windspeed(self, GMV)
         return
 
 # Not fully implemented yet. Maybe not needed - Ignacio
-cdef class SurfaceSullivanPatton(SurfaceBase):
+class SurfaceSullivanPatton(SurfaceBase):
     def __init__(self, paramlist):
         SurfaceBase.__init__(self, paramlist)
         return
-    cpdef initialize(self):
+    def initialize(self):
         return
-    cpdef update(self, GridMeanVariables GMV):
-        cdef:
-            Py_ssize_t k, gw = self.Gr.gw
-            double zb = self.Gr.z_half[gw]
-            double theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
-            double theta_rho_b = theta_rho_c(self.Ref.p0_half[gw], GMV.T.values[gw], self.qsurface, self.qsurface)
-            double Nb2
-            double h_star
-            double pv, pd, sv, sd
-            double lv = latent_heat(GMV.T.values[gw])
-            double theta_flux, theta_surface, g=9.81
-            double T0 = self.Ref.p0_half[gw] * self.Ref.alpha0_half[gw]/Rd
+    def update(self, GMV):
+        gw = self.Gr.gw
+        zb = self.Gr.z_half[gw]
+        theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
+        theta_rho_b = theta_rho_c(self.Ref.p0_half[gw], GMV.T.values[gw], self.qsurface, self.qsurface)
+        lv = latent_heat(GMV.T.values[gw])
+        g=9.81
+        T0 = self.Ref.p0_half[gw] * self.Ref.alpha0_half[gw]/Rd
 
         theta_flux = 0.24
         self.bflux = g * theta_flux * exner_c(self.Ref.p0_half[gw]) / T0
@@ -239,7 +215,7 @@ cdef class SurfaceSullivanPatton(SurfaceBase):
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/zb
         Ri = Nb2 * zb * zb/(self.windspeed * self.windspeed)
 
-        exchange_coefficients_byun(Ri, self.Gr.z_half[gw], self.zrough, &self.cm, &self.ch, &self.obukhov_length)
+        exchange_coefficients_byun(Ri, self.Gr.z_half[gw], self.zrough, self.cm, self.ch, self.obukhov_length)
         self.rho_uflux = -self.cm * self.windspeed * (GMV.U.values[gw] ) * self.Ref.rho0[gw-1]
         self.rho_vflux = -self.cm * self.windspeed * (GMV.V.values[gw] ) * self.Ref.rho0[gw-1]
 
@@ -257,7 +233,7 @@ cdef class SurfaceSullivanPatton(SurfaceBase):
             sd = sd_c(pd, GMV.T.values[gw])
             self.shf = (self.rho_hflux - self.lhf/lv * (sv-sd)) * GMV.T.values[gw]
 
-        
+
         self.ustar =  sqrt(self.cm) * self.windspeed
         # CK--testing this--EDMF scheme checks greater or less than zero,
         if fabs(self.bflux) < 1e-10:
@@ -267,6 +243,6 @@ cdef class SurfaceSullivanPatton(SurfaceBase):
 
         return
 
-    cpdef free_convection_windspeed(self, GridMeanVariables GMV):
+    def free_convection_windspeed(self, GMV):
         SurfaceBase.free_convection_windspeed(self, GMV)
         return

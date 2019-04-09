@@ -1,16 +1,15 @@
 import time
 import numpy as np
-cimport numpy as np
-from Variables cimport GridMeanVariables
-from Turbulence import ParameterizationFactory
+from Variables import GridMeanVariables
+from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
-cimport Grid
-cimport ReferenceState
-cimport Cases
-from Surface cimport  SurfaceBase
-from Cases cimport  CasesBase
-from NetCDFIO cimport NetCDFIO_Stats
-cimport TimeStepping
+import Grid
+import ReferenceState
+import Cases
+from Surface import  SurfaceBase
+from Cases import  CasesBase
+from NetCDFIO import NetCDFIO_Stats
+import TimeStepping
 
 class Simulation1d:
 
@@ -48,7 +47,6 @@ class Simulation1d:
             self.Turb.update_GMV_diagnostics(self.GMV)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
-
 
         return
 

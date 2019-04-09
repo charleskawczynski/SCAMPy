@@ -1,22 +1,15 @@
-#!python
-#cython: boundscheck=False
-#cython: wraparound=True
-#cython: initializedcheck=False
-#cython: cdivision=True
-
 import sys
 import numpy as np
-import cython
 import pylab as plt
-from Grid cimport Grid
-from TimeStepping cimport TimeStepping
-from NetCDFIO cimport NetCDFIO_Stats
-from ReferenceState cimport ReferenceState
+from Grid import Grid
+from TimeStepping import TimeStepping
+from NetCDFIO import NetCDFIO_Stats
+from ReferenceState import ReferenceState
 
-from thermodynamic_functions cimport eos_struct, eos, t_to_entropy_c, t_to_thetali_c, \
+from thermodynamic_functions import eos, t_to_entropy_c, t_to_thetali_c, \
     eos_first_guess_thetal, eos_first_guess_entropy, alpha_c, buoyancy_c
 
-cdef class VariablePrognostic:
+class VariablePrognostic:
     def __init__(self,nz_tot,loc, kind, bc, name, units):
         # Value at the current timestep
         self.values = np.zeros((nz_tot,),dtype=np.double, order='c')
@@ -36,23 +29,17 @@ cdef class VariablePrognostic:
         self.units = units
         return
 
-    cpdef zero_tendencies(self, Grid Gr):
-        cdef:
-            Py_ssize_t k
-        with nogil:
-            for k in xrange(Gr.nzg):
-                self.tendencies[k] = 0.0
+    def zero_tendencies(self, Gr):
+        for k in range(Gr.nzg):
+            self.tendencies[k] = 0.0
         return
 
-    cpdef set_bcs(self,Grid Gr):
-        cdef:
-            Py_ssize_t k
-            Py_ssize_t start_low = Gr.gw - 1
-            Py_ssize_t start_high = Gr.nzg - Gr.gw - 1
-
+    def set_bcs(self,Gr):
+        start_low = Gr.gw - 1
+        start_high = Gr.nzg - Gr.gw - 1
 
         if self.bc == 'sym':
-            for k in xrange(Gr.gw):
+            for k in range(Gr.gw):
                 self.values[start_high + k +1] = self.values[start_high  - k]
                 self.values[start_low - k] = self.values[start_low + 1 + k]
 
@@ -61,9 +48,6 @@ cdef class VariablePrognostic:
 
                 self.new[start_high + k +1] = self.new[start_high  - k]
                 self.new[start_low - k] = self.new[start_low + 1 + k]
-
-
-
         else:
             self.values[start_high] = 0.0
             self.values[start_low] = 0.0
@@ -74,7 +58,7 @@ cdef class VariablePrognostic:
             self.new[start_high] = 0.0
             self.new[start_low] = 0.0
 
-            for k in xrange(1,Gr.gw):
+            for k in range(1,Gr.gw):
                 self.values[start_high+ k] = -self.values[start_high - k ]
                 self.values[start_low- k] = -self.values[start_low + k  ]
 
@@ -86,7 +70,7 @@ cdef class VariablePrognostic:
 
         return
 
-cdef class VariableDiagnostic:
+class VariableDiagnostic:
 
     def __init__(self,nz_tot,loc, kind, bc, name, units):
         # Value at the current timestep
@@ -102,33 +86,25 @@ cdef class VariableDiagnostic:
         self.name = name
         self.units = units
         return
-    cpdef set_bcs(self,Grid Gr):
-        cdef:
-            Py_ssize_t k
-            Py_ssize_t start_low = Gr.gw - 1
-            Py_ssize_t start_high = Gr.nzg - Gr.gw
-
-
+    def set_bcs(self,Gr):
+        start_low = Gr.gw - 1
+        start_high = Gr.nzg - Gr.gw
         if self.bc == 'sym':
-            for k in xrange(Gr.gw):
+            for k in range(Gr.gw):
                 self.values[start_high + k] = self.values[start_high  - 1]
                 self.values[start_low - k] = self.values[start_low + 1]
-
-
         else:
             self.values[start_high] = 0.0
             self.values[start_low] = 0.0
-            for k in xrange(1,Gr.gw):
+            for k in range(1,Gr.gw):
                 self.values[start_high+ k] = 0.0  #-self.values[start_high - k ]
                 self.values[start_low- k] = 0.0 #-self.values[start_low + k ]
-
-
         return
 
 
 
-cdef class GridMeanVariables:
-    def __init__(self, namelist, Grid Gr, ReferenceState Ref):
+class GridMeanVariables:
+    def __init__(self, namelist, Gr, Ref):
         self.Gr = Gr
         self.Ref = Ref
 
@@ -197,7 +173,7 @@ cdef class GridMeanVariables:
 
         return
 
-    cpdef zero_tendencies(self):
+    def zero_tendencies(self):
         self.U.zero_tendencies(self.Gr)
         self.V.zero_tendencies(self.Gr)
         self.QT.zero_tendencies(self.Gr)
@@ -205,17 +181,13 @@ cdef class GridMeanVariables:
         self.H.zero_tendencies(self.Gr)
         return
 
-    cpdef update(self,  TimeStepping TS):
-        cdef:
-            Py_ssize_t  k
-        with nogil:
-            for k in xrange(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
-                self.U.values[k]  +=  self.U.tendencies[k] * TS.dt
-                self.V.values[k]  +=  self.V.tendencies[k] * TS.dt
-                self.H.values[k]  +=  self.H.tendencies[k] * TS.dt
-                self.QT.values[k] +=  self.QT.tendencies[k] * TS.dt
-                self.QR.values[k] +=  self.QR.tendencies[k] * TS.dt
-
+    def update(self, TS):
+        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+            self.U.values[k]  +=  self.U.tendencies[k] * TS.dt
+            self.V.values[k]  +=  self.V.tendencies[k] * TS.dt
+            self.H.values[k]  +=  self.H.tendencies[k] * TS.dt
+            self.QT.values[k] +=  self.QT.tendencies[k] * TS.dt
+            self.QR.values[k] +=  self.QR.tendencies[k] * TS.dt
 
         self.U.set_bcs(self.Gr)
         self.V.set_bcs(self.Gr)
@@ -237,7 +209,7 @@ cdef class GridMeanVariables:
         self.zero_tendencies()
         return
 
-    cpdef initialize_io(self, NetCDFIO_Stats Stats):
+    def initialize_io(self, Stats):
         Stats.add_profile('u_mean')
         Stats.add_profile('v_mean')
         Stats.add_profile('qt_mean')
@@ -261,11 +233,9 @@ cdef class GridMeanVariables:
         Stats.add_ts('lwp')
         return
 
-    cpdef io(self, NetCDFIO_Stats Stats):
-        cdef:
-            double [:] arr = self.U.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw]
-            double lwp = 0.0
-            Py_ssize_t k
+    def io(self, Stats):
+        arr = self.U.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw]
+        lwp = 0.0
         Stats.write_profile('u_mean', arr)
         Stats.write_profile('v_mean',self.V.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
         Stats.write_profile('qt_mean',self.QT.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
@@ -285,29 +255,22 @@ cdef class GridMeanVariables:
             Stats.write_profile('QTvar_mean',self.QTvar.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
             Stats.write_profile('HQTcov_mean',self.HQTcov.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
 
-        for k in xrange(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
             lwp += self.Ref.rho0_half[k]*self.QL.values[k]*self.Gr.dz
         Stats.write_ts('lwp', lwp)
 
         return
 
-    cpdef satadjust(self):
-        cdef:
-            Py_ssize_t k
-            eos_struct sa
-            double alpha, qv, qt, h, p0
-
-        with nogil:
-            for k in xrange(self.Gr.nzg):
-                h = self.H.values[k]
-                qt = self.QT.values[k]
-                p0 = self.Ref.p0_half[k]
-                sa = eos(self.t_to_prog_fp,self.prog_to_t_fp, p0, qt, h )
-                self.QL.values[k] = sa.ql
-                self.T.values[k] = sa.T
-                qv = qt - sa.ql
-                self.THL.values[k] = t_to_thetali_c(p0, sa.T, qt, sa.ql,0.0)
-                alpha = alpha_c(p0, sa.T, qt, qv)
-                self.B.values[k] = buoyancy_c(self.Ref.alpha0_half[k], alpha)
-
+    def satadjust(self):
+        for k in range(self.Gr.nzg):
+            h = self.H.values[k]
+            qt = self.QT.values[k]
+            p0 = self.Ref.p0_half[k]
+            T, ql = eos(self.t_to_prog_fp,self.prog_to_t_fp, p0, qt, h )
+            self.QL.values[k] = ql
+            self.T.values[k] = T
+            qv = qt - ql
+            self.THL.values[k] = t_to_thetali_c(p0, T, qt, ql,0.0)
+            alpha = alpha_c(p0, T, qt, qv)
+            self.B.values[k] = buoyancy_c(self.Ref.alpha0_half[k], alpha)
         return

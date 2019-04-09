@@ -34,8 +34,6 @@ def main():
 
     #sweep_var = [0.05,0.06,0.07,0.08,0.09,0.1,0.11,0.12,0.13,0.14,0.15,0.16,0.17,0.18]
 
-
-
     _z = np.zeros((nz))
     _t = np.zeros((nt))
     _lwp = np.zeros((nt,nvar))
@@ -162,9 +160,6 @@ def main():
     print('========================')
     print('======= SWEEP END ======')
     print('========================')
-
-
-
 
 
 def sweep(sweep_var_i): # vel_pressure_coeff_i

@@ -1,11 +1,4 @@
-#!python
-#cython: boundscheck=False
-#cython: wraparound=False
-#cython: initializedcheck=False
-#cython: cdivision=True
-
-cdef class TimeStepping:
-
+class TimeStepping:
     def __init__(self,namelist):
         try:
             self.dt = namelist['time_stepping']['dt']
@@ -18,16 +11,12 @@ cdef class TimeStepping:
             self.t_max = namelist['time_stepping']['t_max']
         except:
             self.t_max = 7200.0
-
-
         # set time
         self.t = 0.0
         self.nstep = 0
-
-
         return
 
-    cpdef update(self):
+    def update(self):
         self.t += self.dt
         self.nstep += 1
         return

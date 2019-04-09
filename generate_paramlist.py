@@ -18,7 +18,6 @@ import ast
 # paramlist['turbulence']['EDMF_PrognosticTKE']['detrainment_factor'] = 1.0
 
 
-
 #NB: except for Bomex and life_cycle_Tan2018 cases, the parameters listed have not been thoroughly tuned/tested
 # and should be regarded as placeholders only. Optimal parameters may also depend on namelist options, such as
 # entrainment/detrainment rate formulation, diagnostic vs. prognostic updrafts, and vertical resolution
@@ -348,15 +347,11 @@ def SP():
 
 
 def write_file(paramlist):
-
-
     fh = open('paramlist_'+paramlist['meta']['casename']+ '.in', 'w')
     #pprint.pprint(paramlist)
     json.dump(paramlist, fh, sort_keys=True, indent=4)
     fh.close()
-
     return
-
 
 if __name__ == '__main__':
     main()
