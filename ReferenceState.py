@@ -85,17 +85,19 @@ class ReferenceState:
 
         # Compute reference state thermodynamic profiles
         #_____COMMENTED TO TEST COMPILATION_____________________
-        for k in range(Gr.nzg):
+        for k in Gr.over_points_full():
             temperature[k], ql[k] = eos(t_to_entropy_c, eos_first_guess_entropy, p_[k], self.qtg, self.sg)
             qv[k] = self.qtg - (ql[k] + qi[k])
             alpha[k] = alpha_c(p_[k], temperature[k], self.qtg, qv[k])
+
+        for k in Gr.over_points_half():
             temperature_half[k], ql_half[k] = eos(t_to_entropy_c, eos_first_guess_entropy, p_half_[k], self.qtg, self.sg)
             qv_half[k] = self.qtg - (ql_half[k] + qi_half[k])
             alpha_half[k] = alpha_c(p_half_[k], temperature_half[k], self.qtg, qv_half[k])
 
         # Now do a sanity check to make sure that the Reference State entropy profile is uniform following
         # saturation adjustment
-        for k in range(Gr.nzg):
+        for k in Gr.over_points_half():
             s = t_to_entropy_c(p_half[k],temperature_half[k],self.qtg,ql_half[k],qi_half[k])
             if np.abs(s - self.sg)/self.sg > 0.01:
                 print('Error in reference profiles entropy not constant !')

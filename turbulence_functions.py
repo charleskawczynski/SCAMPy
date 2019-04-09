@@ -226,38 +226,6 @@ def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
 
     return
 
-def construct_tridiag_diffusion_implicitMF(nzg, gw, dzi, dt, rho_ae_K_m, massflux, rho, alpha, ae, a, b, c):
-    nz = nzg - 2* gw
-    for k in range(gw,nzg-gw):
-        X = rho[k] * ae[k]/dt
-        Y = rho_ae_K_m[k] * dzi * dzi
-        Z = rho_ae_K_m[k-1] * dzi * dzi
-        if k == gw:
-            Z = 0.0
-        elif k == nzg-gw-1:
-            Y = 0.0
-        a[k-gw] = - Z/X + 0.5 * massflux[k-1] * dt * dzi/rho[k]
-        b[k-gw] = 1.0 + Y/X + Z/X + 0.5 * dt * dzi * (massflux[k-1]-massflux[k])/rho[k]
-        c[k-gw] = -Y/X - 0.5 * dt * dzi * massflux[k]/rho[k]
-
-    return
-
-def construct_tridiag_diffusion_dirichlet(nzg, gw, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
-    nz = nzg - 2* gw
-    for k in range(gw,nzg-gw):
-        X = rho[k] * ae[k]/dt
-        Y = rho_ae_K_m[k] * dzi * dzi
-        Z = rho_ae_K_m[k-1] * dzi * dzi
-        if k == gw:
-            Z = 0.0
-            Y = 0.0
-        elif k == nzg-gw-1:
-            Y = 0.0
-        a[k-gw] = - Z/X
-        b[k-gw] = 1.0 + Y/X + Z/X
-        c[k-gw] = -Y/X
-    return
-
 def tridiag_solve(nz, x, a, b, c):
     scratch = copy.deepcopy(x)
     scratch[0] = c[0]/b[0]

@@ -30,3 +30,4 @@ class Grid:
 
     def over_points_half_real(self):
         return range(self.gw, self.nzg-self.gw)
+

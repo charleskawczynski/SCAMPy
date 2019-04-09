@@ -30,7 +30,6 @@ def pd_c(p0, qt, qv):
 def pv_c(p0, qt, qv):
     return p0 * eps_vi * qv /(1.0 - qt + eps_vi * qv)
 
-
 def density_temperature_c(T, qt, qv):
     return T * (1.0 - qt + eps_vi * qv)
 
