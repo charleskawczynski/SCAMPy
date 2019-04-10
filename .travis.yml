@@ -5,8 +5,8 @@ python:
 # command to install dependencies
 install:
   # - pip install NetCDFIO
-  # - pip install netCDF4
   # - pip install pylab
+  - pip install netCDF4
   - pip install scipy
   - pip install numpy
   - pip install matplotlib
