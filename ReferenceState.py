@@ -2,6 +2,7 @@ from Grid import Grid
 from NetCDFIO import NetCDFIO_Stats
 import numpy as np
 import pylab as plt
+from Field import Field
 from scipy.integrate import odeint
 from thermodynamic_functions import t_to_entropy_c, eos_first_guess_entropy, eos, alpha_c
 from parameters import *

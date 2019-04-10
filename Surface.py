@@ -24,7 +24,7 @@ class SurfaceBase:
         for k in range(self.Gr.nzg):
             qv = GMV.QT.values[k] - GMV.QL.values[k]
             theta_rho[k] = theta_rho_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
-        zi = get_inversion(theta_rho[0], GMV.U.values[0], GMV.V.values[0], self.Gr.z_half[0], kmin, kmax, self.Ri_bulk_crit)
+        zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.Gr.z_half, kmin, kmax, self.Ri_bulk_crit)
         wstar = get_wstar(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
         return

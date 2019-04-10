@@ -98,18 +98,16 @@ def eos_first_guess_entropy(H, pd, pv, qt):
 def eos(t_to_prog, prog_to_t, p0, qt, prog):
     qv = qt
     ql = 0.0
-    pv_1 = pv_c(p0,qt,qt )
+    pv_1 = pv_c(p0, qt, qt)
     pd_1 = p0 - pv_1
     T_1 = prog_to_t(prog, pd_1, pv_1, qt)
     pv_star_1 = pv_star(T_1)
     qv_star_1 = qv_star_c(p0,qt,pv_star_1)
-
     ql_2=0.0
     # If not saturated
     if(qt <= qv_star_1):
         T = T_1
         ql = 0.0
-
     else:
         ql_1 = qt - qv_star_1
         prog_1 = t_to_prog(p0, T_1, qt, ql_1, 0.0)

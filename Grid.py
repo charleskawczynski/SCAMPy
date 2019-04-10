@@ -1,5 +1,5 @@
 import numpy as np
-import time
+
 class Grid:
     def __init__(self, namelist):
         #Get the grid spacing
@@ -10,8 +10,8 @@ class Grid:
         self.gw = namelist['grid']['gw']
         self.nz = namelist['grid']['nz']
         self.nzg = self.nz + 2 * self.gw
-        self.z_half = np.empty((self.nz+2*self.gw),dtype=np.double,order='c')
-        self.z = np.empty((self.nz+2*self.gw),dtype=np.double,order='c')
+        self.z_half = np.empty((self.nzg),dtype=np.double,order='c')
+        self.z      = np.empty((self.nzg),dtype=np.double,order='c')
         count = 0
         for i in range(-self.gw,self.nz+self.gw,1):
             self.z[count] = (i + 1) * self.dz
@@ -20,7 +20,7 @@ class Grid:
         return
 
     def over_points_full(self):
-        return range(-self.gw, self.nz+self.gw,1)
+        return range(self.nzg)
 
     def over_points_full_real(self):
         return range(-self.gw,self.nz+self.gw,1)

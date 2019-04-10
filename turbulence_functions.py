@@ -164,13 +164,11 @@ def get_wstar(bflux, zi):
 
 # BL height
 def get_inversion(theta_rho, u, v, z_half, kmin, kmax, Ri_bulk_crit):
-
     theta_rho_b = theta_rho[kmin]
     h = 0.0
     Ri_bulk=0.0
     Ri_bulk_low = 0.0
     k = kmin
-
     # test if we need to look at the free convective limit
     if (u[kmin] * u[kmin] + v[kmin] * v[kmin]) <= 0.01:
         for k in range(kmin,kmax):
@@ -194,7 +192,6 @@ def get_mixing_tau(zi, wstar):
     return zi / (wstar + 0.001)
 
 # MO scaling of near surface tke and scalar variance
-
 def get_surface_tke(ustar, wstar, zLL, oblength):
     if oblength < 0.0:
         return ((3.75 + np.cbrt(zLL/oblength * zLL/oblength)) * ustar * ustar + 0.2 * wstar * wstar)

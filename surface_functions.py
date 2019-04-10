@@ -85,8 +85,6 @@ def compute_ustar(windspeed, buoyancy_flux, z0, z1) :
                 zeta0 = z0 / lmo
                 f1 = windspeed - ustar1 / vkb * (logz - psi_m_unstable(zeta, zeta0))
                 delta_ustar = ustar1 - ustar
-
-
     return ustar
 
 def exchange_coefficients_byun(Ri, zb, z0, cm, ch, lmo):
@@ -95,8 +93,8 @@ def exchange_coefficients_byun(Ri, zb, z0, cm, ch, lmo):
     sb = Ri/Pr0
     if Ri > 0.0:
         zeta = zfactor/(2.0*beta_h*(beta_m*Ri -1.0))*((1.0-2.0*beta_h*Ri)-sqrt(1.0+4.0*(beta_h - beta_m)*sb))
-        lmo[0] = zb/zeta
-        zeta0 = z0/lmo[0]
+        lmo = zb/zeta
+        zeta0 = z0/lmo
         psi_m = psi_m_stable(zeta, zeta0)
         psi_h = psi_h_stable(zeta,zeta0)
     else:
@@ -109,13 +107,13 @@ def exchange_coefficients_byun(Ri, zb, z0, cm, ch, lmo):
         else:
             angle = acos(pb/sqrt(qb * qb * qb))
             zeta = zfactor * (-2.0 * sqrt(qb) * cos(angle/3.0)+1.0/(3.0*gamma_m))
-        lmo[0] = zb/zeta
-        zeta0 = z0/lmo[0]
+        lmo = zb/zeta
+        zeta0 = z0/lmo
         psi_m = psi_m_unstable(zeta, zeta0)
         psi_h = psi_h_unstable(zeta,zeta0)
 
     cu = vkb/(logz-psi_m)
     cth = vkb/(logz-psi_h)/Pr0
-    cm[0] = cu * cu
-    ch[0] = cu * cth
+    cm = cu * cu
+    ch = cu * cth
     return

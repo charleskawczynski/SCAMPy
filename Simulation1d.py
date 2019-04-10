@@ -31,7 +31,6 @@ class Simulation1d:
         self.Turb.initialize(self.GMV)
         self.initialize_io()
         self.io()
-
         return
 
     def run(self):
