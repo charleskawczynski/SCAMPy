@@ -530,8 +530,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     # Perform the update of the scheme
 
     def update(self,GMV, Case, TS):
-        kmin = self.Gr.gw
-        kmax = self.Gr.nzg - self.Gr.gw
 
         self.update_inversion(GMV, Case.inversion_option)
 

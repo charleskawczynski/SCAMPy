@@ -4,19 +4,16 @@ python:
   - "3.6"
 # command to install dependencies
 install:
-  - pip install NetCDFIO
+  # - pip install NetCDFIO
+  # - pip install netCDF4
   - pip install scipy
   - pip install numpy
-  - pip install NetCDFIO_Stats
   - pip install math
   - pip install pylab
   - pip install argparse
   - pip install json
   - pip install pprint
-  - pip install ast
-  - pip install netCDF4
   - pip install matplotlib
-  - pip install copy
 
 # command to run tests
 script:
