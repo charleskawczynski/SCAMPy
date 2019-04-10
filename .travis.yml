@@ -6,9 +6,9 @@ python:
 install:
   # - pip install NetCDFIO
   # - pip install netCDF4
+  # - pip install pylab
   - pip install scipy
   - pip install numpy
-  - pip install pylab
   - pip install matplotlib
 
 # command to run tests
