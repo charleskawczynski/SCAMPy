@@ -932,6 +932,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         input_st = type('', (), {})()
         input_st.wstar = self.wstar
 
+        input_st.b_mean = 0
         input_st.dz = self.Gr.dz
         input_st.zbl = self.compute_zbl_qt_grad(GMV)
         for i in range(self.n_updrafts):
