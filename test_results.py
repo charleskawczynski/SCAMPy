@@ -30,6 +30,8 @@ def expected_solutions(cases):
     return sol_expected
 
 def test_all_cases():
+    subprocess.run('mkdir InputFiles', shell=True)
+    subprocess.run('mkdir OutputFiles', shell=True)
     cases = ('Soares', 'Bomex', 'life_cycle_Tan2018', 'Rico', 'TRMM_LBA', 'ARM_SGP', 'GATE_III', 'DYCOMS_RF01', 'GABLS', 'SP')
     cases = ('Soares', 'Bomex')
     tol = 0.1
