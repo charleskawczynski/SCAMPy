@@ -4,8 +4,6 @@ python:
   - "3.6"
 # command to install dependencies
 install:
-  # - pip install NetCDFIO
-  # - pip install pylab
   - pip install netCDF4
   - pip install scipy
   - pip install numpy
