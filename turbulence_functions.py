@@ -7,17 +7,20 @@ from thermodynamic_functions import *
 def entr_detr_dry(entr_in):
     eps = 1.0 # to avoid division by zero when z = 0 or z_i
     # Following Soares 2004
+    _ret = type('', (), {})()
     _ret.entr_sc = 0.5*(1.0/entr_in.z + 1.0/np.fmax(entr_in.zi - entr_in.z, 10.0)) #vkb/(z + 1.0e-3)
     _ret.detr_sc = 0.0
     return  _ret
 
 def entr_detr_inverse_z(entr_in):
+    _ret = type('', (), {})()
     _ret.entr_sc = vkb/entr_in.z
     _ret.detr_sc= 0.0
     return _ret
 
 def entr_detr_inverse_w(entr_in):
     eps_w = 1.0/(np.fmax(np.fabs(entr_in.w),1.0)* 500)
+    _ret = type('', (), {})()
     if entr_in.af>0.0:
         partiation_func  = entr_detr_buoyancy_sorting(entr_in)
         _ret.entr_sc = partiation_func*eps_w/2.0
@@ -28,22 +31,22 @@ def entr_detr_inverse_w(entr_in):
     return _ret
 
 def entr_detr_buoyancy_sorting(entr_in):
-        sqpi_inv = 1.0/sqrt(pi)
-        sqrt2 = sqrt(2.0)
+        sqpi_inv = 1.0/np.sqrt(pi)
+        sqrt2 = np.sqrt(2.0)
         partiation_func = 0.0
         inner_partiation_func = 0.0
         abscissas, weights = np.polynomial.hermite.hermgauss(entr_in.quadrature_order)
 
         if entr_in.env_QTvar != 0.0 and entr_in.env_Hvar != 0.0:
-            sd_q = sqrt(entr_in.env_QTvar)
-            sd_h = sqrt(entr_in.env_Hvar)
+            sd_q = np.sqrt(entr_in.env_QTvar)
+            sd_h = np.sqrt(entr_in.env_Hvar)
             corr = np.fmax(np.fmin(entr_in.env_HQTcov/np.fmax(sd_h*sd_q, 1e-13),1.0),-1.0)
 
             # limit sd_q to prevent negative qt_hat
             sd_q_lim = (1e-10 - entr_in.qt_env)/(sqrt2 * abscissas[0])
             sd_q = np.fmin(sd_q, sd_q_lim)
             qt_var = sd_q * sd_q
-            sigma_h_star = sqrt(np.fmax(1.0-corr*corr,0.0)) * sd_h
+            sigma_h_star = np.sqrt(np.fmax(1.0-corr*corr,0.0)) * sd_h
 
             for m_q in range(entr_in.quadrature_order):
                 qt_hat    = (entr_in.qt_env + sqrt2 * sd_q * abscissas[m_q] + entr_in.qt_up)/2.0
@@ -81,13 +84,13 @@ def entr_detr_tke2(entr_in):
     else:
         _ret.detr_sc = 0.0
 
-    _ret.entr_sc = (0.05 * sqrt(entr_in.tke) / np.fmax(entr_in.w, 0.01) / np.fmax(entr_in.af, 0.001) / np.fmax(entr_in.z, 1.0))
+    _ret.entr_sc = (0.05 * np.sqrt(entr_in.tke) / np.fmax(entr_in.w, 0.01) / np.fmax(entr_in.af, 0.001) / np.fmax(entr_in.z, 1.0))
     return  _ret
 
 # yair - this is a new entr-detr function that takes entr as proportional to TKE/w and detr ~ b/w2
 def entr_detr_tke(entr_in):
     _ret.detr_sc = np.fabs(entr_in.b)/ np.fmax(entr_in.w * entr_in.w, 1e-3)
-    _ret.entr_sc = sqrt(entr_in.tke) / np.fmax(entr_in.w, 0.01) / np.fmax(sqrt(entr_in.af), 0.001) / 50000.0
+    _ret.entr_sc = np.sqrt(entr_in.tke) / np.fmax(entr_in.w, 0.01) / np.fmax(np.sqrt(entr_in.af), 0.001) / 50000.0
     return  _ret
 
 
