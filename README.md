@@ -48,6 +48,21 @@ To update tests, update
  - code configuration for a particular `case` and
  - `sol_expected[case]` in `test_results.py`
 
+Cases currently tested:
+
+ |  Verified | Tested | Case name            |
+ |:------------------------------------------|
+ |  [ ]      | [x]    | `Soares`             |
+ |  [x]      | [x]    | `Bomex`              |
+ |  [ ]      | [x]    | `life_cycle_Tan2018` |
+ |  [ ]      | [x]    | `Rico`               |
+ |  [ ]      | [x]    | `TRMM_LBA`           |
+ |  [ ]      | [ ]    | `ARM_SGP`            |
+ |  [ ]      | [ ]    | `GATE_III`           |
+ |  [ ]      | [ ]    | `DYCOMS_RF01`        |
+ |  [ ]      | [ ]    | `GABLS`              |
+ |  [ ]      | [ ]    | `SP`                 |
+
 ## Acknowledgments
 
 Code Contributors:
