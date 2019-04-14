@@ -23,18 +23,11 @@ class NetCDFIO_Stats:
         outpath = str(os.path.join(namelist['output']['output_root'] + 'Output.' + namelist['meta']['simname'] + '.'
                                    + self.uuid[len(self.uuid )-5:len(self.uuid)]))
 
-        try:
-            os.mkdir(outpath)
-        except:
-            pass
+        os.makedirs(outpath, exist_ok=True)
 
-        self.stats_path = str( os.path.join(outpath, namelist['stats_io']['stats_dir']))
+        self.stats_path = str(os.path.join(outpath, namelist['stats_io']['stats_dir']))
 
-        try:
-            os.mkdir(self.stats_path)
-        except:
-            pass
-
+        os.makedirs(self.stats_path, exist_ok=True)
 
         self.path_plus_file = str( self.stats_path + '/' + 'Stats.' + namelist['meta']['simname'] + '.nc')
         if os.path.exists(self.path_plus_file):
@@ -47,13 +40,11 @@ class NetCDFIO_Stats:
                 else:
                     break
 
+        shutil.move(os.path.join( './', namelist['meta']['simname'] + '.in'),
+                    os.path.join( outpath, namelist['meta']['simname'] + '.in'))
 
-
-        shutil.copyfile(os.path.join( './', namelist['meta']['simname'] + '.in'),
-                        os.path.join( outpath, namelist['meta']['simname'] + '.in'))
-
-        shutil.copyfile(os.path.join( './paramlist_'+paramlist['meta']['casename']+ '.in'),
-                        os.path.join( outpath, 'paramlist_'+paramlist['meta']['casename']+ '.in'))
+        shutil.move(os.path.join( './paramlist_'+paramlist['meta']['casename']+ '.in'),
+                    os.path.join( outpath, 'paramlist_'+paramlist['meta']['casename']+ '.in'))
         self.setup_stats_file()
         return
 

@@ -1,5 +1,6 @@
 import argparse
 import sys
+import main
 import copy
 import numpy as np
 import subprocess
@@ -30,8 +31,6 @@ def expected_solutions(cases):
     return sol_expected
 
 def test_all_cases():
-    subprocess.run('mkdir InputFiles', shell=True)
-    subprocess.run('mkdir OutputFiles', shell=True)
     cases = ('Soares', 'Bomex', 'life_cycle_Tan2018', 'Rico', 'TRMM_LBA', 'ARM_SGP', 'GATE_III', 'DYCOMS_RF01', 'GABLS', 'SP')
     cases = ('Soares', 'Bomex')
     tol = 0.1
@@ -45,22 +44,7 @@ def test_all_cases():
 
 def run_case(case, sol_expected, tol):
     tests = []
-
-    sol = type('', (), {})()
-    # Parse information from the command line
-    pythonVersion = 'python'+sys.version[0]
-    subprocess.run(pythonVersion+' generate_namelist.py '+case, shell=True)
-    subprocess.run(pythonVersion+' generate_paramlist.py '+case, shell=True)
-
-    file_namelist = open(case+'.in').read()
-    namelist = json.loads(file_namelist)
-    del file_namelist
-
-    file_paramlist = open('paramlist_'+case+'.in').read()
-    paramlist = json.loads(file_paramlist)
-    del file_paramlist
-
-    sol = main1d(namelist, paramlist)
+    sol = main.run(case)
 
     vars_to_compare = [name for name in dir(sol_expected) if name[:2] != '__' and name[-2:]]
     for vn in vars_to_compare:
@@ -80,14 +64,6 @@ def run_case(case, sol_expected, tol):
     for test in tests:
         print(test)
     return tests
-
-def main1d(namelist, paramlist):
-    import Simulation1d
-    Simulation = Simulation1d.Simulation1d(namelist, paramlist)
-    Simulation.initialize(namelist)
-    sol = Simulation.run()
-    print('The simulation has completed.')
-    return sol
 
 if __name__ == "__main__":
     sol = test_all_cases()

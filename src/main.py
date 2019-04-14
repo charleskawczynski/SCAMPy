@@ -1,15 +1,23 @@
 import argparse
 import sys
+import os
 import subprocess
 import json
 
 def run(case):
     # Parse information from the command line
-    pythonVersion = 'python'+sys.version[0]
-    subprocess.run('mkdir InputFiles', shell=True)
-    subprocess.run('mkdir OutputFiles', shell=True)
-    subprocess.run(pythonVersion+' generate_namelist.py '+case, shell=True)
-    subprocess.run(pythonVersion+' generate_paramlist.py '+case, shell=True)
+    # pythonVersion = 'python'+sys.version[0] # depends on how python is called
+    pythonVersion = 'python'
+    folders_to_exclude = ['__pycache__', '.git']
+    this_file = os.path.join(os.getcwd(),__file__)
+    root_folder = os.path.dirname(os.path.dirname(this_file))
+    os.makedirs(root_folder+'OutputFiles', exist_ok=True)
+    namelist_file = 'generate_namelist.py'
+    paramlist_file = 'generate_paramlist.py'
+    namelist_file = [root+os.sep+f for root, dirs, files in os.walk(root_folder) for f in files if f==namelist_file][0]
+    paramlist_file = [root+os.sep+f for root, dirs, files in os.walk(root_folder) for f in files if f==paramlist_file][0]
+    subprocess.run(pythonVersion+' '+namelist_file+' '+case, shell=True)
+    subprocess.run(pythonVersion+' '+paramlist_file+' '+case, shell=True)
 
     file_namelist = open(case+'.in').read()
     namelist = json.loads(file_namelist)

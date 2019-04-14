@@ -73,7 +73,7 @@ def Soares():
     namelist['turbulence']['EDMF_PrognosticTKE']['calc_scalar_var'] = True
 
     namelist['output'] = {}
-    namelist['output']['output_root'] = './'
+    namelist['output']['output_root'] = '../OutputFiles/'
 
     namelist['stats_io'] = {}
     namelist['stats_io']['stats_dir'] = 'stats'
@@ -118,7 +118,7 @@ def Bomex():
     namelist['turbulence']['EDMF_PrognosticTKE']['mixing_length'] = 'tke'
 
     namelist['output'] = {}
-    namelist['output']['output_root'] = './'
+    namelist['output']['output_root'] = '../OutputFiles/'
 
     namelist['stats_io'] = {}
     namelist['stats_io']['stats_dir'] = 'stats'
@@ -163,7 +163,7 @@ def life_cycle_Tan2018():
     namelist['turbulence']['EDMF_PrognosticTKE']['mixing_length'] = 'tke'
 
     namelist['output'] = {}
-    namelist['output']['output_root'] = './'
+    namelist['output']['output_root'] = '../OutputFiles/'
 
     namelist['stats_io'] = {}
     namelist['stats_io']['stats_dir'] = 'stats'
@@ -207,7 +207,7 @@ def Rico():
     namelist['turbulence']['EDMF_PrognosticTKE']['mixing_length'] = 'tke'
 
     namelist['output'] = {}
-    namelist['output']['output_root'] = './'
+    namelist['output']['output_root'] = '../OutputFiles/'
 
     namelist['stats_io'] = {}
     namelist['stats_io']['stats_dir'] = 'stats'
@@ -252,7 +252,7 @@ def TRMM_LBA(): # yair
     namelist['turbulence']['EDMF_PrognosticTKE']['mixing_length'] = 'tke'
 
     namelist['output'] = {}
-    namelist['output']['output_root'] = './'
+    namelist['output']['output_root'] = '../OutputFiles/'
 
     namelist['stats_io'] = {}
     namelist['stats_io']['stats_dir'] = 'stats'
@@ -297,7 +297,7 @@ def ARM_SGP():
     namelist['turbulence']['EDMF_PrognosticTKE']['mixing_length'] = 'tke'
 
     namelist['output'] = {}
-    namelist['output']['output_root'] = './'
+    namelist['output']['output_root'] = '../OutputFiles/'
 
     namelist['stats_io'] = {}
     namelist['stats_io']['stats_dir'] = 'stats'
@@ -342,7 +342,7 @@ def GATE_III(): # yair
     namelist['turbulence']['EDMF_PrognosticTKE']['calc_scalar_var'] = True
 
     namelist['output'] = {}
-    namelist['output']['output_root'] = './'
+    namelist['output']['output_root'] = '../OutputFiles/'
 
     namelist['stats_io'] = {}
     namelist['stats_io']['stats_dir'] = 'stats'
@@ -386,7 +386,7 @@ def DYCOMS_RF01():
     namelist['turbulence']['EDMF_PrognosticTKE']['mixing_length'] = 'sbl'
 
     namelist['output'] = {}
-    namelist['output']['output_root'] = './'
+    namelist['output']['output_root'] = '../OutputFiles/'
 
     namelist['stats_io'] = {}
     namelist['stats_io']['stats_dir'] = 'stats'
@@ -432,7 +432,7 @@ def GABLS():
     namelist['turbulence']['EDMF_PrognosticTKE']['mixing_length'] = 'sbl'
 
     namelist['output'] = {}
-    namelist['output']['output_root'] = './'
+    namelist['output']['output_root'] = '../OutputFiles/'
 
     namelist['stats_io'] = {}
     namelist['stats_io']['stats_dir'] = 'stats'
@@ -478,7 +478,7 @@ def SP():
     namelist['turbulence']['EDMF_PrognosticTKE']['use_scalar_var'] = True
 
     namelist['output'] = {}
-    namelist['output']['output_root'] = './'
+    namelist['output']['output_root'] = '../OutputFiles/'
 
     namelist['stats_io'] = {}
     namelist['stats_io']['stats_dir'] = 'stats'
