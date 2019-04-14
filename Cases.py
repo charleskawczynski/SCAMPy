@@ -127,7 +127,6 @@ class Soares(CasesBase):
         self.Sur.lhf = 2.5e-5 * Ref.rho0[Gr.gw -1] * latent_heat(self.Sur.Tsurface)
         self.Sur.shf = 6.0e-2 * cpm_c(self.Sur.qsurface) * Ref.rho0[Gr.gw-1]
         self.Sur.ustar_fixed = False
-        self.Sur.ustar = 0.0 # m/s
         self.Sur.Gr = Gr
         self.Sur.Ref = Ref
         self.Sur.bflux = g * ( 6.0e-2/self.Sur.Tsurface + (eps_vi -1.0)* 2.5e-5) # This will be overwritten
@@ -611,8 +610,6 @@ class TRMM_LBA(CasesBase):
         GMV.T.values = T
         theta_rho = RH*0.0
         epsi = 287.1/461.5
-        PV_star # here pv_star is a function
-        qv_star
 
         GMV.U.set_bcs(Gr)
         GMV.T.set_bcs(Gr)
@@ -1215,7 +1212,6 @@ class DYCOMS_RF01(CasesBase):
     def initialize_surface(self, Gr, Ref ):
         self.Sur.zrough      = 1.0e-4
         self.Sur.ustar_fixed = False
-        self.Sur.ustar = 0.0 # m/s
         self.Sur.cm          = 0.0011
 
         # sensible heat flux

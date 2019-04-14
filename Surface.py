@@ -7,6 +7,9 @@ from Variables import GridMeanVariables
 
 class SurfaceBase:
     def __init__(self, paramlist):
+        self.ustar = None
+        self.lhf = None
+        self.shf = None
         self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']
         return
     def initialize(self):
@@ -116,7 +119,7 @@ class SurfaceFixedCoeffs(SurfaceBase):
 
         self.ustar =  np.sqrt(self.cm) * windspeed
         # CK--testing this--EDMF scheme checks greater or less than zero,
-        if fabs(self.bflux) < 1e-10:
+        if np.fabs(self.bflux) < 1e-10:
             self.obukhov_length = 0.0
         else:
             self.obukhov_length = -self.ustar *self.ustar *self.ustar /self.bflux /vkb
@@ -173,7 +176,7 @@ class SurfaceMoninObukhov(SurfaceBase):
         self.bflux = buoyancy_flux(self.shf, self.lhf, GMV.T.values[gw], GMV.QT.values[gw],self.Ref.alpha0[gw-1]  )
         self.ustar =  sqrt(self.cm) * self.windspeed
         # CK--testing this--EDMF scheme checks greater or less than zero,
-        if fabs(self.bflux) < 1e-10:
+        if np.fabs(self.bflux) < 1e-10:
             self.obukhov_length = 0.0
         else:
             self.obukhov_length = -self.ustar *self.ustar *self.ustar /self.bflux /vkb
@@ -235,7 +238,7 @@ class SurfaceSullivanPatton(SurfaceBase):
 
         self.ustar =  sqrt(self.cm) * self.windspeed
         # CK--testing this--EDMF scheme checks greater or less than zero,
-        if fabs(self.bflux) < 1e-10:
+        if np.fabs(self.bflux) < 1e-10:
             self.obukhov_length = 0.0
         else:
             self.obukhov_length = -self.ustar *self.ustar *self.ustar /self.bflux /vkb
