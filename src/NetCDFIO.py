@@ -8,7 +8,7 @@ from Grid import Grid
 import numpy as np
 
 class NetCDFIO_Stats:
-    def __init__(self, namelist, paramlist, Gr):
+    def __init__(self, namelist, paramlist, Gr, root_dir):
         self.root_grp = None
         self.profiles_grp = None
         self.ts_grp = None
@@ -20,7 +20,7 @@ class NetCDFIO_Stats:
         self.frequency = namelist['stats_io']['frequency']
 
         # Setup the statistics output path
-        outpath = str(os.path.join(namelist['output']['output_root'] + 'Output.' + namelist['meta']['simname'] + '.'
+        outpath = str(os.path.join(root_dir, namelist['output']['output_root'] + 'Output.' + namelist['meta']['simname'] + '.'
                                    + self.uuid[len(self.uuid )-5:len(self.uuid)]))
 
         os.makedirs(outpath, exist_ok=True)

@@ -13,14 +13,14 @@ import TimeStepping
 
 class Simulation1d:
 
-    def __init__(self, namelist, paramlist):
+    def __init__(self, namelist, paramlist, root_dir):
         self.Gr = Grid.Grid(namelist)
         self.Ref = ReferenceState.ReferenceState(self.Gr)
         self.GMV = GridMeanVariables(namelist, self.Gr, self.Ref)
         self.Case = CasesFactory(namelist, paramlist)
         self.Turb = ParameterizationFactory(namelist,paramlist, self.Gr, self.Ref)
         self.TS = TimeStepping.TimeStepping(namelist)
-        self.Stats = NetCDFIO_Stats(namelist, paramlist, self.Gr)
+        self.Stats = NetCDFIO_Stats(namelist, paramlist, self.Gr, root_dir)
         return
 
     def initialize(self, namelist):
