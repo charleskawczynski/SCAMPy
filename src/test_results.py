@@ -31,16 +31,25 @@ def expected_solutions(cases):
     return sol_expected
 
 def test_all_cases():
-    cases = ('Soares', 'Bomex', 'life_cycle_Tan2018', 'Rico', 'TRMM_LBA', 'ARM_SGP', 'GATE_III', 'DYCOMS_RF01', 'GABLS', 'SP')
-    cases = ('Soares', 'Bomex')
+    all_tests = run_all_cases()
+    passed_tests = [test[-1] for test in all_tests]
+    assert all(passed_tests)
+
+def run_all_cases():
+    all_cases = ('Soares', 'Bomex', 'life_cycle_Tan2018', 'Rico', 'TRMM_LBA', 'ARM_SGP', 'GATE_III', 'DYCOMS_RF01', 'GABLS', 'SP')
     tol = 0.1
-    sol_expected = expected_solutions(cases)
+    sol_expected = expected_solutions(all_cases)
+
+    # cases = ('Soares', 'Bomex')
+    cases = ('Bomex', )
+
     all_tests = [run_case(case, sol_expected[case], tol) for case in cases]
 
     print('******************************* Summary test results:')
     for tests in all_tests:
         for test in tests:
             print(test)
+    return all_tests
 
 def run_case(case, sol_expected, tol):
     tests = []
@@ -53,12 +62,16 @@ def run_case(case, sol_expected, tol):
         s_expected = getattr(sol_expected, vn)[1:-1]
         s_computed = getattr(sol, vn)[1:-1]
         y_amax = np.amax(s_expected)
-        err = [abs(x-y)/(y_amax+1) for x,y in zip(s_computed, s_expected)]
-        passed = all([e < tol for e in err])
+        abs_err = [abs(x-y) for x,y in zip(s_computed, s_expected)]
+        rel_err = [x/y_amax for x in abs_err]
+        print('y_amax = ', y_amax)
+        print('abs_err = ', abs_err)
+        print('rel_err = ', rel_err)
+        passed = all([e < tol for e in rel_err])
         if passed:
-            tests.append(('Pass: '+case+', '+vn, err, passed))
+            tests.append(('Pass: '+case+', '+vn, rel_err, passed))
         else:
-            tests.append(('Fail: '+case+', '+vn, err, passed))
+            tests.append(('Fail: '+case+', '+vn, rel_err, passed))
 
     print('---------- Single test results:')
     for test in tests:

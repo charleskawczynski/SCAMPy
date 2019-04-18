@@ -339,6 +339,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         # Create the class for environment thermodynamics
         self.EnvThermo = EnvironmentThermodynamics(namelist, paramlist, Gr, Ref, self.EnvVar)
 
+        a_ = self.surface_area/self.n_updrafts
+        self.surface_scalar_coeff = np.zeros((self.n_updrafts,), dtype=np.double, order='c')
+        for i in range(self.n_updrafts):
+            self.surface_scalar_coeff[i] = percentile_bounds_mean_norm(1.0-self.surface_area+i*a_,
+                                                                       1.0-self.surface_area + (i+1)*a_ , 1000)
+
         # Entrainment rates
         self.entr_sc = np.zeros((self.n_updrafts, Gr.nzg),dtype=np.double,order='c')
         #self.press = np.zeros((self.n_updrafts, Gr.nzg),dtype=np.double,order='c')
@@ -765,16 +771,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         h_var = get_surface_variance(Case.Sur.rho_hflux*alpha0LL,
                                              Case.Sur.rho_hflux*alpha0LL, ustar, zLL, oblength)
 
-        a_ = self.surface_area/self.n_updrafts
-
         for i in range(self.n_updrafts):
-            surface_scalar_coeff= percentile_bounds_mean_norm(1.0-self.surface_area+i*a_,
-                                                                   1.0-self.surface_area + (i+1)*a_ , 1000)
-
             self.area_surface_bc[i] = self.surface_area/self.n_updrafts
             self.w_surface_bc[i] = 0.0
-            self.h_surface_bc[i] = (GMV.H.values[gw] + surface_scalar_coeff * np.sqrt(h_var))
-            self.qt_surface_bc[i] = (GMV.QT.values[gw] + surface_scalar_coeff * np.sqrt(qt_var))
+            self.h_surface_bc[i] = (GMV.H.values[gw] + self.surface_scalar_coeff[i] * np.sqrt(h_var))
+            self.qt_surface_bc[i] = (GMV.QT.values[gw] + self.surface_scalar_coeff[i] * np.sqrt(qt_var))
         return
 
     def reset_surface_covariance(self, GMV, Case):

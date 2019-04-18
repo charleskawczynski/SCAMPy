@@ -20,12 +20,12 @@ class NetCDFIO_Stats:
         self.frequency = namelist['stats_io']['frequency']
 
         # Setup the statistics output path
-        outpath = str(os.path.join(root_dir, namelist['output']['output_root'] + 'Output.' + namelist['meta']['simname'] + '.'
+        self.outpath = str(os.path.join(root_dir, namelist['output']['output_root'] + 'Output.' + namelist['meta']['simname'] + '.'
                                    + self.uuid[len(self.uuid )-5:len(self.uuid)]))
 
-        os.makedirs(outpath, exist_ok=True)
+        os.makedirs(self.outpath, exist_ok=True)
 
-        self.stats_path = str(os.path.join(outpath, namelist['stats_io']['stats_dir']))
+        self.stats_path = str(os.path.join(self.outpath, namelist['stats_io']['stats_dir']))
 
         os.makedirs(self.stats_path, exist_ok=True)
 
@@ -41,10 +41,10 @@ class NetCDFIO_Stats:
                     break
 
         shutil.move(os.path.join( './', namelist['meta']['simname'] + '.in'),
-                    os.path.join( outpath, namelist['meta']['simname'] + '.in'))
+                    os.path.join( self.outpath, namelist['meta']['simname'] + '.in'))
 
         shutil.move(os.path.join( './paramlist_'+paramlist['meta']['casename']+ '.in'),
-                    os.path.join( outpath, 'paramlist_'+paramlist['meta']['casename']+ '.in'))
+                    os.path.join( self.outpath, 'paramlist_'+paramlist['meta']['casename']+ '.in'))
         self.setup_stats_file()
         return
 

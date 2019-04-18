@@ -5,6 +5,7 @@ from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
 import Grid
 import ReferenceState
+import matplotlib.pyplot as plt
 import Cases
 from Surface import  SurfaceBase
 from Cases import  CasesBase
@@ -83,6 +84,37 @@ class Simulation1d:
         sol.gm_V = self.GMV.V.values
         sol.gm_QL = self.GMV.QL.values
         sol.gm_B = self.GMV.B.values
+
+
+        plt.plot(sol.ud_W   , sol.z); plt.savefig(self.Stats.outpath+'ud_W.png'); plt.close()
+        plt.plot(sol.ud_Area, sol.z); plt.savefig(self.Stats.outpath+'ud_Area.png'); plt.close()
+        plt.plot(sol.ud_QT  , sol.z); plt.savefig(self.Stats.outpath+'ud_QT.png'); plt.close()
+        plt.plot(sol.ud_QL  , sol.z); plt.savefig(self.Stats.outpath+'ud_QL.png'); plt.close()
+        plt.plot(sol.ud_QR  , sol.z); plt.savefig(self.Stats.outpath+'ud_QR.png'); plt.close()
+        plt.plot(sol.ud_THL , sol.z); plt.savefig(self.Stats.outpath+'ud_THL.png'); plt.close()
+        plt.plot(sol.ud_T   , sol.z); plt.savefig(self.Stats.outpath+'ud_T.png'); plt.close()
+        plt.plot(sol.ud_B   , sol.z); plt.savefig(self.Stats.outpath+'ud_B.png'); plt.close()
+        plt.plot(sol.e_W     , sol.z); plt.savefig(self.Stats.outpath+'e_W.png'); plt.close()
+        plt.plot(sol.e_QT    , sol.z); plt.savefig(self.Stats.outpath+'e_QT.png'); plt.close()
+        plt.plot(sol.e_QL    , sol.z); plt.savefig(self.Stats.outpath+'e_QL.png'); plt.close()
+        plt.plot(sol.e_QR    , sol.z); plt.savefig(self.Stats.outpath+'e_QR.png'); plt.close()
+        plt.plot(sol.e_H     , sol.z); plt.savefig(self.Stats.outpath+'e_H.png'); plt.close()
+        plt.plot(sol.e_THL   , sol.z); plt.savefig(self.Stats.outpath+'e_THL.png'); plt.close()
+        plt.plot(sol.e_T     , sol.z); plt.savefig(self.Stats.outpath+'e_T.png'); plt.close()
+        plt.plot(sol.e_B     , sol.z); plt.savefig(self.Stats.outpath+'e_B.png'); plt.close()
+        plt.plot(sol.e_CF    , sol.z); plt.savefig(self.Stats.outpath+'e_CF.png'); plt.close()
+        plt.plot(sol.e_TKE   , sol.z); plt.savefig(self.Stats.outpath+'e_TKE.png'); plt.close()
+        plt.plot(sol.e_Hvar  , sol.z); plt.savefig(self.Stats.outpath+'e_Hvar.png'); plt.close()
+        plt.plot(sol.e_QTvar , sol.z); plt.savefig(self.Stats.outpath+'e_QTvar.png'); plt.close()
+        plt.plot(sol.e_HQTcov, sol.z); plt.savefig(self.Stats.outpath+'e_HQTcov.png'); plt.close()
+        plt.plot(sol.gm_QT , sol.z); plt.savefig(self.Stats.outpath+'gm_QT.png'); plt.close()
+        plt.plot(sol.gm_U  , sol.z); plt.savefig(self.Stats.outpath+'gm_U.png'); plt.close()
+        plt.plot(sol.gm_H  , sol.z); plt.savefig(self.Stats.outpath+'gm_H.png'); plt.close()
+        plt.plot(sol.gm_T  , sol.z); plt.savefig(self.Stats.outpath+'gm_T.png'); plt.close()
+        plt.plot(sol.gm_THL, sol.z); plt.savefig(self.Stats.outpath+'gm_THL.png'); plt.close()
+        plt.plot(sol.gm_V  , sol.z); plt.savefig(self.Stats.outpath+'gm_V.png'); plt.close()
+        plt.plot(sol.gm_QL , sol.z); plt.savefig(self.Stats.outpath+'gm_QL.png'); plt.close()
+        plt.plot(sol.gm_B  , sol.z); plt.savefig(self.Stats.outpath+'gm_B.png'); plt.close()
 
         return sol
 

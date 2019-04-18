@@ -56,9 +56,6 @@ class ReferenceState:
         p[Gr.gw - 1:-Gr.gw +1] = odeint(rhs, p0, z, hmax=1.0)[:, 0]
         p_half[Gr.gw:-Gr.gw] = odeint(rhs, p0, z_half, hmax=1.0)[1:, 0]
 
-        print("z = ",z)
-        print("p = ",p)
-
         # Set boundary conditions
         p[:Gr.gw - 1] = p[2 * Gr.gw - 2:Gr.gw - 1:-1]
         p[-Gr.gw + 1:] = p[-Gr.gw - 1:-2 * Gr.gw:-1]
