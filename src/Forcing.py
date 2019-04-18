@@ -1,5 +1,6 @@
 import numpy as np
 from parameters import *
+from Field import Field
 from Variables import GridMeanVariables, VariablePrognostic
 from forcing_functions import  convert_forcing_entropy, convert_forcing_thetal
 
@@ -7,11 +8,11 @@ class ForcingBase:
     def __init__(self):
         return
     def initialize(self, GMV):
-        self.subsidence = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
-        self.dTdt = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
-        self.dqtdt = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
-        self.ug = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
-        self.vg = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
+        self.subsidence = Field.half(self.Gr)
+        self.dTdt       = Field.half(self.Gr)
+        self.dqtdt      = Field.half(self.Gr)
+        self.ug         = Field.half(self.Gr)
+        self.vg         = Field.half(self.Gr)
 
         if GMV.H.name == 's':
             self.convert_forcing_prog_fp = convert_forcing_entropy

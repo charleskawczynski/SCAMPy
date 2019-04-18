@@ -9,12 +9,12 @@ from parameters import *
 
 class ReferenceState:
     def __init__(self, Gr ):
-        self.p0 = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        self.p0_half = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        self.alpha0 = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        self.alpha0_half = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        self.rho0 = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        self.rho0_half = np.zeros(Gr.nzg, dtype=np.double, order='c')
+        self.p0          = Field.full(Gr)
+        self.p0_half     = Field.half(Gr)
+        self.alpha0      = Field.full(Gr)
+        self.alpha0_half = Field.half(Gr)
+        self.rho0        = Field.full(Gr)
+        self.rho0_half   = Field.half(Gr)
         return
 
     def initialize(self, Gr, Stats):
@@ -42,19 +42,20 @@ class ReferenceState:
         ##_____________TO COMPILE______________
 
         # Construct arrays for integration points
-        z = np.array(Gr.z[Gr.gw - 1:-Gr.gw + 1])
-        z_half = np.append([0.0], np.array(Gr.z_half[Gr.gw:-Gr.gw]))
+
+        z = Gr.z_full_real()
+        z_half = Gr.z_half_real()
 
         # We are integrating the log pressure so need to take the log of the
         # surface pressure
         p0 = np.log(self.Pg)
 
-        p = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        p_half = np.zeros(Gr.nzg, dtype=np.double, order='c')
+        p = Field.full(Gr)
+        p_half = Field.half(Gr)
 
         # Perform the integration
-        p[Gr.gw - 1:-Gr.gw +1] = odeint(rhs, p0, z, hmax=1.0)[:, 0]
-        p_half[Gr.gw:-Gr.gw] = odeint(rhs, p0, z_half, hmax=1.0)[1:, 0]
+        p[Gr.k_full_real()] = odeint(rhs, p0, z, hmax=1.0)[:, 0]
+        p_half[Gr.k_half_real()] = odeint(rhs, p0, z_half, hmax=1.0)[:, 0]
 
         # Set boundary conditions
         p[:Gr.gw - 1] = p[2 * Gr.gw - 2:Gr.gw - 1:-1]
@@ -63,23 +64,23 @@ class ReferenceState:
         p_half[:Gr.gw] = p_half[2 * Gr.gw - 1:Gr.gw - 1:-1]
         p_half[-Gr.gw:] = p_half[-Gr.gw - 1:-2 * Gr.gw - 1:-1]
 
-        p = np.exp(p)
-        p_half = np.exp(p_half)
+        p[:] = np.exp(p[:])
+        p_half[:] = np.exp(p_half[:])
 
         p_ = p
         p_half_ = p_half
-        temperature = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        temperature_half = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        alpha = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        alpha_half = np.zeros(Gr.nzg, dtype=np.double, order='c')
+        temperature = Field.full(Gr)
+        temperature_half = Field.half(Gr)
+        alpha = Field.full(Gr)
+        alpha_half = Field.half(Gr)
 
-        ql = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        qi = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        qv = np.zeros(Gr.nzg, dtype=np.double, order='c')
+        ql = Field.full(Gr)
+        qi = Field.full(Gr)
+        qv = Field.full(Gr)
 
-        ql_half = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        qi_half = np.zeros(Gr.nzg, dtype=np.double, order='c')
-        qv_half = np.zeros(Gr.nzg, dtype=np.double, order='c')
+        ql_half = Field.half(Gr)
+        qi_half = Field.half(Gr)
+        qv_half = Field.half(Gr)
 
         # Compute reference state thermodynamic profiles
         #_____COMMENTED TO TEST COMPILATION_____________________
@@ -104,8 +105,8 @@ class ReferenceState:
         # print(np.array(Gr.extract_local_ghosted(alpha_half,2)))
         self.alpha0_half = alpha_half
         self.alpha0 = alpha
-        self.p0 = p_
-        self.p0_half = p_half
+        self.p0[:] = p_
+        self.p0_half[:] = p_half
         self.rho0 = 1.0 / np.array(self.alpha0)
         self.rho0_half = 1.0 / np.array(self.alpha0_half)
 
