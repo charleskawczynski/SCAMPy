@@ -32,7 +32,7 @@ def expected_solutions(cases):
 
 def test_all_cases():
     all_tests = run_all_cases()
-    passed_tests = [test[-1] for test in all_tests]
+    passed_tests = [results[-1] for test in all_tests for results in test]
     assert all(passed_tests)
 
 def run_all_cases():
