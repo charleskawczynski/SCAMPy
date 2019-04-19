@@ -3,6 +3,26 @@ import copy
 
 """
 var_tuple = (('rho_0', 1), ('w', 3), ('a', 3), ('alpha_0', 1))
+        unkowns = (
+        ('a', N_subdomains),
+        ('w', N_subdomains),
+        ('q_tot', N_subdomains),
+        ('θ_liq', N_subdomains),
+        ('tke', N_subdomains),
+        ('cv_q_tot', N_subdomains),
+        ('cv_θ_liq', N_subdomains),
+        ('cv_θ_liq_q_tot', N_subdomains),
+        )
+        temp_vars = (('rho_0', 1),
+                     ('alpha_0', 1),
+                     ('p_0', 1),
+                     ('w', 3),
+                     ('a', 3),
+                     )
+        unknowns = (('rho_0', 1), ('w', 3), ('a', 3), ('alpha_0', 1))
+        self.state_vec = StateVec
+        self.state_vec = StateVec
+
 """
 
 def get_var_mapper(var_tuple):

@@ -68,22 +68,23 @@ class ParameterizationBase:
         gw = self.Gr.gw
         kmin = gw
         kmax = self.Gr.nzg-gw
+        theta_rho_bl = theta_rho.surface_bl(self.Gr)
 
         Ri_bulk_crit = 0.0
 
-        for k in range(gw, self.Gr.nzg-gw):
+        for k in self.Gr.over_points_half_real():
             qv = GMV.QT.values[k] - GMV.QL.values[k]
             theta_rho[k] = theta_rho_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
 
 
         if option == 'theta_rho':
-            for k in range(kmin,kmax):
-                if theta_rho[k] > theta_rho[kmin]:
+            for k in self.Gr.over_points_half_real():
+                if theta_rho[k] > theta_rho_bl:
                     self.zi = self.Gr.z_half[k]
                     break
         elif option == 'thetal_maxgrad':
 
-            for k in range(kmin, kmax):
+            for k in self.Gr.over_points_half_real():
                 grad =  (GMV.THL.values[k+1] - GMV.THL.values[k])*self.Gr.dzi
                 if grad > maxgrad:
                     maxgrad = grad

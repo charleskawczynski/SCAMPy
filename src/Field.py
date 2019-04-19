@@ -36,13 +36,13 @@ class Field:
         if self.full_data:
             return self.values[grid.surface()]
         else:
-            return (self.values[grid.surface_bl()]+self.values[grid.surface_bl()-1])/2.0
+            return (self.values[grid.k_surface_bl()]+self.values[grid.k_surface_bl()-1])/2.0
 
     def surface_bl(self, grid):
         if self.full_data:
             return (self.values[grid.surface()]+self.values[grid.surface()+1])/2.0
         else:
-            return self.values[grid.surface_bl()]
+            return self.values[grid.k_surface_bl()]
 
     def extrap(self, grid):
         if self.full_data:
