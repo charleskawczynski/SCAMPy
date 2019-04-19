@@ -228,26 +228,25 @@ class GridMeanVariables:
         return
 
     def io(self, Stats):
-        arr = self.U.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw]
         lwp = 0.0
-        Stats.write_profile('u_mean', arr)
-        Stats.write_profile('v_mean',self.V.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('qt_mean',self.QT.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('ql_mean',self.QL.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('qr_mean',self.QR.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('temperature_mean',self.T.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('buoyancy_mean',self.B.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+        Stats.write_profile_new('u_mean'           , self.Gr, self.U.values)
+        Stats.write_profile_new('v_mean'           , self.Gr, self.V.values)
+        Stats.write_profile_new('qt_mean'          , self.Gr, self.QT.values)
+        Stats.write_profile_new('ql_mean'          , self.Gr, self.QL.values)
+        Stats.write_profile_new('qr_mean'          , self.Gr, self.QR.values)
+        Stats.write_profile_new('temperature_mean' , self.Gr, self.T.values)
+        Stats.write_profile_new('buoyancy_mean'    , self.Gr, self.B.values)
         if self.H.name == 's':
-            Stats.write_profile('s_mean',self.H.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-            Stats.write_profile('thetal_mean',self.THL.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('s_mean'     , self.Gr, self.H.values)
+            Stats.write_profile_new('thetal_mean', self.Gr, self.THL.values)
         elif self.H.name == 'thetal':
-            Stats.write_profile('thetal_mean',self.H.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('thetal_mean', self.Gr, self.H.values)
         if self.calc_tke:
-            Stats.write_profile('tke_mean',self.TKE.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('tke_mean'   , self.Gr, self.TKE.values)
         if self.calc_scalar_var:
-            Stats.write_profile('Hvar_mean',self.Hvar.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-            Stats.write_profile('QTvar_mean',self.QTvar.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-            Stats.write_profile('HQTcov_mean',self.HQTcov.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('Hvar_mean'  , self.Gr, self.Hvar.values)
+            Stats.write_profile_new('QTvar_mean' , self.Gr, self.QTvar.values)
+            Stats.write_profile_new('HQTcov_mean', self.Gr, self.HQTcov.values)
 
         for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
             lwp += self.Ref.rho0_half[k]*self.QL.values[k]*self.Gr.dz

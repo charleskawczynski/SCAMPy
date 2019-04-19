@@ -14,7 +14,7 @@ import pylab as plt
 class UpdraftVariable:
     def __init__(self, nu, nz, loc, kind, name, units):
         self.values     = np.zeros((nu,nz),dtype=np.double, order='c')
-        self.old        = np.zeros((nu,nz),dtype=np.double, order='c')  # needed for prognostic updrafts
+        self.old        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
         self.new        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
         self.tendencies = np.zeros((nu,nz),dtype=np.double, order='c')
         self.flux       = np.zeros((nu,nz),dtype=np.double, order='c')
@@ -218,18 +218,18 @@ class UpdraftVariables:
 
     def io(self, Stats):
 
-        Stats.write_profile('updraft_area', self.Area.bulkvalues[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('updraft_w', self.W.bulkvalues[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('updraft_qt', self.QT.bulkvalues[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('updraft_ql', self.QL.bulkvalues[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('updraft_qr', self.QR.bulkvalues[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+        Stats.write_profile_new('updraft_area'       , self.Gr, self.Area.bulkvalues)
+        Stats.write_profile_new('updraft_w'          , self.Gr, self.W.bulkvalues)
+        Stats.write_profile_new('updraft_qt'         , self.Gr, self.QT.bulkvalues)
+        Stats.write_profile_new('updraft_ql'         , self.Gr, self.QL.bulkvalues)
+        Stats.write_profile_new('updraft_qr'         , self.Gr, self.QR.bulkvalues)
         if self.H.name == 'thetal':
-            Stats.write_profile('updraft_thetal', self.H.bulkvalues[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('updraft_thetal' , self.Gr, self.H.bulkvalues)
         else:
-            Stats.write_profile('updraft_s', self.H.bulkvalues[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-            #Stats.write_profile('updraft_thetal', self.THL.bulkvalues[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('updraft_temperature', self.T.bulkvalues[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('updraft_buoyancy', self.B.bulkvalues[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('updraft_s'      , self.Gr, self.H.bulkvalues)
+            #Stats.write_profile_new('updraft_thetal', self.Gr, self.THL.bulkvalues)
+        Stats.write_profile_new('updraft_temperature', self.Gr, self.T.bulkvalues)
+        Stats.write_profile_new('updraft_buoyancy'   , self.Gr, self.B.bulkvalues)
         self.get_cloud_base_top_cover()
         # Note definition of cloud cover : each updraft is associated with a cloud cover equal to the maximum
         # area fraction of the updraft where ql > 0. Each updraft is assumed to have maximum overlap with respect to

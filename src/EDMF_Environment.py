@@ -129,24 +129,24 @@ class EnvironmentVariables:
         return
 
     def io(self, Stats):
-        Stats.write_profile('env_w', self.W.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('env_qt', self.QT.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('env_ql', self.QL.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('env_qr', self.QR.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+        Stats.write_profile_new('env_w'          , self.Gr, self.W.values)
+        Stats.write_profile_new('env_qt'         , self.Gr, self.QT.values)
+        Stats.write_profile_new('env_ql'         , self.Gr, self.QL.values)
+        Stats.write_profile_new('env_qr'         , self.Gr, self.QR.values)
         if self.H.name == 's':
-            Stats.write_profile('env_s', self.H.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('env_s'      , self.Gr, self.H.values)
         else:
-            Stats.write_profile('env_thetal', self.H.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('env_thetal' , self.Gr, self.H.values)
 
-        Stats.write_profile('env_temperature', self.T.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+        Stats.write_profile_new('env_temperature', self.Gr, self.T.values)
         if self.calc_tke:
-            Stats.write_profile('env_tke', self.TKE.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('env_tke'    , self.Gr, self.TKE.values)
         if self.calc_scalar_var:
-            Stats.write_profile('env_Hvar', self.Hvar.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-            Stats.write_profile('env_QTvar', self.QTvar.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-            Stats.write_profile('env_HQTcov', self.HQTcov.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('env_Hvar'   , self.Gr, self.Hvar.values)
+            Stats.write_profile_new('env_QTvar'  , self.Gr, self.QTvar.values)
+            Stats.write_profile_new('env_HQTcov' , self.Gr, self.HQTcov.values)
         if self.EnvThermo_scheme  == 'sommeria_deardorff':
-            Stats.write_profile('env_THVvar', self.THVvar.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+            Stats.write_profile_new('env_THVvar' , self.Gr, self.THVvar.values)
 
         #ToDo [suggested by CK for AJ ;]
         # Add output of environmental cloud fraction, cloud base, cloud top (while the latter can be gleaned from ql profiles

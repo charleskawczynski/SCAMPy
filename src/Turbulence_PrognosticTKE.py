@@ -146,8 +146,8 @@ class SimilarityED(ParameterizationBase):
         return
 
     def io(self, Stats):
-        Stats.write_profile('eddy_viscosity', self.KM.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('eddy_diffusivity', self.KH.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+        Stats.write_profile_new('eddy_viscosity'  , self.Gr, self.KM.values)
+        Stats.write_profile_new('eddy_diffusivity', self.Gr, self.KH.values)
         return
 
     def update(self,GMV, Case, TS ):
@@ -450,8 +450,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def io(self, Stats):
-        kmin = self.Gr.gw
-        kmax = self.Gr.nzg-self.Gr.gw
         mean_entr_sc = Field.half(self.Gr)
         mean_detr_sc = Field.half(self.Gr)
         massflux     = Field.half(self.Gr)
@@ -461,8 +459,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.UpdVar.io(Stats)
         self.EnvVar.io(Stats)
 
-        Stats.write_profile('eddy_viscosity', self.KM.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('eddy_diffusivity', self.KH.values[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
+        Stats.write_profile_new('eddy_viscosity'  , self.Gr, self.KM.values)
+        Stats.write_profile_new('eddy_diffusivity', self.Gr, self.KH.values)
         for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
             mf_h[k] = interp2pt(self.massflux_h[k], self.massflux_h[k-1])
             mf_qt[k] = interp2pt(self.massflux_qt[k], self.massflux_qt[k-1])
@@ -472,61 +470,61 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     mean_entr_sc[k] += self.UpdVar.Area.values[i,k] * self.entr_sc[i,k]/self.UpdVar.Area.bulkvalues[k]
                     mean_detr_sc[k] += self.UpdVar.Area.values[i,k] * self.detr_sc[i,k]/self.UpdVar.Area.bulkvalues[k]
 
-        Stats.write_profile('entrainment_sc', mean_entr_sc[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('detrainment_sc', mean_detr_sc[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('massflux', massflux[self.Gr.gw:self.Gr.nzg-self.Gr.gw ])
-        Stats.write_profile('massflux_h', mf_h[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('massflux_qt', mf_qt[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('massflux_tendency_h', self.massflux_tendency_h[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('massflux_tendency_qt', self.massflux_tendency_qt[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('diffusive_flux_h', self.diffusive_flux_h[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('diffusive_flux_qt', self.diffusive_flux_qt[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('diffusive_tendency_h', self.diffusive_tendency_h[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('diffusive_tendency_qt', self.diffusive_tendency_qt[self.Gr.gw:self.Gr.nzg-self.Gr.gw])
-        Stats.write_profile('total_flux_h', np.add(mf_h[self.Gr.gw:self.Gr.nzg-self.Gr.gw],
-                                                   self.diffusive_flux_h[self.Gr.gw:self.Gr.nzg-self.Gr.gw]))
-        Stats.write_profile('total_flux_qt', np.add(mf_qt[self.Gr.gw:self.Gr.nzg-self.Gr.gw],
-                                                    self.diffusive_flux_qt[self.Gr.gw:self.Gr.nzg-self.Gr.gw]))
-        Stats.write_profile('mixing_length', self.mixing_length[kmin:kmax])
-        Stats.write_profile('updraft_qt_precip', self.UpdMicro.prec_source_qt_tot[kmin:kmax])
-        Stats.write_profile('updraft_thetal_precip', self.UpdMicro.prec_source_h_tot[kmin:kmax])
+        Stats.write_profile_new('entrainment_sc', self.Gr, mean_entr_sc)
+        Stats.write_profile_new('detrainment_sc', self.Gr, mean_detr_sc)
+        Stats.write_profile_new('massflux'      , self.Gr, massflux)
+        Stats.write_profile_new('massflux_h'    , self.Gr, mf_h)
+        Stats.write_profile_new('massflux_qt'   , self.Gr, mf_qt)
+        Stats.write_profile_new('massflux_tendency_h'  , self.Gr, self.massflux_tendency_h)
+        Stats.write_profile_new('massflux_tendency_qt' , self.Gr, self.massflux_tendency_qt)
+        Stats.write_profile_new('diffusive_flux_h'     , self.Gr, self.diffusive_flux_h)
+        Stats.write_profile_new('diffusive_flux_qt'    , self.Gr, self.diffusive_flux_qt)
+        Stats.write_profile_new('diffusive_tendency_h' , self.Gr, self.diffusive_tendency_h)
+        Stats.write_profile_new('diffusive_tendency_qt', self.Gr, self.diffusive_tendency_qt)
+        total_flux_h = mf_h[:] + self.diffusive_flux_h[:]
+        total_flux_qt = mf_qt[:] + self.diffusive_flux_qt[:]
+        Stats.write_profile_new('total_flux_h', self.Gr, total_flux_h)
+        Stats.write_profile_new('total_flux_qt',self.Gr, total_flux_qt)
+        Stats.write_profile_new('mixing_length'        , self.Gr, self.mixing_length)
+        Stats.write_profile_new('updraft_qt_precip'    , self.Gr, self.UpdMicro.prec_source_qt_tot)
+        Stats.write_profile_new('updraft_thetal_precip', self.Gr, self.UpdMicro.prec_source_h_tot)
 
         if self.calc_tke:
             self.compute_covariance_dissipation(self.EnvVar.TKE)
-            Stats.write_profile('tke_dissipation', self.EnvVar.TKE.dissipation[kmin:kmax])
-            Stats.write_profile('tke_entr_gain', self.EnvVar.TKE.entr_gain[kmin:kmax])
+            Stats.write_profile_new('tke_dissipation', self.Gr, self.EnvVar.TKE.dissipation)
+            Stats.write_profile_new('tke_entr_gain'  , self.Gr, self.EnvVar.TKE.entr_gain)
             self.compute_covariance_detr(self.EnvVar.TKE)
-            Stats.write_profile('tke_detr_loss', self.EnvVar.TKE.detr_loss[kmin:kmax])
-            Stats.write_profile('tke_shear', self.EnvVar.TKE.shear[kmin:kmax])
-            Stats.write_profile('tke_buoy', self.EnvVar.TKE.buoy[kmin:kmax])
-            Stats.write_profile('tke_pressure', self.EnvVar.TKE.press[kmin:kmax])
-            Stats.write_profile('tke_interdomain', self.EnvVar.TKE.interdomain[kmin:kmax])
+            Stats.write_profile_new('tke_detr_loss'  , self.Gr, self.EnvVar.TKE.detr_loss)
+            Stats.write_profile_new('tke_shear'      , self.Gr, self.EnvVar.TKE.shear)
+            Stats.write_profile_new('tke_buoy'       , self.Gr, self.EnvVar.TKE.buoy)
+            Stats.write_profile_new('tke_pressure'   , self.Gr, self.EnvVar.TKE.press)
+            Stats.write_profile_new('tke_interdomain', self.Gr, self.EnvVar.TKE.interdomain)
 
         if self.calc_scalar_var:
             self.compute_covariance_dissipation(self.EnvVar.Hvar)
-            Stats.write_profile('Hvar_dissipation', self.EnvVar.Hvar.dissipation[kmin:kmax])
+            Stats.write_profile_new('Hvar_dissipation'  , self.Gr, self.EnvVar.Hvar.dissipation)
             self.compute_covariance_dissipation(self.EnvVar.QTvar)
-            Stats.write_profile('QTvar_dissipation', self.EnvVar.QTvar.dissipation[kmin:kmax])
+            Stats.write_profile_new('QTvar_dissipation' , self.Gr, self.EnvVar.QTvar.dissipation)
             self.compute_covariance_dissipation(self.EnvVar.HQTcov)
-            Stats.write_profile('HQTcov_dissipation', self.EnvVar.HQTcov.dissipation[kmin:kmax])
-            Stats.write_profile('Hvar_entr_gain', self.EnvVar.Hvar.entr_gain[kmin:kmax])
-            Stats.write_profile('QTvar_entr_gain', self.EnvVar.QTvar.entr_gain[kmin:kmax])
-            Stats.write_profile('HQTcov_entr_gain', self.EnvVar.HQTcov.entr_gain[kmin:kmax])
+            Stats.write_profile_new('HQTcov_dissipation', self.Gr, self.EnvVar.HQTcov.dissipation)
+            Stats.write_profile_new('Hvar_entr_gain'    , self.Gr, self.EnvVar.Hvar.entr_gain)
+            Stats.write_profile_new('QTvar_entr_gain'   , self.Gr, self.EnvVar.QTvar.entr_gain)
+            Stats.write_profile_new('HQTcov_entr_gain'  , self.Gr, self.EnvVar.HQTcov.entr_gain)
             self.compute_covariance_detr(self.EnvVar.Hvar)
             self.compute_covariance_detr(self.EnvVar.QTvar)
             self.compute_covariance_detr(self.EnvVar.HQTcov)
-            Stats.write_profile('Hvar_detr_loss', self.EnvVar.Hvar.detr_loss[kmin:kmax])
-            Stats.write_profile('QTvar_detr_loss', self.EnvVar.QTvar.detr_loss[kmin:kmax])
-            Stats.write_profile('HQTcov_detr_loss', self.EnvVar.HQTcov.detr_loss[kmin:kmax])
-            Stats.write_profile('Hvar_shear', self.EnvVar.Hvar.shear[kmin:kmax])
-            Stats.write_profile('QTvar_shear', self.EnvVar.QTvar.shear[kmin:kmax])
-            Stats.write_profile('HQTcov_shear', self.EnvVar.HQTcov.shear[kmin:kmax])
-            Stats.write_profile('Hvar_rain', self.EnvVar.Hvar.rain_src[kmin:kmax])
-            Stats.write_profile('QTvar_rain', self.EnvVar.QTvar.rain_src[kmin:kmax])
-            Stats.write_profile('HQTcov_rain', self.EnvVar.HQTcov.rain_src[kmin:kmax])
-            Stats.write_profile('Hvar_interdomain', self.EnvVar.Hvar.interdomain[kmin:kmax])
-            Stats.write_profile('QTvar_interdomain', self.EnvVar.QTvar.interdomain[kmin:kmax])
-            Stats.write_profile('HQTcov_interdomain', self.EnvVar.HQTcov.interdomain[kmin:kmax])
+            Stats.write_profile_new('Hvar_detr_loss'    , self.Gr, self.EnvVar.Hvar.detr_loss)
+            Stats.write_profile_new('QTvar_detr_loss'   , self.Gr, self.EnvVar.QTvar.detr_loss)
+            Stats.write_profile_new('HQTcov_detr_loss'  , self.Gr, self.EnvVar.HQTcov.detr_loss)
+            Stats.write_profile_new('Hvar_shear'        , self.Gr, self.EnvVar.Hvar.shear)
+            Stats.write_profile_new('QTvar_shear'       , self.Gr, self.EnvVar.QTvar.shear)
+            Stats.write_profile_new('HQTcov_shear'      , self.Gr, self.EnvVar.HQTcov.shear)
+            Stats.write_profile_new('Hvar_rain'         , self.Gr, self.EnvVar.Hvar.rain_src)
+            Stats.write_profile_new('QTvar_rain'        , self.Gr, self.EnvVar.QTvar.rain_src)
+            Stats.write_profile_new('HQTcov_rain'       , self.Gr, self.EnvVar.HQTcov.rain_src)
+            Stats.write_profile_new('Hvar_interdomain'  , self.Gr, self.EnvVar.Hvar.interdomain)
+            Stats.write_profile_new('QTvar_interdomain' , self.Gr, self.EnvVar.QTvar.interdomain)
+            Stats.write_profile_new('HQTcov_interdomain', self.Gr, self.EnvVar.HQTcov.interdomain)
 
 
         return

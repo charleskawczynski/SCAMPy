@@ -124,6 +124,11 @@ class NetCDFIO_Stats:
         var[-1, :] = np.array(data)
         return
 
+    def write_profile_new(self, var_name, grid, data):
+        var = self.profiles_grp.variables[var_name]
+        var[-1, :] = np.array(data[grid.gw:grid.nzg-grid.gw])
+        return
+
     def write_reference_profile(self, var_name, data):
         '''
         Writes a profile to the reference group NetCDF Stats file. The variable must have already been
