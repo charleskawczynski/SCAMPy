@@ -488,7 +488,7 @@ class Rico(CasesBase):
         self.Fo.Gr = Gr
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in range(Gr.nzg):
+        for k in Gr.over_points_half():
             # Geostrophic velocity profiles
             self.Fo.ug[k] = -9.9 + 2.0e-3 * Gr.z_half[k]
             self.Fo.vg[k] = -3.8
@@ -775,7 +775,7 @@ class TRMM_LBA(CasesBase):
 
         ind1 = int(mt.trunc(10.0/600.0))
         ind2 = int(mt.ceil(10.0/600.0))
-        for k in range(Gr.nzg):
+        for k in Gr.over_points_half():
             if 10%600.0 == 0:
                 self.Fo.dTdt[k] = self.rad[ind1,k]
             else:
@@ -806,19 +806,19 @@ class TRMM_LBA(CasesBase):
         ind2 = int(mt.ceil(TS.t/600.0))
         ind1 = int(mt.trunc(TS.t/600.0))
         if TS.t<600.0: # first 10 min use the radiative forcing of t=10min (as in the paper)
-            for k in range(self.Fo.Gr.nzg):
+            for k in self.Fo.Gr.over_points_half():
                 self.Fo.dTdt[k] = self.rad[0,k]
         elif TS.t>18900.0:
-            for k in range(self.Fo.Gr.nzg):
+            for k in self.Fo.Gr.over_points_half():
                 self.Fo.dTdt[k] = (self.rad[31,k]-self.rad[30,k])/(self.rad_time[31]-self.rad_time[30])\
                                       *(18900.0/60.0-self.rad_time[30])+self.rad[30,k]
 
         else:
             if TS.t%600.0 == 0:
-                for k in range(self.Fo.Gr.nzg):
+                for k in self.Fo.Gr.over_points_half():
                     self.Fo.dTdt[k] = self.rad[ind1,k]
             else: # in all other cases - interpolate
-                for k in range(self.Fo.Gr.nzg):
+                for k in self.Fo.Gr.over_points_half_real():
                     if self.Fo.Gr.z_half[k] < 22699.48:
                         self.Fo.dTdt[k]    = (self.rad[ind2,k]-self.rad[ind1,k])\
                                                  /(self.rad_time[ind2]-self.rad_time[ind1])\
@@ -902,7 +902,7 @@ class ARM_SGP(CasesBase):
         self.Fo.Gr = Gr
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in range(Gr.nzg):
+        for k in Gr.over_points_half():
             self.Fo.ug[k] = 10.0
             self.Fo.vg[k] = 0.0
 
@@ -942,7 +942,7 @@ class ARM_SGP(CasesBase):
         Rqt_in = np.array([0.08, 0.02, 0.04, -0.1, -0.16, -0.3])/1000.0/3600.0 # Radiative forcing for qt converted to [kg/kg/sec]
         dTdt = np.interp(TS.t,t_in,AT_in) + np.interp(TS.t,t_in,RT_in)
         dqtdt =  np.interp(TS.t,t_in,Rqt_in)
-        for k in range(self.Fo.Gr.nzg): # correct dims
+        for k in self.Fo.Gr.over_points_half():
                 if self.Fo.Gr.z_half[k] <=1000.0:
                     self.Fo.dTdt[k] = dTdt
                     self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.Ref.p0_half[k])

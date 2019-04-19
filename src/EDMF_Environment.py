@@ -212,12 +212,10 @@ class EnvironmentThermodynamics:
 
     def eos_update_SA_mean(self, EnvVar, in_Env):
 
-        gw = self.Gr.gw
-
         if EnvVar.H.name != 'thetal':
             sys.exit('EDMF_Environment: rain source terms are defined for thetal as model variable')
 
-        for k in range(gw,self.Gr.nzg-gw):
+        for k in self.Gr.over_points_half_real():
             # condensation + autoconversion
             T, ql  = eos(self.t_to_prog_fp, self.prog_to_t_fp, self.Ref.p0_half[k], EnvVar.QT.values[k], EnvVar.H.values[k])
             mph = microphysics(T, ql, self.Ref.p0_half[k], EnvVar.QT.values[k], self.max_supersaturation, in_Env)
@@ -233,7 +231,6 @@ class EnvironmentThermodynamics:
         #TODO - read prescribed var/covar from file to compare with LES data
         #TODO - add tendencies for GMV H, QT and QR due to rain
 
-        gw = self.Gr.gw
         abscissas = a
         weights = w
         # arrays for storing quadarature points and ints for labeling items in the arrays
@@ -249,7 +246,7 @@ class EnvironmentThermodynamics:
 
         # for testing (to be removed)
         if EnvVar.use_prescribed_scalar_var:
-            for k in range(gw, self.Gr.nzg-gw):
+            for k in self.Gr.over_points_half_real():
                 if k * self.Gr.dz <= 1500:
                     EnvVar.QTvar.values[k]  = EnvVar.prescribed_QTvar
                 else:
@@ -271,7 +268,7 @@ class EnvironmentThermodynamics:
         i_ql, i_T, i_thl, i_alpha, i_cf, i_qr, i_qt_cld, i_qt_dry, i_T_cld, i_T_dry = range(env_len)
         i_SH_qt, i_Sqt_H, i_SH_H, i_Sqt_qt, i_Sqt, i_SH = range(src_len)
 
-        for k in range(gw, self.Gr.nzg-gw):
+        for k in self.Gr.over_points_half_real():
             if EnvVar.QTvar.values[k] != 0.0 and EnvVar.Hvar.values[k] != 0.0 and EnvVar.HQTcov.values[k] != 0.0:
                 sd_q = np.sqrt(EnvVar.QTvar.values[k])
                 sd_h = np.sqrt(EnvVar.Hvar.values[k])
@@ -375,10 +372,9 @@ class EnvironmentThermodynamics:
         # this function follows the derivation in
         # Sommeria and Deardorff 1977: Sub grid scale condensation in models of non-precipitating clouds.
         # J. Atmos. Sci., 34, 344-355.
-        gw = self.Gr.gw
 
         if EnvVar.H.name == 'thetal':
-            for k in range(gw, self.Gr.nzg-gw):
+            for k in self.Gr.over_points_half_real():
                 Lv = latent_heat(EnvVar.T.values[k])
                 cp = cpd
                 # paper notation used below
