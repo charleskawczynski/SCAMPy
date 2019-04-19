@@ -10,12 +10,9 @@ from thermodynamic_functions import  *
 from microphysics_functions import *
 
 class EnvironmentVariable:
-    def __init__(self, nz, loc, kind, name, units):
-        self.values = np.zeros((nz,),dtype=np.double, order='c')
-        self.flux = np.zeros((nz,),dtype=np.double, order='c')
-        if loc != 'half' and loc != 'full':
-            print('Invalid location setting for variable! Must be half or full')
-        self.loc = loc
+    def __init__(self, Gr, loc, kind, name, units):
+        self.values = Field.field(Gr, loc)
+        self.flux = Field.field(Gr, loc)
         if kind != 'scalar' and kind != 'velocity':
             print ('Invalid kind setting for variable! Must be scalar or velocity')
         self.kind = kind
@@ -23,19 +20,16 @@ class EnvironmentVariable:
         self.units = units
 
 class EnvironmentVariable_2m:
-    def __init__(self, nz, loc, kind, name, units):
-        self.values = np.zeros((nz,),dtype=np.double, order='c')
-        self.dissipation = np.zeros((nz,),dtype=np.double, order='c')
-        self.entr_gain = np.zeros((nz,),dtype=np.double, order='c')
-        self.detr_loss = np.zeros((nz,),dtype=np.double, order='c')
-        self.buoy = np.zeros((nz,),dtype=np.double, order='c')
-        self.press = np.zeros((nz,),dtype=np.double, order='c')
-        self.shear = np.zeros((nz,),dtype=np.double, order='c')
-        self.interdomain = np.zeros((nz,),dtype=np.double, order='c')
-        self.rain_src = np.zeros((nz,),dtype=np.double, order='c')
-        if loc != 'half':
-            print('Invalid location setting for variable! Must be half')
-        self.loc = loc
+    def __init__(self, Gr, loc, kind, name, units):
+        self.values      = Field.field(Gr, loc)
+        self.dissipation = Field.field(Gr, loc)
+        self.entr_gain   = Field.field(Gr, loc)
+        self.detr_loss   = Field.field(Gr, loc)
+        self.buoy        = Field.field(Gr, loc)
+        self.press       = Field.field(Gr, loc)
+        self.shear       = Field.field(Gr, loc)
+        self.interdomain = Field.field(Gr, loc)
+        self.rain_src    = Field.field(Gr, loc)
         if kind != 'scalar' and kind != 'velocity':
             print ('Invalid kind setting for variable! Must be scalar or velocity')
         self.kind = kind
@@ -48,18 +42,18 @@ class EnvironmentVariables:
         nz = Gr.nzg
         self.Gr = Gr
 
-        self.W = EnvironmentVariable(nz, 'full', 'velocity', 'w','m/s' )
-        self.QT = EnvironmentVariable( nz, 'half', 'scalar', 'qt','kg/kg' )
-        self.QL = EnvironmentVariable( nz, 'half', 'scalar', 'ql','kg/kg' )
-        self.QR = EnvironmentVariable( nz, 'half', 'scalar', 'qr','kg/kg' )
+        self.W   = EnvironmentVariable(Gr, 'full', 'velocity', 'w','m/s' )
+        self.QT  = EnvironmentVariable(Gr, 'half', 'scalar', 'qt','kg/kg' )
+        self.QL  = EnvironmentVariable(Gr, 'half', 'scalar', 'ql','kg/kg' )
+        self.QR  = EnvironmentVariable(Gr, 'half', 'scalar', 'qr','kg/kg' )
+        self.THL = EnvironmentVariable(Gr, 'half', 'scalar', 'thetal', 'K')
+        self.T   = EnvironmentVariable(Gr, 'half', 'scalar', 'temperature','K' )
+        self.B   = EnvironmentVariable(Gr, 'half', 'scalar', 'buoyancy','m^2/s^3' )
+        self.CF  = EnvironmentVariable(Gr, 'half', 'scalar','cloud_fraction', '-')
         if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-            self.H = EnvironmentVariable( nz, 'half', 'scalar', 's','J/kg/K' )
+            self.H = EnvironmentVariable(Gr, 'half', 'scalar', 's','J/kg/K' )
         elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-            self.H = EnvironmentVariable( nz, 'half', 'scalar', 'thetal','K' )
-        self.THL = EnvironmentVariable(nz, 'half', 'scalar', 'thetal', 'K')
-        self.T = EnvironmentVariable( nz, 'half', 'scalar', 'temperature','K' )
-        self.B = EnvironmentVariable( nz, 'half', 'scalar', 'buoyancy','m^2/s^3' )
-        self.CF = EnvironmentVariable(nz, 'half', 'scalar','cloud_fraction', '-')
+            self.H = EnvironmentVariable(Gr, 'half', 'scalar', 'thetal','K' )
 
         # TKE   TODO   repeated from Variables.pyx logic
         if  namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':
@@ -84,19 +78,19 @@ class EnvironmentVariables:
             print('Defaulting to saturation adjustment with respect to environmental means')
 
         if self.calc_tke:
-            self.TKE = EnvironmentVariable_2m( nz, 'half', 'scalar', 'tke','m^2/s^2' )
+            self.TKE = EnvironmentVariable_2m(Gr, 'half', 'scalar', 'tke','m^2/s^2' )
 
         if self.calc_scalar_var:
-            self.QTvar = EnvironmentVariable_2m( nz, 'half', 'scalar', 'qt_var','kg^2/kg^2' )
+            self.QTvar = EnvironmentVariable_2m(Gr, 'half', 'scalar', 'qt_var','kg^2/kg^2' )
             if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-                self.Hvar = EnvironmentVariable_2m(nz, 'half', 'scalar', 's_var', '(J/kg/K)^2')
-                self.HQTcov = EnvironmentVariable_2m(nz, 'half', 'scalar', 's_qt_covar', '(J/kg/K)(kg/kg)' )
+                self.Hvar = EnvironmentVariable_2m(Gr, 'half', 'scalar', 's_var', '(J/kg/K)^2')
+                self.HQTcov = EnvironmentVariable_2m(Gr, 'half', 'scalar', 's_qt_covar', '(J/kg/K)(kg/kg)' )
             elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-                self.Hvar = EnvironmentVariable_2m(nz, 'half', 'scalar', 'thetal_var', 'K^2')
-                self.HQTcov = EnvironmentVariable_2m(nz, 'half', 'scalar', 'thetal_qt_covar', 'K(kg/kg)' )
+                self.Hvar = EnvironmentVariable_2m(Gr, 'half', 'scalar', 'thetal_var', 'K^2')
+                self.HQTcov = EnvironmentVariable_2m(Gr, 'half', 'scalar', 'thetal_qt_covar', 'K(kg/kg)' )
 
         if self.EnvThermo_scheme == 'sommeria_deardorff':
-            self.THVvar = EnvironmentVariable(nz, 'half', 'scalar', 'thetav_var', 'K^2' )
+            self.THVvar = EnvironmentVariable(Gr, 'half', 'scalar', 'thetav_var', 'K^2' )
 
         #TODO  - most likely a temporary solution (unless it could be useful for testing)
         try:

@@ -28,11 +28,11 @@ def ParameterizationFactory(namelist, paramlist, Gr, Ref):
 # A base class common to all turbulence parameterizations
 class ParameterizationBase:
     def __init__(self, paramlist, Gr, Ref):
-        self.turbulence_tendency  = np.zeros((Gr.nzg,), dtype=np.double, order='c')
+        self.turbulence_tendency = Field.half(Gr)
         self.Gr = Gr # grid class
         self.Ref = Ref # reference state class
-        self.KM = VariableDiagnostic(Gr.nzg,'half', 'scalar','sym', 'diffusivity', 'm^2/s') # eddy viscosity
-        self.KH = VariableDiagnostic(Gr.nzg,'half', 'scalar','sym', 'viscosity', 'm^2/s') # eddy diffusivity
+        self.KM = VariableDiagnostic(Gr, 'half', 'scalar','sym', 'diffusivity', 'm^2/s') # eddy viscosity
+        self.KH = VariableDiagnostic(Gr, 'half', 'scalar','sym', 'viscosity', 'm^2/s') # eddy diffusivity
         # get values from paramlist
         self.prandtl_number = paramlist['turbulence']['prandtl_number']
         self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']
@@ -63,7 +63,7 @@ class ParameterizationBase:
 
     # Update the diagnosis of the inversion height, using the maximum temperature gradient method
     def update_inversion(self, GMV, option ):
-        theta_rho = np.zeros((self.Gr.nzg,),dtype=np.double, order='c')
+        theta_rho = Field.half(self.Gr)
         maxgrad = 0.0
         gw = self.Gr.gw
         kmin = gw
@@ -359,7 +359,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.m = np.zeros((self.n_updrafts, Gr.nzg),dtype=np.double, order='c')
 
         # mixing length
-        self.mixing_length = np.zeros((Gr.nzg,),dtype=np.double, order='c')
+        self.mixing_length = Field.half(Gr)
 
         # Near-surface BC of updraft area fraction
         self.area_surface_bc= np.zeros((self.n_updrafts,),dtype=np.double, order='c')
@@ -368,25 +368,24 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.qt_surface_bc= np.zeros((self.n_updrafts,),dtype=np.double, order='c')
 
         # Mass flux tendencies of mean scalars (for output)
-        self.massflux_tendency_h = np.zeros((Gr.nzg,),dtype=np.double,order='c')
-        self.massflux_tendency_qt = np.zeros((Gr.nzg,),dtype=np.double,order='c')
-
+        self.massflux_tendency_h = Field.half(Gr)
+        self.massflux_tendency_qt = Field.half(Gr)
 
         # (Eddy) diffusive tendencies of mean scalars (for output)
-        self.diffusive_tendency_h = np.zeros((Gr.nzg,),dtype=np.double,order='c')
-        self.diffusive_tendency_qt = np.zeros((Gr.nzg,),dtype=np.double,order='c')
+        self.diffusive_tendency_h = Field.half(Gr)
+        self.diffusive_tendency_qt = Field.half(Gr)
 
         # Vertical fluxes for output
-        self.massflux_h = np.zeros((Gr.nzg,),dtype=np.double,order='c')
-        self.massflux_qt = np.zeros((Gr.nzg,),dtype=np.double,order='c')
-        self.diffusive_flux_h = np.zeros((Gr.nzg,),dtype=np.double,order='c')
-        self.diffusive_flux_qt = np.zeros((Gr.nzg,),dtype=np.double,order='c')
+        self.massflux_h = Field.half(Gr)
+        self.massflux_qt = Field.half(Gr)
+        self.diffusive_flux_h = Field.half(Gr)
+        self.diffusive_flux_qt = Field.half(Gr)
         if self.calc_tke:
-            self.massflux_tke = np.zeros((Gr.nzg,),dtype=np.double,order='c')
+            self.massflux_tke = Field.half(Gr)
 
         # Added by Ignacio : Length scheme in use (mls), and smooth min effect (ml_ratio)
-        self.mls = np.zeros((Gr.nzg,),dtype=np.double, order='c')
-        self.ml_ratio = np.zeros((Gr.nzg,),dtype=np.double, order='c')
+        self.mls = Field.half(Gr)
+        self.ml_ratio = Field.half(Gr)
         return
 
     def initialize(self, GMV):
@@ -453,11 +452,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     def io(self, Stats):
         kmin = self.Gr.gw
         kmax = self.Gr.nzg-self.Gr.gw
-        mean_entr_sc = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
-        mean_detr_sc = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
-        massflux = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
-        mf_h = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
-        mf_qt = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
+        mean_entr_sc = Field.half(self.Gr)
+        mean_detr_sc = Field.half(self.Gr)
+        massflux     = Field.half(self.Gr)
+        mf_h         = Field.half(self.Gr)
+        mf_qt        = Field.half(self.Gr)
 
         self.UpdVar.io(Stats)
         self.EnvVar.io(Stats)

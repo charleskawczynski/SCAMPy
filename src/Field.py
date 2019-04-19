@@ -7,12 +7,21 @@ class Field:
         return
 
     @classmethod
+    def half(cls, grid):
+        return Field(grid.nzg, False)
+
+    @classmethod
     def full(cls, grid):
         return Field(grid.nzg, True)
 
     @classmethod
-    def half(cls, grid):
-        return Field(grid.nzg, False)
+    def field(cls, grid, loc):
+        if loc == 'half':
+            return Field.half(grid)
+        elif loc == 'full':
+            return Field.full(grid)
+        else:
+            print('Invalid location setting for variable! Must be half or full')
 
     def __getitem__(self, key):
         return self.values[key]

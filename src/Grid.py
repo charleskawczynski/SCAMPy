@@ -41,7 +41,7 @@ class Grid:
         return self.nz+self.gw-1
 
     def k_top_atmos_bl(self): # Index for fields at half location
-        return self.nz+self.gw-1
+        return self.nz+self.gw-1 # = nzg - 1
 
     def k_surface_ghost_full(self):
         return self.k_surface()-1

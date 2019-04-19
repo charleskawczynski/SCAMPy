@@ -13,12 +13,12 @@ import pylab as plt
 
 class UpdraftVariable:
     def __init__(self, nu, nz, loc, kind, name, units):
-        self.values = np.zeros((nu,nz),dtype=np.double, order='c')
-        self.old = np.zeros((nu,nz),dtype=np.double, order='c')  # needed for prognostic updrafts
-        self.new = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
+        self.values     = np.zeros((nu,nz),dtype=np.double, order='c')
+        self.old        = np.zeros((nu,nz),dtype=np.double, order='c')  # needed for prognostic updrafts
+        self.new        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
         self.tendencies = np.zeros((nu,nz),dtype=np.double, order='c')
-        self.flux = np.zeros((nu,nz),dtype=np.double, order='c')
-        self.bulkvalues = np.zeros((nz,), dtype=np.double, order = 'c')
+        self.flux       = np.zeros((nu,nz),dtype=np.double, order='c')
+        self.bulkvalues = np.zeros((nz,)  ,dtype=np.double, order='c')
         if loc != 'half' and loc != 'full':
             print('Invalid location setting for variable! Must be half or full')
         self.loc = loc
@@ -323,8 +323,8 @@ class UpdraftMicrophysics:
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
         self.prec_source_h = np.zeros((n_updraft, Gr.nzg), dtype=np.double, order='c')
         self.prec_source_qt = np.zeros((n_updraft, Gr.nzg), dtype=np.double, order='c')
-        self.prec_source_h_tot = np.zeros((Gr.nzg,), dtype=np.double, order='c')
-        self.prec_source_qt_tot = np.zeros((Gr.nzg,), dtype=np.double, order='c')
+        self.prec_source_h_tot  = Field.half(Gr)
+        self.prec_source_qt_tot = Field.half(Gr)
         return
 
     def compute_sources(self, UpdVar):
