@@ -65,9 +65,6 @@ class ParameterizationBase:
     def update_inversion(self, GMV, option ):
         theta_rho = Field.half(self.Gr)
         maxgrad = 0.0
-        gw = self.Gr.gw
-        kmin = gw
-        kmax = self.Gr.nzg-gw
         theta_rho_bl = theta_rho.surface_bl(self.Gr)
 
         Ri_bulk_crit = 0.0
@@ -90,7 +87,7 @@ class ParameterizationBase:
                     maxgrad = grad
                     self.zi = self.Gr.z[k]
         elif option == 'critical_Ri':
-            self.zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.Gr.z_half, kmin, kmax, self.Ri_bulk_crit)
+            self.zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.Gr, self.Ri_bulk_crit)
 
         else:
             print('INVERSION HEIGHT OPTION NOT RECOGNIZED')

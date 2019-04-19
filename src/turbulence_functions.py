@@ -166,20 +166,22 @@ def get_wstar(bflux, zi):
     return np.cbrt(np.fmax(bflux * zi, 0.0))
 
 # BL height
-def get_inversion(theta_rho, u, v, z_half, kmin, kmax, Ri_bulk_crit):
-    theta_rho_b = theta_rho[kmin]
+def get_inversion(theta_rho, u, v, grid, Ri_bulk_crit):
+    theta_rho_b = theta_rho.surface_bl(grid)
     h = 0.0
     Ri_bulk=0.0
     Ri_bulk_low = 0.0
+    kmin = grid.k_surface_bl()
     k = kmin
+    z_half = grid.z_half
     # test if we need to look at the free convective limit
     if (u[kmin] * u[kmin] + v[kmin] * v[kmin]) <= 0.01:
-        for k in range(kmin,kmax):
+        for k in grid.over_points_half_real():
             if theta_rho[k] > theta_rho_b:
                 break
         h = (z_half[k] - z_half[k-1])/(theta_rho[k] - theta_rho[k-1]) * (theta_rho_b - theta_rho[k-1]) + z_half[k-1]
     else:
-        for k in range(kmin,kmax):
+        for k in grid.over_points_half_real():
             Ri_bulk_low = Ri_bulk
             Ri_bulk = g * (theta_rho[k] - theta_rho_b) * z_half[k]/theta_rho_b / (u[k] * u[k] + v[k] * v[k])
             if Ri_bulk > Ri_bulk_crit:

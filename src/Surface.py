@@ -19,16 +19,13 @@ class SurfaceBase:
     def update(self, GMV):
         return
     def free_convection_windspeed(self, GMV):
-        gw = self.Gr.gw
-        kmin = gw
-        kmax = self.Gr.nzg-gw
-        theta_rho = np.zeros((self.Gr.nzg,), dtype=np.double, order='c')
+        theta_rho = Field.half(self.Gr)
 
         # Need to get theta_rho
         for k in range(self.Gr.nzg):
             qv = GMV.QT.values[k] - GMV.QL.values[k]
             theta_rho[k] = theta_rho_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
-        zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.Gr.z_half, kmin, kmax, self.Ri_bulk_crit)
+        zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.Gr, self.Ri_bulk_crit)
         wstar = get_wstar(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
         return
