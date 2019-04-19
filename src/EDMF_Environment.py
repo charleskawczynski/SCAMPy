@@ -2,6 +2,7 @@ import numpy as np
 import sys
 from parameters import *
 from Grid import  Grid
+from Field import Field
 from TimeStepping import TimeStepping
 from ReferenceState import ReferenceState
 from Variables import VariableDiagnostic, GridMeanVariables
@@ -423,16 +424,6 @@ class EnvironmentThermodynamics:
                 self.qv_cloudy[k] = EnvVar.QT.values[k] - EnvVar.QL.values[k]
                 self.qt_cloudy[k] = EnvVar.QT.values[k]
                 self.th_cloudy[k] = EnvVar.T.values[k]/exner_c(self.Ref.p0_half[k])
-
-                #using the approximation in eq. (25) in SD, noting that in the paper there is a typo in the first
-                # condition and 1.6 there should be -1.6
-                # if Q1<-1.6:
-                #     EnvVar.QL.values[k] = 0.0*lambda1*sigma1
-                # elif Q1>-1.6 and Q1<1.6:
-                #     EnvVar.QL.values[k] = ((Q1+1.6)**2/6.4)*lambda1*sigma1
-                # elif Q1>1.6:
-                #     EnvVar.QL.values[k] = Q1*lambda1*sigma1
-                #
 
         elif EnvVar.H.name == 's':
             sys.exit('EDMF_Environment: Sommeria Deardorff is not defined for using entropy as thermodyanmic variable')

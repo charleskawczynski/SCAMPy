@@ -19,6 +19,18 @@ class Grid:
             count += 1
         return
 
+    def k_first_full(self):
+        return 0
+
+    def k_first_half(self):
+        return 0
+
+    def k_last_full(self):
+        return self.nzg
+
+    def k_last_half(self):
+        return self.nzg
+
     def k_surface(self): # Index for fields at full location
         return self.gw-1
 
@@ -26,16 +38,28 @@ class Grid:
         return self.gw
 
     def k_top_atmos(self): # Index for fields at full location
-        return self.nz+self.gw
+        return self.nz+self.gw-1
 
     def k_top_atmos_bl(self): # Index for fields at half location
-        return self.nz+self.gw
+        return self.nz+self.gw-1
+
+    def k_surface_ghost_full(self):
+        return self.k_surface()-1
+
+    def k_surface_ghost_half(self):
+        return self.k_surface_bl()-1
+
+    def k_top_atmos_ghost_full(self):
+        return self.k_top_atmos()+1
+
+    def k_top_atmos_ghost_half(self):
+        return self.k_top_atmos_bl()+1
 
     def k_full_real(self):
-        return slice(self.k_surface(),self.k_top_atmos(),1)
+        return slice(self.k_surface(),self.k_top_atmos()+1,1)
 
     def k_half_real(self):
-        return slice(self.k_surface_bl(),self.k_top_atmos_bl(),1)
+        return slice(self.k_surface_bl(),self.k_top_atmos_bl()+1,1)
 
     def z_surface(self):
         return self.z[self.k_surface()]
@@ -50,14 +74,29 @@ class Grid:
         return [self.z_half[i] for i in self.over_points_half_real()]
 
     def over_points_full(self):
-        return range(self.nzg)
+        return range(self.k_surface_ghost_full(), self.k_top_atmos_ghost_full()+1)
 
     def over_points_half(self):
-        return range(self.nzg)
+        return range(self.k_surface_ghost_half(), self.k_top_atmos_ghost_half()+1)
+
+    def over_points_full_ghost_surface(self):
+        return list(range(self.k_first_full(), self.k_surface()+1))
+
+    def over_points_full_ghost_top(self):
+        return list(range(self.k_top_atmos_ghost_full(), self.k_last_full()))
+
+    def over_points_half_ghost_surface(self):
+        return list(range(self.k_first_half(), self.k_surface_bl()))
+
+    def over_points_half_ghost_top(self):
+        return list(range(self.k_top_atmos_ghost_half(), self.k_last_half()))
+
+    def over_points_half_ghost(self):
+        return list(range(self.k_surface_ghost_half(), self.k_top_atmos_ghost_half()))
 
     def over_points_full_real(self):
-        return range(self.k_surface(), self.k_top_atmos())
+        return range(self.k_surface(), self.k_top_atmos()+1)
 
     def over_points_half_real(self):
-        return range(self.k_surface_bl(), self.k_top_atmos_bl())
+        return range(self.k_surface_bl(), self.k_top_atmos_bl()+1)
 

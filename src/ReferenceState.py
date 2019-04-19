@@ -1,8 +1,8 @@
 from Grid import Grid
+from Field import Field
 from NetCDFIO import NetCDFIO_Stats
 import numpy as np
-import pylab as plt
-from Field import Field
+import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from thermodynamic_functions import t_to_entropy_c, eos_first_guess_entropy, eos, alpha_c
 from parameters import *
@@ -33,13 +33,10 @@ class ReferenceState:
 
         # Form a right hand side for integrating the hydrostatic equation to
         # determine the reference pressure
-        ##_____________TO COMPILE______________
         def rhs(p, z):
             T, q_l = eos(t_to_entropy_c, eos_first_guess_entropy, np.exp(p),  self.qtg, self.sg)
             q_i = 0.0
             return -g / (Rd * T * (1.0 - self.qtg + eps_vi * (self.qtg - q_l - q_i)))
-
-        ##_____________TO COMPILE______________
 
         # Construct arrays for integration points
 
@@ -57,13 +54,10 @@ class ReferenceState:
         p[Gr.k_full_real()] = odeint(rhs, p0, z, hmax=1.0)[:, 0]
         p_half[Gr.k_half_real()] = odeint(rhs, p0, z_half, hmax=1.0)[:, 0]
 
+        p_half.apply_Neumann(Gr, 0.0)
+        p.apply_Neumann(Gr, 0.0)
+
         # Set boundary conditions
-        p[:Gr.gw - 1] = p[2 * Gr.gw - 2:Gr.gw - 1:-1]
-        p[-Gr.gw + 1:] = p[-Gr.gw - 1:-2 * Gr.gw:-1]
-
-        p_half[:Gr.gw] = p_half[2 * Gr.gw - 1:Gr.gw - 1:-1]
-        p_half[-Gr.gw:] = p_half[-Gr.gw - 1:-2 * Gr.gw - 1:-1]
-
         p[:] = np.exp(p[:])
         p_half[:] = np.exp(p_half[:])
 
@@ -83,13 +77,14 @@ class ReferenceState:
         qv_half = Field.half(Gr)
 
         # Compute reference state thermodynamic profiles
-        #_____COMMENTED TO TEST COMPILATION_____________________
-        for k in Gr.over_points_full():
+        # for k in Gr.over_points_full():
+        for k in Gr.over_points_full_real():
             temperature[k], ql[k] = eos(t_to_entropy_c, eos_first_guess_entropy, p_[k], self.qtg, self.sg)
             qv[k] = self.qtg - (ql[k] + qi[k])
             alpha[k] = alpha_c(p_[k], temperature[k], self.qtg, qv[k])
 
-        for k in Gr.over_points_half():
+        # for k in Gr.over_points_half():
+        for k in Gr.over_points_half_real():
             temperature_half[k], ql_half[k] = eos(t_to_entropy_c, eos_first_guess_entropy, p_half_[k], self.qtg, self.sg)
             qv_half[k] = self.qtg - (ql_half[k] + qi_half[k])
             alpha_half[k] = alpha_c(p_half_[k], temperature_half[k], self.qtg, qv_half[k])
@@ -102,13 +97,26 @@ class ReferenceState:
                 print('Error in reference profiles entropy not constant !')
                 print('Likely error in saturation adjustment')
 
-        # print(np.array(Gr.extract_local_ghosted(alpha_half,2)))
-        self.alpha0_half = alpha_half
-        self.alpha0 = alpha
-        self.p0[:] = p_
-        self.p0_half[:] = p_half
-        self.rho0 = 1.0 / np.array(self.alpha0)
-        self.rho0_half = 1.0 / np.array(self.alpha0_half)
+        self.alpha0_half[:] = alpha_half[:]
+        self.alpha0[:] = alpha[:]
+        self.p0[:] = p_[:]
+        self.p0_half[:] = p_half[:]
+        self.rho0[:] = 1.0 / np.array(self.alpha0[:])
+        self.rho0_half[:] = 1.0 / np.array(self.alpha0_half[:])
+
+        self.alpha0_half.extrap(Gr)
+        self.alpha0.extrap(Gr)
+        self.p0.extrap(Gr)
+        self.p0_half.extrap(Gr)
+        self.rho0.extrap(Gr)
+        self.rho0_half.extrap(Gr)
+
+        plt.plot(self.p0.values         , Gr.z); plt.savefig(Stats.outpath+'p0.png'         ); plt.close()
+        plt.plot(self.p0_half.values    , Gr.z); plt.savefig(Stats.outpath+'p0_half.png'    ); plt.close()
+        plt.plot(self.rho0.values       , Gr.z); plt.savefig(Stats.outpath+'rho0.png'       ); plt.close()
+        plt.plot(self.rho0_half.values  , Gr.z); plt.savefig(Stats.outpath+'rho0_half.png'  ); plt.close()
+        plt.plot(self.alpha0.values     , Gr.z); plt.savefig(Stats.outpath+'alpha0.png'     ); plt.close()
+        plt.plot(self.alpha0_half.values, Gr.z); plt.savefig(Stats.outpath+'alpha0_half.png'); plt.close()
 
         Stats.add_reference_profile('alpha0')
         Stats.write_reference_profile('alpha0', alpha[Gr.gw:-Gr.gw])
@@ -124,15 +132,6 @@ class ReferenceState:
         Stats.write_reference_profile('rho0', 1.0 / np.array(alpha[Gr.gw:-Gr.gw]))
         Stats.add_reference_profile('rho0_half')
         Stats.write_reference_profile('rho0_half', 1.0 / np.array(alpha_half[Gr.gw:-Gr.gw]))
-
-        # Stats.add_reference_profile('temperature0', Gr, Pa)
-        # Stats.write_reference_profile('temperature0', temperature_half[Gr.dims.gw:-Gr.dims.gw], Pa)
-        # Stats.add_reference_profile('ql0', Gr, Pa)
-        # Stats.write_reference_profile('ql0', ql_half[Gr.dims.gw:-Gr.dims.gw], Pa)
-        # Stats.add_reference_profile('qv0', Gr, Pa)
-        # Stats.write_reference_profile('qv0', qv_half[Gr.dims.gw:-Gr.dims.gw], Pa)
-        # Stats.add_reference_profile('qi0', Gr, Pa)
-        # Stats.write_reference_profile('qi0', qi_half[Gr.dims.gw:-Gr.dims.gw], Pa)
 
         return
 

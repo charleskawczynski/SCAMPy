@@ -4,6 +4,7 @@ import sys
 from EDMF_Updrafts import *
 from EDMF_Environment import *
 from Grid import Grid
+from Field import Field
 from Variables import VariablePrognostic, VariableDiagnostic, GridMeanVariables
 from Surface import SurfaceBase
 from Cases import  CasesBase

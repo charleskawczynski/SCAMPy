@@ -3,6 +3,7 @@ from parameters import *
 from thermodynamic_functions import  *
 from microphysics_functions import  *
 import Grid as Grid
+from Field import Field
 import ReferenceState
 from Variables import GridMeanVariables
 from NetCDFIO import NetCDFIO_Stats
