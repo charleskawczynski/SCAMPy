@@ -211,7 +211,6 @@ def get_surface_variance(flux1, flux2, ustar, zLL, oblength):
     else:
         return 4.0 * c_star1 * c_star2
 
-# Math-y stuff
 def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
     nz = nzg - 2* gw
     for k in range(gw,nzg-gw):

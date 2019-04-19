@@ -22,7 +22,7 @@ class SurfaceBase:
         theta_rho = Field.half(self.Gr)
 
         # Need to get theta_rho
-        for k in range(self.Gr.nzg):
+        for k in self.Gr.over_points_half():
             qv = GMV.QT.values[k] - GMV.QL.values[k]
             theta_rho[k] = theta_rho_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
         zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.Gr, self.Ri_bulk_crit)
