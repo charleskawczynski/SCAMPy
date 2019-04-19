@@ -539,7 +539,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         if TS.nstep == 0:
             self.initialize_covariance(GMV, Case)
-            for k in range(self.Gr.nzg):
+            for k in self.Gr.over_points_half():
                 if self.calc_tke:
                     self.EnvVar.TKE.values[k] = GMV.TKE.values[k]
                 if self.calc_scalar_var:
@@ -805,7 +805,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         gw = self.Gr.gw
         if whichvals == 'values':
 
-            for k in range(self.Gr.nzg-1):
+            for k in self.Gr.over_points_half():
                 val1 = 1.0/(1.0-self.UpdVar.Area.bulkvalues[k])
                 val2 = self.UpdVar.Area.bulkvalues[k] * val1
                 self.EnvVar.QT.values[k] = val1 * GMV.QT.values[k] - val2 * self.UpdVar.QT.bulkvalues[k]
@@ -827,7 +827,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         elif whichvals == 'mf_update':
             # same as above but replace GMV.SomeVar.values with GMV.SomeVar.mf_update
 
-            for k in range(self.Gr.nzg-1):
+            for k in self.Gr.over_points_half():
                 val1 = 1.0/(1.0-self.UpdVar.Area.bulkvalues[k])
                 val2 = self.UpdVar.Area.bulkvalues[k] * val1
 
@@ -862,7 +862,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         tke_factor = 1.0
 
 
-        for k in range(self.Gr.nzg):
+        for k in self.Gr.over_points_half():
             if covar_e.name == 'tke':
                 tke_factor = 0.5
                 phi_diff = interp2pt(phi_e.values[k-1]-gmv_phi[k-1], phi_e.values[k]-gmv_phi[k])
@@ -896,7 +896,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         if covar_e.name == 'tke':
             tke_factor = 0.5
 
-        for k in range(self.Gr.nzg):
+        for k in self.Gr.over_points_half():
             if ae[k] > 0.0:
                 if covar_e.name == 'tke':
                     phi_diff = interp2pt(phi_e.values[k-1] - gmv_phi[k-1],phi_e.values[k] - gmv_phi[k])
@@ -1435,12 +1435,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         if self.calc_tke:
             if ws > 0.0:
-                for k in range(self.Gr.nzg):
+                for k in self.Gr.over_points_half():
                     z = self.Gr.z_half[k]
                     GMV.TKE.values[k] = ws * 1.3 * np.cbrt((us*us*us)/(ws*ws*ws) + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
         if self.calc_scalar_var:
             if ws > 0.0:
-                for k in range(self.Gr.nzg):
+                for k in self.Gr.over_points_half():
                     z = self.Gr.z_half[k]
                     # need to rethink of how to initilize the covarinace profiles - for nowmI took the TKE profile
                     GMV.Hvar.values[k]   = GMV.Hvar.values[self.Gr.gw] * ws * 1.3 * np.cbrt((us*us*us)/(ws*ws*ws) + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
@@ -1511,7 +1511,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                         phi_e,  psi_e,
                         Covar):
 
-        for k in range(self.Gr.nzg):
+        for k in self.Gr.over_points_half():
             Covar.interdomain[k] = 0.0
             for i in range(self.n_updrafts):
                 if Covar.name == 'tke':
