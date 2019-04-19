@@ -50,15 +50,11 @@ class ParameterizationBase:
     # Calculate the tendency of the grid mean variables due to turbulence as the difference between the values at the beginning
     # and  end of all substeps taken
     def update(self,GMV, Case, TS):
-        gw = self.Gr.gw
-        nzg = self.Gr.nzg
-
-        for k in range(gw,nzg-gw):
+        for k in self.Gr.over_points_half_real():
             GMV.H.tendencies[k] += (GMV.H.new[k] - GMV.H.values[k]) * TS.dti
             GMV.QT.tendencies[k] += (GMV.QT.new[k] - GMV.QT.values[k]) * TS.dti
             GMV.U.tendencies[k] += (GMV.U.new[k] - GMV.U.values[k]) * TS.dti
             GMV.V.tendencies[k] += (GMV.V.new[k] - GMV.V.values[k]) * TS.dti
-
         return
 
     # Update the diagnosis of the inversion height, using the maximum temperature gradient method
@@ -104,11 +100,7 @@ class ParameterizationBase:
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
 
         ustar = Case.Sur.ustar
-        gw = self.Gr.gw
-        nzg = self.Gr.nzg
-        nz = self.Gr.nz
-
-        for k in range(gw,nzg-gw):
+        for k in self.Gr.over_points_half_real():
             zzi = self.Gr.z_half[k]/self.zi
             if zzi <= 1.0:
                 if self.wstar<1e-6:
@@ -120,7 +112,6 @@ class ParameterizationBase:
             else:
                 self.KH.values[k] = 0.0
                 self.KM.values[k] = 0.0
-
 
         # Set the boundary points at top and bottom of domain
         self.KH.set_bcs(self.Gr)
@@ -459,7 +450,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         Stats.write_profile_new('eddy_viscosity'  , self.Gr, self.KM.values)
         Stats.write_profile_new('eddy_diffusivity', self.Gr, self.KH.values)
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_points_half_real():
             mf_h[k] = interp2pt(self.massflux_h[k], self.massflux_h[k-1])
             mf_qt[k] = interp2pt(self.massflux_qt[k], self.massflux_qt[k-1])
             massflux[k] = interp2pt(self.m[0,k], self.m[0,k-1])
@@ -625,7 +616,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                                                                self.UpdVar.QT.values, self.UpdVar.QL.values,
                                                                self.UpdVar.QR.values, self.UpdVar.H.values,
                                                                i, gw)
-            for k in range(gw+1, self.Gr.nzg-gw):
+            for k in self.Gr.over_points_half_real():
                 denom = 1.0 + self.entr_sc[i,k] * dz
                 self.UpdVar.H.values[i,k] = (self.UpdVar.H.values[i,k-1] + self.entr_sc[i,k] * dz * GMV.H.values[k])/denom
                 self.UpdVar.QT.values[i,k] = (self.UpdVar.QT.values[i,k-1] + self.entr_sc[i,k] * dz * GMV.QT.values[k])/denom
@@ -651,7 +642,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.UpdVar.W.values[i, self.Gr.gw-1] = self.w_surface_bc[i]
             self.entr_sc[i,gw] = 2.0 /dz
             self.detr_sc[i,gw] = 0.0
-            for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+            for k in self.Gr.over_points_half_real():
                 area_k = interp2pt(self.UpdVar.Area.values[i,k], self.UpdVar.Area.values[i,k+1])
                 if area_k >= self.minimum_area:
                     w_km = self.UpdVar.W.values[i,k-1]
@@ -721,10 +712,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def compute_mixing_length(self, obukhov_length):
-        gw = self.Gr.gw
         tau =  get_mixing_tau(self.zi, self.wstar)
 
-        for k in range(gw, self.Gr.nzg-gw):
+        for k in self.Gr.over_points_half_real():
             l1 = tau * np.sqrt(np.fmax(self.EnvVar.TKE.values[k],0.0))
             z_ = self.Gr.z_half[k]
             if obukhov_length < 0.0: #unstable
@@ -738,13 +728,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
 
     def compute_eddy_diffusivities_tke(self, GMV, Case):
-        gw = self.Gr.gw
-
         if self.similarity_diffusivity:
             ParameterizationBase.compute_eddy_diffusivities_similarity(self,GMV, Case)
         else:
             self.compute_mixing_length(Case.Sur.obukhov_length)
-            for k in range(gw, self.Gr.nzg-gw):
+            for k in self.Gr.over_points_half_real():
                 lm = self.mixing_length[k]
                 self.KM.values[k] = self.tke_ed_coeff * lm * np.sqrt(np.fmax(self.EnvVar.TKE.values[k],0.0) )
                 # Prandtl number is fixed. It should be defined as a function of height - Ignacio
@@ -934,7 +922,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         input_st.zbl = self.compute_zbl_qt_grad(GMV)
         for i in range(self.n_updrafts):
             input_st.zi = self.UpdVar.cloud_base[i]
-            for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+            for k in self.Gr.over_points_half_real():
                 input_st.quadrature_order = quadrature_order
                 input_st.b = self.UpdVar.B.values[i,k]
                 input_st.w = interp2pt(self.UpdVar.W.values[i,k],self.UpdVar.W.values[i,k-1])
@@ -1005,7 +993,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         zbl_qt = 0.0
         qt_grad = 0.0
 
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_points_half_real():
             z_ = self.Gr.z_half[k]
             qt_up = GMV.QT.values[k+1]
             qt_ = GMV.QT.values[k]
@@ -1029,7 +1017,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.UpdVar.Area.new[i,gw] = self.area_surface_bc[i]
             au_lim = self.area_surface_bc[i] * self.max_area_factor
 
-            for k in range(gw, self.Gr.nzg-gw):
+            for k in self.Gr.over_points_half_real():
 
                 # First solve for updated area fraction at k+1
                 whalf_kp = interp2pt(self.UpdVar.W.values[i,k], self.UpdVar.W.values[i,k+1])
@@ -1178,7 +1166,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         # Compute the mass flux and associated scalar fluxes
         for i in range(self.n_updrafts):
             self.m[i,gw-1] = 0.0
-            for k in range(self.Gr.gw, self.Gr.nzg-1):
+            for k in self.Gr.over_points_half_real():
                 self.m[i,k] = ((self.UpdVar.W.values[i,k] - self.EnvVar.W.values[k] )* self.Ref.rho0[k]
                                * interp2pt(self.UpdVar.Area.values[i,k],self.UpdVar.Area.values[i,k+1]))
 
@@ -1305,7 +1293,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def compute_tke_buoy(self, GMV):
-        gw = self.Gr.gw
         grad_thl_minus=0.0
         grad_qt_minus=0.0
         grad_thl_plus=0
@@ -1314,7 +1301,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         # Note that source terms at the gw grid point are not really used because that is where tke boundary condition is
         # enforced (according to MO similarity). Thus here I am being sloppy about lowest grid point
-        for k in range(gw, self.Gr.nzg-gw):
+        for k in self.Gr.over_points_half_real():
             qt_dry = self.EnvThermo.qt_dry[k]
             th_dry = self.EnvThermo.th_dry[k]
             t_cloudy = self.EnvThermo.t_cloudy[k]
@@ -1356,9 +1343,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def compute_tke_pressure(self):
-        gw = self.Gr.gw
-
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_points_half_real():
             self.EnvVar.TKE.press[k] = 0.0
             for i in range(self.n_updrafts):
                 wu_half = interp2pt(self.UpdVar.W.values[i,k-1], self.UpdVar.W.values[i,k])
@@ -1372,7 +1357,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
 
     def update_GMV_diagnostics(self, GMV):
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_points_half_real():
             GMV.QL.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.QL.bulkvalues[k]
                                 + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.QL.values[k])
 
@@ -1455,7 +1440,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     def cleanup_covariance(self, GMV):
         tmp_eps = 1e-18
 
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_points_half_real():
             if GMV.TKE.values[k] < tmp_eps:
                 GMV.TKE.values[k] = 0.0
             if GMV.Hvar.values[k] < tmp_eps:
@@ -1485,7 +1470,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         du_high = 0.0
         dv_high = 0.0
 
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_points_half_real():
             if Covar.name == 'tke':
                 du_low = du_high
                 dv_low = dv_high
@@ -1529,7 +1514,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     def compute_covariance_entr(self, Covar, UpdVar1,
                 UpdVar2, EnvVar1, EnvVar2):
 
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_points_half_real():
             Covar.entr_gain[k] = 0.0
             for i in range(self.n_updrafts):
                 if Covar.name =='tke':
@@ -1552,7 +1537,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def compute_covariance_detr(self, Covar):
 
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_points_half_real():
             Covar.detr_loss[k] = 0.0
             for i in range(self.n_updrafts):
                 w_u = interp2pt(self.UpdVar.W.values[i,k-1], self.UpdVar.W.values[i,k])
@@ -1564,7 +1549,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         # TODO defined again in compute_covariance_shear and compute_covaraince
         ae = np.subtract(np.ones((self.Gr.nzg,),dtype=np.double, order='c'),self.UpdVar.Area.bulkvalues) # area of environment
 
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_points_half_real():
             self.EnvVar.TKE.rain_src[k] = 0.0
             self.EnvVar.Hvar.rain_src[k]   = self.Ref.rho0_half[k] * ae[k] * 2. * self.EnvThermo.Hvar_rain_dt[k]   * TS.dti
             self.EnvVar.QTvar.rain_src[k]  = self.Ref.rho0_half[k] * ae[k] * 2. * self.EnvThermo.QTvar_rain_dt[k]  * TS.dti
@@ -1576,7 +1561,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     def compute_covariance_dissipation(self, Covar):
         ae = np.subtract(np.ones((self.Gr.nzg,),dtype=np.double, order='c'),self.UpdVar.Area.bulkvalues)
 
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_points_half_real():
             Covar.dissipation[k] = (self.Ref.rho0_half[k] * ae[k] * Covar.values[k]
                                 *pow(np.fmax(self.EnvVar.TKE.values[k],0), 0.5)/np.fmax(self.mixing_length[k],1.0) * self.tke_diss_coeff)
         return
