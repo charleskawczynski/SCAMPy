@@ -12,19 +12,19 @@ import pylab as plt
 
 
 class UpdraftVariable:
-    def __init__(self, nu, nz, loc, kind, name, units):
+    def __init__(self, Gr, nu, nz, loc, kind, name, units):
         self.values     = np.zeros((nu,nz),dtype=np.double, order='c')
         self.old        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
         self.new        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
         self.tendencies = np.zeros((nu,nz),dtype=np.double, order='c')
         self.flux       = np.zeros((nu,nz),dtype=np.double, order='c')
         self.bulkvalues = np.zeros((nz,)  ,dtype=np.double, order='c')
-        if loc != 'half' and loc != 'full':
-            print('Invalid location setting for variable! Must be half or full')
-        self.loc = loc
-        if kind != 'scalar' and kind != 'velocity':
-            print ('Invalid kind setting for variable! Must be scalar or velocity')
-        self.kind = kind
+        # self.values     = [Field.field(Gr, loc) for i in 1:nu]
+        # self.old        = [Field.field(Gr, loc) for i in 1:nu]
+        # self.new        = [Field.field(Gr, loc) for i in 1:nu]
+        # self.tendencies = [Field.field(Gr, loc) for i in 1:nu]
+        # self.flux       = [Field.field(Gr, loc) for i in 1:nu]
+        # self.bulkvalues = Field.field(Gr, loc)
         self.name = name
         self.units = units
 
@@ -55,18 +55,18 @@ class UpdraftVariables:
         self.n_updrafts = nu
         nzg = Gr.nzg
 
-        self.W    = UpdraftVariable(nu, nzg, 'full', 'velocity', 'w','m/s' )
-        self.Area = UpdraftVariable(nu, nzg, 'full', 'scalar', 'area_fraction','[-]' )
-        self.QT   = UpdraftVariable(nu, nzg, 'half', 'scalar', 'qt','kg/kg' )
-        self.QL   = UpdraftVariable(nu, nzg, 'half', 'scalar', 'ql','kg/kg' )
-        self.QR   = UpdraftVariable(nu, nzg, 'half', 'scalar', 'qr','kg/kg' )
-        self.THL  = UpdraftVariable(nu, nzg, 'half', 'scalar', 'thetal', 'K')
-        self.T    = UpdraftVariable(nu, nzg, 'half', 'scalar', 'temperature','K' )
-        self.B    = UpdraftVariable(nu, nzg, 'half', 'scalar', 'buoyancy','m^2/s^3' )
+        self.W    = UpdraftVariable(Gr, nu, nzg, 'full', 'velocity', 'w','m/s' )
+        self.Area = UpdraftVariable(Gr, nu, nzg, 'full', 'scalar', 'area_fraction','[-]' )
+        self.QT   = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'qt','kg/kg' )
+        self.QL   = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'ql','kg/kg' )
+        self.QR   = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'qr','kg/kg' )
+        self.THL  = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'thetal', 'K')
+        self.T    = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'temperature','K' )
+        self.B    = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'buoyancy','m^2/s^3' )
         if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-            self.H = UpdraftVariable(nu, nzg, 'half', 'scalar', 's','J/kg/K' )
+            self.H = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 's','J/kg/K' )
         elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-            self.H = UpdraftVariable(nu, nzg, 'half', 'scalar', 'thetal','K' )
+            self.H = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'thetal','K' )
 
 
         if namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':

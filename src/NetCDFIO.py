@@ -21,7 +21,7 @@ class NetCDFIO_Stats:
 
         # Setup the statistics output path
         self.outpath = str(os.path.join(root_dir, namelist['output']['output_root'] + 'Output.' + namelist['meta']['simname'] + '.'
-                                   + self.uuid[len(self.uuid )-5:len(self.uuid)]))
+                                   + self.uuid[len(self.uuid )-5:len(self.uuid)])) + os.sep
 
         os.makedirs(self.outpath, exist_ok=True)
 

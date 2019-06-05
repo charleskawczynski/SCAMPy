@@ -5,6 +5,8 @@ from EDMF_Updrafts import *
 from EDMF_Environment import *
 from Grid import Grid
 from Field import Field
+from Field import Cut
+from Field import Dual
 from Variables import VariablePrognostic, VariableDiagnostic, GridMeanVariables
 from Surface import SurfaceBase
 from Cases import  CasesBase
@@ -24,6 +26,9 @@ def ParameterizationFactory(namelist, paramlist, Gr, Ref):
     else:
         print('Did not recognize parameterization ' + scheme)
         return
+
+def advect(f, grid):
+    return (f[2]-f[1])*grid.dzi
 
 # A base class common to all turbulence parameterizations
 class ParameterizationBase:
@@ -68,7 +73,6 @@ class ParameterizationBase:
         for k in self.Gr.over_points_half_real():
             qv = GMV.QT.values[k] - GMV.QL.values[k]
             theta_rho[k] = theta_rho_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
-
 
         if option == 'theta_rho':
             for k in self.Gr.over_points_half_real():
@@ -514,10 +518,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             Stats.write_profile_new('Hvar_interdomain'  , self.Gr, self.EnvVar.Hvar.interdomain)
             Stats.write_profile_new('QTvar_interdomain' , self.Gr, self.EnvVar.QTvar.interdomain)
             Stats.write_profile_new('HQTcov_interdomain', self.Gr, self.EnvVar.HQTcov.interdomain)
-
-
         return
-
 
 
     # Perform the update of the scheme
@@ -999,8 +1000,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 # First solve for updated area fraction at k+1
                 whalf_kp = interp2pt(self.UpdVar.W.values[i,k], self.UpdVar.W.values[i,k+1])
                 whalf_k = interp2pt(self.UpdVar.W.values[i,k-1], self.UpdVar.W.values[i,k])
-                adv = -self.Ref.alpha0_half[k+1] * dzi *( self.Ref.rho0_half[k+1] * self.UpdVar.Area.values[i,k+1] * whalf_kp
-                                                          -self.Ref.rho0_half[k] * self.UpdVar.Area.values[i,k] * whalf_k)
+                a_kp = self.UpdVar.Area.values[i,k+1]
+                a_k = self.UpdVar.Area.values[i,k]
+                rho_kp = self.Ref.rho0_half[k+1]
+                rho_k = self.Ref.rho0_half[k]
+                alpha0_kp = self.Ref.alpha0_half[k+1]
+                adv = - alpha0_kp * dzi *( rho_kp * a_kp * whalf_kp - rho_k * a_k * whalf_k)
+
                 entr_term = self.UpdVar.Area.values[i,k+1] * whalf_kp * (self.entr_sc[i,k+1] )
                 detr_term = self.UpdVar.Area.values[i,k+1] * whalf_kp * (- self.detr_sc[i,k+1])
 
@@ -1399,15 +1405,17 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             if ws > 0.0:
                 for k in self.Gr.over_points_half():
                     z = self.Gr.z_half[k]
-                    GMV.TKE.values[k] = ws * 1.3 * np.cbrt((us*us*us)/(ws*ws*ws) + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
+                    temp = ws * 1.3 * np.cbrt((us*us*us)/(ws*ws*ws) + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
+                    GMV.TKE.values[k] = temp
         if self.calc_scalar_var:
             if ws > 0.0:
                 for k in self.Gr.over_points_half():
                     z = self.Gr.z_half[k]
                     # need to rethink of how to initilize the covarinace profiles - for nowmI took the TKE profile
-                    GMV.Hvar.values[k]   = GMV.Hvar.values[self.Gr.gw] * ws * 1.3 * np.cbrt((us*us*us)/(ws*ws*ws) + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
-                    GMV.QTvar.values[k]  = GMV.QTvar.values[self.Gr.gw] * ws * 1.3 * np.cbrt((us*us*us)/(ws*ws*ws) + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
-                    GMV.HQTcov.values[k] = GMV.HQTcov.values[self.Gr.gw] * ws * 1.3 * np.cbrt((us*us*us)/(ws*ws*ws) + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
+                    temp = ws * 1.3 * np.cbrt((us*us*us)/(ws*ws*ws) + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
+                    GMV.Hvar.values[k]   = GMV.Hvar.values[self.Gr.gw] * temp
+                    GMV.QTvar.values[k]  = GMV.QTvar.values[self.Gr.gw] * temp
+                    GMV.HQTcov.values[k] = GMV.HQTcov.values[self.Gr.gw] * temp
             self.reset_surface_covariance(GMV, Case)
             self.compute_mixing_length(Case.Sur.obukhov_length)
 

@@ -1,5 +1,15 @@
 import numpy as np
 
+class Cut:
+    def __init__(self, k):
+        self.k = k
+        return
+
+class Dual:
+    def __init__(self, k):
+        self.k = k
+        return
+
 class Field:
     def __init__(self, n, full_data):
         self.full_data = full_data
@@ -24,7 +34,24 @@ class Field:
             print('Invalid location setting for variable! Must be half or full')
 
     def __getitem__(self, key):
-        return self.values[key]
+        if not (isinstance(key, Dual) or isinstance(key, Cut)):
+            return self.values[key]
+        elif isinstance(key, Cut):
+            return [self.values[k] for k in [key.k-1, key.k, key.k+1]]
+        else:
+            if self.full_data:
+                if isinstance(key, Dual):
+                    return [self.values[k] for k in [key.k-1, key.k]]
+                else:
+                    print('key = '+str(key))
+                    raise ValueError('Bad key in full Field.py')
+            else:
+                if isinstance(key, Dual):
+                    return [self.values[k] for k in [key.k-1, key.k]]
+                else:
+                    print('key = '+str(key))
+                    raise ValueError('Bad key in half Field.py')
+
 
     def __setitem__(self, key, value):
         self.values[key] = value
