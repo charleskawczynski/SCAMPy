@@ -1,14 +1,28 @@
 import numpy as np
 
 class Grid:
-    def __init__(self, namelist):
-        #Get the grid spacing
-        self.dz = namelist['grid']['dz']
-        #Set the inverse grid spacing
+    # def __init__(self, namelist):
+    #     #Get the grid spacing
+    #     self.dz = namelist['grid']['dz']
+    #     #Set the inverse grid spacing
+    #     self.dzi = 1.0/self.dz
+    #     #Get the grid dimensions and ghost points
+    #     self.gw = namelist['grid']['gw']
+    #     self.nz = namelist['grid']['nz']
+    #     self.nzg = self.nz + 2 * self.gw
+    #     self.z_half = np.empty((self.nzg),dtype=np.double,order='c')
+    #     self.z      = np.empty((self.nzg),dtype=np.double,order='c')
+    #     count = 0
+    #     for i in range(-self.gw,self.nz+self.gw,1):
+    #         self.z[count] = (i + 1) * self.dz
+    #         self.z_half[count] = (i+0.5)*self.dz
+    #         count += 1
+    #     return
+    def __init__(self, z_min, z_max, n_elems_real, n_ghost):
+        self.dz = (z_max-z_min)/n_elems_real
         self.dzi = 1.0/self.dz
-        #Get the grid dimensions and ghost points
-        self.gw = namelist['grid']['gw']
-        self.nz = namelist['grid']['nz']
+        self.gw = n_ghost
+        self.nz = n_elems_real
         self.nzg = self.nz + 2 * self.gw
         self.z_half = np.empty((self.nzg),dtype=np.double,order='c')
         self.z      = np.empty((self.nzg),dtype=np.double,order='c')
@@ -72,6 +86,12 @@ class Grid:
 
     def z_half_real(self):
         return [self.z_half[i] for i in self.over_points_half_real()]
+
+    def z_full(self):
+        return [self.z[i] for i in self.over_points_full()]
+
+    def z_half(self):
+        return [self.z_half[i] for i in self.over_points_half()]
 
     def over_points_full(self):
         return range(self.k_surface_ghost_full(), self.k_top_atmos_ghost_full()+1)

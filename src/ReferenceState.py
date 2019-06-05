@@ -36,7 +36,8 @@ class ReferenceState:
         def rhs(p, z):
             T, q_l = eos(t_to_entropy_c, eos_first_guess_entropy, np.exp(p),  self.qtg, self.sg)
             q_i = 0.0
-            return -g / (Rd * T * (1.0 - self.qtg + eps_vi * (self.qtg - q_l - q_i)))
+            R_m = Rd * (1.0 - self.qtg + eps_vi * (self.qtg - q_l - q_i))
+            return -g / (R_m * T)
 
         # Construct arrays for integration points
 
@@ -117,6 +118,13 @@ class ReferenceState:
         plt.plot(self.rho0_half.values  , Gr.z); plt.savefig(Stats.outpath+'rho0_half.png'  ); plt.close()
         plt.plot(self.alpha0.values     , Gr.z); plt.savefig(Stats.outpath+'alpha0.png'     ); plt.close()
         plt.plot(self.alpha0_half.values, Gr.z); plt.savefig(Stats.outpath+'alpha0_half.png'); plt.close()
+
+        self.p0.export_data(Gr         ,Stats.outpath+'p0.dat')
+        self.p0_half.export_data(Gr    ,Stats.outpath+'p0_half.dat')
+        self.rho0.export_data(Gr       ,Stats.outpath+'rho0.dat')
+        self.rho0_half.export_data(Gr  ,Stats.outpath+'rho0_half.dat')
+        self.alpha0.export_data(Gr     ,Stats.outpath+'alpha0.dat')
+        self.alpha0_half.export_data(Gr,Stats.outpath+'alpha0_half.dat')
 
         Stats.add_reference_profile('alpha0')
         Stats.write_reference_profile('alpha0', alpha[Gr.gw:-Gr.gw])

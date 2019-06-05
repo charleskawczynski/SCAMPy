@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 class Cut:
@@ -58,6 +59,23 @@ class Field:
 
     def __len__(self):
         return len(self.values)
+
+    def export_data(self, grid, file_name):
+        if self.full_data:
+            a = np.transpose(grid.z)
+        else:
+            a = np.transpose(grid.z_half)
+        b = np.transpose(self.values)
+        A = np.vstack((a, b))
+        A = np.transpose(A)
+        fmt = ",".join(["%10.6e"] * (2))
+        ext = file_name.split('.')[-1]
+        var_name = file_name.replace('.'+ext, '')
+        var_name = var_name.replace(ext, '')
+        var_name = var_name.split('.')[-1]
+        var_name = var_name.split(os.sep)[-1]
+        np.savetxt(file_name, A, fmt=fmt, header="z,"+var_name, comments='')
+        return
 
     def surface(self, grid):
         if self.full_data:

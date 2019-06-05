@@ -4,6 +4,7 @@ from Variables import GridMeanVariables
 from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
 import Grid
+# import StateVec
 import ReferenceState
 import matplotlib.pyplot as plt
 import Cases
@@ -15,7 +16,32 @@ import TimeStepping
 class Simulation1d:
 
     def __init__(self, namelist, paramlist, root_dir):
-        self.Gr = Grid.Grid(namelist)
+        z_min        = 0
+        n_elems_real = namelist['grid']['nz']
+        z_max        = namelist['grid']['dz']*namelist['grid']['nz']
+        n_ghost      = namelist['grid']['gw']
+        N_subdomains = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']+1
+
+        # unkowns = (
+        #            ('a', N_subdomains),
+        #            ('w', N_subdomains),
+        #            ('q_tot', N_subdomains),
+        #            ('θ_liq', N_subdomains),
+        #            ('tke', N_subdomains),
+        #            ('cv_q_tot', N_subdomains),
+        #            ('cv_θ_liq', N_subdomains),
+        #            ('cv_θ_liq_q_tot', N_subdomains),
+        #           )
+        # var_tuple = (
+        #              ('rho_0', 1),
+        #              ('alpha_0', 1),
+        #              ('p_0', 1),
+        #             )
+
+        # self.q = StateVec.StateVec(unkowns, grid)
+        # self.tmp = StateVec.StateVec(var_tuple, grid)
+
+        self.Gr = Grid.Grid(z_min, z_max, n_elems_real, n_ghost)
         self.Ref = ReferenceState.ReferenceState(self.Gr)
         self.GMV = GridMeanVariables(namelist, self.Gr, self.Ref)
         self.Case = CasesFactory(namelist, paramlist)
