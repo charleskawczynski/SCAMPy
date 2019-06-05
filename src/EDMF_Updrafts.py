@@ -17,13 +17,11 @@ class UpdraftVariable:
         self.old        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
         self.new        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
         self.tendencies = np.zeros((nu,nz),dtype=np.double, order='c')
-        self.flux       = np.zeros((nu,nz),dtype=np.double, order='c')
         self.bulkvalues = np.zeros((nz,)  ,dtype=np.double, order='c')
         # self.values     = [Field.field(Gr, loc) for i in 1:nu]
         # self.old        = [Field.field(Gr, loc) for i in 1:nu]
         # self.new        = [Field.field(Gr, loc) for i in 1:nu]
         # self.tendencies = [Field.field(Gr, loc) for i in 1:nu]
-        # self.flux       = [Field.field(Gr, loc) for i in 1:nu]
         # self.bulkvalues = Field.field(Gr, loc)
         self.name = name
         self.units = units

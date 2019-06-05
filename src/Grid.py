@@ -10,7 +10,7 @@ class Grid:
         self.z_half = np.empty((self.nzg),dtype=np.double,order='c')
         self.z      = np.empty((self.nzg),dtype=np.double,order='c')
         count = 0
-        for i in range(-self.gw,self.nz+self.gw,1):
+        for i in range(-self.gw, self.nz+self.gw,1):
             self.z[count] = (i + 1) * self.dz
             self.z_half[count] = (i+0.5)*self.dz
             count += 1

@@ -17,7 +17,7 @@ class ReferenceState:
         self.rho0_half   = Field.half(Gr)
         return
 
-    def initialize(self, Gr, Stats):
+    def initialize(self, Gr, Stats, tmp):
         '''
         Initilize the reference profiles. The function is typically called from the case
         specific initialization fucntion defined in Initialization.pyx
@@ -89,6 +89,9 @@ class ReferenceState:
             temperature_half[k], ql_half[k] = eos(t_to_entropy_c, eos_first_guess_entropy, p_half_[k], self.qtg, self.sg)
             qv_half[k] = self.qtg - (ql_half[k] + qi_half[k])
             alpha_half[k] = alpha_c(p_half_[k], temperature_half[k], self.qtg, qv_half[k])
+            # tmp['α_0', k] = alpha_half[k]
+            # tmp['ρ_0', k] = 1.0/tmp['α_0', k]
+            # tmp['p_0', k] = p_[k]
 
         # Now do a sanity check to make sure that the Reference State entropy profile is uniform following
         # saturation adjustment

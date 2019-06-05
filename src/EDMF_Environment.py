@@ -12,7 +12,6 @@ from microphysics_functions import *
 class EnvironmentVariable:
     def __init__(self, Gr, loc, kind, name, units):
         self.values = Field.field(Gr, loc)
-        self.flux = Field.field(Gr, loc)
         if kind != 'scalar' and kind != 'velocity':
             print ('Invalid kind setting for variable! Must be scalar or velocity')
         self.kind = kind

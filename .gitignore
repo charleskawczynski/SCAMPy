@@ -10,6 +10,7 @@
 *.idea/workspace.xml
 build/
 *.txt
+.pytest_cache/
 figs/
 _static/
 _templates/

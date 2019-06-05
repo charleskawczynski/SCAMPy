@@ -42,7 +42,7 @@ def CasesFactory(namelist, paramlist):
 class CasesBase:
     def __init__(self, paramlist):
         return
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         return
     def initialize_profiles(self, Gr, GMV, Ref):
         return
@@ -77,11 +77,11 @@ class Soares(CasesBase):
         self.Fo.apply_coriolis = False
         self.Fo.apply_subsidence = False
         return
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         Ref.Pg = 1000.0 * 100.0
         Ref.qtg = 4.5e-3
         Ref.Tg = 300.0
-        Ref.initialize(Gr, Stats)
+        Ref.initialize(Gr, Stats, tmp)
         return
     def initialize_profiles(self, Gr, GMV, Ref):
         theta = np.zeros((Gr.nzg,),dtype=np.double, order='c')
@@ -163,11 +163,11 @@ class Bomex(CasesBase):
         self.Fo.coriolis_param = 0.376e-4 # s^{-1}
         self.Fo.apply_subsidence = True
         return
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         Ref.Pg = 1.015e5  #Pressure at ground
         Ref.Tg = 300.4  #Temperature at ground
         Ref.qtg = 0.02245   #Total water mixing ratio at surface
-        Ref.initialize(Gr, Stats)
+        Ref.initialize(Gr, Stats, tmp)
         return
     def initialize_profiles(self, Gr, GMV, Ref):
         thetal = np.zeros((Gr.nzg,), dtype=np.double, order='c')
@@ -287,7 +287,7 @@ class life_cycle_Tan2018(CasesBase):
         self.Fo.coriolis_param = 0.376e-4 # s^{-1}
         self.Fo.apply_subsidence = True
         return
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         Ref.Pg = 1.015e5  #Pressure at ground
         Ref.Tg = 300.4  #Temperature at ground
         Ref.qtg = 0.02245   #Total water mixing ratio at surface
@@ -418,7 +418,7 @@ class Rico(CasesBase):
         self.Fo.apply_subsidence = True
         return
 
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         Ref.Pg = 1.0154e5  #Pressure at ground
         Ref.Tg = 299.8  #Temperature at ground
         pvg = pv_star(Ref.Tg)
@@ -534,7 +534,7 @@ class TRMM_LBA(CasesBase):
         self.Fo.apply_coriolis = False
         self.Fo.apply_subsidence = False
         return
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         Ref.Pg = 991.3*100  #Pressure at ground
         Ref.Tg = 296.85   # surface values for reference state (RS) which outputs p0 rho0 alpha0
         pvg = pv_star(Ref.Tg)
@@ -842,7 +842,7 @@ class ARM_SGP(CasesBase):
         self.Fo.apply_subsidence =False
 
         return
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         Ref.Pg = 970.0*100 #Pressure at ground
         Ref.Tg = 299.0   # surface values for reference state (RS) which outputs p0 rho0 alpha0
         Ref.qtg = 15.2/1000#Total water mixing ratio at surface
@@ -967,7 +967,7 @@ class GATE_III(CasesBase):
         self.Fo.apply_coriolis = False
 
         return
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         Ref.Pg = 1013.0*100  #Pressure at ground
         Ref.Tg = 299.184   # surface values for reference state (RS) which outputs p0 rho0 alpha0
         Ref.qtg = 16.5/1000#Total water mixing ratio at surface
@@ -1096,7 +1096,7 @@ class DYCOMS_RF01(CasesBase):
         self.inversion_option = 'thetal_maxgrad'
         return
 
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         Ref.Pg   = 1017.8 * 100.0
         Ref.qtg  = 9.0 / 1000.0
         # Use an exner function with values for Rd, and cp given in Stevens 2005 to compute temperature
@@ -1289,7 +1289,7 @@ class GABLS(CasesBase):
         self.Fo.apply_subsidence = False
         return
 
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         Ref.Pg = 1.0e5  #Pressure at ground
         Ref.Tg = 265.0  #Temperature at ground
         Ref.qtg = 1.0e-4 #Total water mixing ratio at surface. if set to 0, alpha0, rho0, p0 are NaN (TBD)
@@ -1384,7 +1384,7 @@ class SP(CasesBase):
         self.Fo.apply_subsidence = False
         return
 
-    def initialize_reference(self, Gr, Ref, Stats):
+    def initialize_reference(self, Gr, Ref, Stats, tmp):
         Ref.Pg = 1.0e5  #Pressure at ground
         Ref.Tg = 300.0  #Temperature at ground
         Ref.qtg = 1.0e-4   #Total water mixing ratio at surface. if set to 0, alpha0, rho0, p0 are NaN.
