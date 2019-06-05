@@ -4,14 +4,14 @@ from Variables import GridMeanVariables
 from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
 import Grid
-# import StateVec
-import ReferenceState
+from StateVec import StateVec
+from ReferenceState import ReferenceState
 import matplotlib.pyplot as plt
 import Cases
 from Surface import  SurfaceBase
 from Cases import  CasesBase
 from NetCDFIO import NetCDFIO_Stats
-import TimeStepping
+from TimeStepping import TimeStepping
 
 class Simulation1d:
 
@@ -20,33 +20,30 @@ class Simulation1d:
         n_elems_real = namelist['grid']['nz']
         z_max        = namelist['grid']['dz']*namelist['grid']['nz']
         n_ghost      = namelist['grid']['gw']
-        N_subdomains = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']+1
+        N_subdomains = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']+2
 
-        # unkowns = (
-        #            ('a', N_subdomains),
-        #            ('w', N_subdomains),
-        #            ('q_tot', N_subdomains),
-        #            ('θ_liq', N_subdomains),
-        #            ('tke', N_subdomains),
-        #            ('cv_q_tot', N_subdomains),
-        #            ('cv_θ_liq', N_subdomains),
-        #            ('cv_θ_liq_q_tot', N_subdomains),
-        #           )
-        # var_tuple = (
-        #              ('rho_0', 1),
-        #              ('alpha_0', 1),
-        #              ('p_0', 1),
-        #             )
-
-        # self.q = StateVec.StateVec(unkowns, grid)
-        # self.tmp = StateVec.StateVec(var_tuple, grid)
+        unkowns = (('a', N_subdomains),
+                   ('w', N_subdomains),
+                   ('q_tot', N_subdomains),
+                   ('θ_liq', N_subdomains),
+                   ('tke', N_subdomains),
+                   ('cv_q_tot', N_subdomains),
+                   ('cv_θ_liq', N_subdomains),
+                   ('cv_θ_liq_q_tot', N_subdomains),)
+        temp_vars = (('ρ_0', 1),
+                     ('α_0', 1),
+                     ('p_0', 1),
+                     )
 
         self.Gr = Grid.Grid(z_min, z_max, n_elems_real, n_ghost)
-        self.Ref = ReferenceState.ReferenceState(self.Gr)
+        self.q = StateVec(unkowns, self.Gr)
+        self.tmp = StateVec(temp_vars, self.Gr)
+
+        self.Ref = ReferenceState(self.Gr)
         self.GMV = GridMeanVariables(namelist, self.Gr, self.Ref)
         self.Case = CasesFactory(namelist, paramlist)
-        self.Turb = ParameterizationFactory(namelist,paramlist, self.Gr, self.Ref)
-        self.TS = TimeStepping.TimeStepping(namelist)
+        self.Turb = ParameterizationFactory(namelist, paramlist, self.Gr, self.Ref)
+        self.TS = TimeStepping(namelist)
         self.Stats = NetCDFIO_Stats(namelist, paramlist, self.Gr, root_dir)
         return
 

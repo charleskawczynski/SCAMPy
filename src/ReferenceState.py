@@ -8,7 +8,7 @@ from thermodynamic_functions import t_to_entropy_c, eos_first_guess_entropy, eos
 from parameters import *
 
 class ReferenceState:
-    def __init__(self, Gr ):
+    def __init__(self, Gr):
         self.p0          = Field.full(Gr)
         self.p0_half     = Field.half(Gr)
         self.alpha0      = Field.full(Gr)

@@ -4,6 +4,16 @@ from Grid import Grid
 
 import numpy as np
 
+class Cut:
+    def __init__(self, k):
+        self.k = k
+        return
+
+class Dual:
+    def __init__(self, k):
+        self.k = k
+        return
+
 def get_var_mapper(var_tuple):
     var_names = [v for (v, nsd) in var_tuple]
     end_index = list(np.cumsum([nsd for (v, nsd) in var_tuple]))
@@ -28,7 +38,13 @@ class StateVec:
             name, k, i = tup
         else:
             raise ValueError("__getitem__ called with wrong dimensions in StateVec.py")
-        return self.fields[self.var_mapper[name][i], k]
+        if not (isinstance(k, Cut) or isinstance(k, Dual)):
+            return self.fields[self.var_mapper[name][i], k]
+        else:
+            if isinstance(k, Cut):
+                return [self.fields[self.var_mapper[name][i], j] for j in range(k.k-1,k.k+2)]
+            elif isinstance(k, Dual):
+                return [(self.fields[self.var_mapper[name][i], j]+self.fields[self.var_mapper[name][i], j+1])/2 for j in range(k.k-1,k.k+1)]
 
     def __setitem__(self, tup, value):
         if len(tup)==2:
@@ -71,18 +87,20 @@ z_max        = 1.0
 n_elems_real = 10
 n_ghost      = 1
 grid = Grid(z_min, z_max, n_elems_real, n_ghost)
-unknowns = (('rho_0', 1), ('w', 3), ('a', 3), ('alpha_0', 1))
+unknowns = (('ρ_0', 1), ('w', 3), ('a', 3), ('alpha_0', 1))
 state_vec = StateVec(unknowns, grid)
 print(state_vec)
 
-state_vec['rho_0', 1] = 2.0
+state_vec['ρ_0', 1] = 1.0
+state_vec['ρ_0', 3] = 4.0
 print(state_vec)
 state_vec['w', 2, 2] = 3.0
 print(state_vec)
 print(state_vec.over_sub_domains())
 print(state_vec.over_sub_domains(1))
-print(state_vec.over_sub_domains('rho_0'))
-print(state_vec.var_names_except('rho_0'))
+print(state_vec.over_sub_domains('ρ_0'))
+print(state_vec.var_names_except('ρ_0'))
+print(state_vec['ρ_0', Cut(2)])
 """
 
 
