@@ -106,8 +106,8 @@ class Field:
 
     def apply_Neumann(self, grid, value):
         if isinstance(self.loc, Node):
-            self.values[0:grid.k_surface()]             = 2.0*self.values[grid.k_surface()  ] - self.values[grid.k_surface()  +1] + 2.0*grid.dz*value*(+1)
-            self.values[grid.k_top_atmos_ghost_full():] = 2.0*self.values[grid.k_top_atmos()] - self.values[grid.k_top_atmos()-1] + 2.0*grid.dz*value*(-1)
+            self.values[0:grid.boundary(Zmin())]             = 2.0*self.values[grid.boundary(Zmin())  ] - self.values[grid.boundary(Zmin())  +1] + 2.0*grid.dz*value*(+1)
+            self.values[grid.k_top_atmos_ghost_full():] = 2.0*self.values[grid.boundary(Zmax())] - self.values[grid.boundary(Zmax())-1] + 2.0*grid.dz*value*(-1)
         else:
             self.values[0:grid.first_interior(Zmin())]          = self.values[grid.first_interior(Zmin())  ] + grid.dz*value
             self.values[grid.k_top_atmos_ghost_half():] = self.values[grid.first_interior(Zmax())] - grid.dz*value
