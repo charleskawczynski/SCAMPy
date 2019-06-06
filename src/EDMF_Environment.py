@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 from parameters import *
-from Grid import  Grid
+from Grid import Grid, Zmin, Zmax, Center, Node
 from Field import Field
 from TimeStepping import TimeStepping
 from ReferenceState import ReferenceState
@@ -41,18 +41,18 @@ class EnvironmentVariables:
         nz = Gr.nzg
         self.Gr = Gr
 
-        self.W   = EnvironmentVariable(Gr, 'full', 'velocity', 'w','m/s' )
-        self.QT  = EnvironmentVariable(Gr, 'half', 'scalar', 'qt','kg/kg' )
-        self.QL  = EnvironmentVariable(Gr, 'half', 'scalar', 'ql','kg/kg' )
-        self.QR  = EnvironmentVariable(Gr, 'half', 'scalar', 'qr','kg/kg' )
-        self.THL = EnvironmentVariable(Gr, 'half', 'scalar', 'thetal', 'K')
-        self.T   = EnvironmentVariable(Gr, 'half', 'scalar', 'temperature','K' )
-        self.B   = EnvironmentVariable(Gr, 'half', 'scalar', 'buoyancy','m^2/s^3' )
-        self.CF  = EnvironmentVariable(Gr, 'half', 'scalar','cloud_fraction', '-')
+        self.W   = EnvironmentVariable(Gr, Node(), 'velocity', 'w','m/s' )
+        self.QT  = EnvironmentVariable(Gr, Center(), 'scalar', 'qt','kg/kg' )
+        self.QL  = EnvironmentVariable(Gr, Center(), 'scalar', 'ql','kg/kg' )
+        self.QR  = EnvironmentVariable(Gr, Center(), 'scalar', 'qr','kg/kg' )
+        self.THL = EnvironmentVariable(Gr, Center(), 'scalar', 'thetal', 'K')
+        self.T   = EnvironmentVariable(Gr, Center(), 'scalar', 'temperature','K' )
+        self.B   = EnvironmentVariable(Gr, Center(), 'scalar', 'buoyancy','m^2/s^3' )
+        self.CF  = EnvironmentVariable(Gr, Center(), 'scalar','cloud_fraction', '-')
         if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-            self.H = EnvironmentVariable(Gr, 'half', 'scalar', 's','J/kg/K' )
+            self.H = EnvironmentVariable(Gr, Center(), 'scalar', 's','J/kg/K' )
         elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-            self.H = EnvironmentVariable(Gr, 'half', 'scalar', 'thetal','K' )
+            self.H = EnvironmentVariable(Gr, Center(), 'scalar', 'thetal','K' )
 
         # TKE   TODO   repeated from Variables.pyx logic
         if  namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':
@@ -77,19 +77,19 @@ class EnvironmentVariables:
             print('Defaulting to saturation adjustment with respect to environmental means')
 
         if self.calc_tke:
-            self.TKE = EnvironmentVariable_2m(Gr, 'half', 'scalar', 'tke','m^2/s^2' )
+            self.TKE = EnvironmentVariable_2m(Gr, Center(), 'scalar', 'tke','m^2/s^2' )
 
         if self.calc_scalar_var:
-            self.QTvar = EnvironmentVariable_2m(Gr, 'half', 'scalar', 'qt_var','kg^2/kg^2' )
+            self.QTvar = EnvironmentVariable_2m(Gr, Center(), 'scalar', 'qt_var','kg^2/kg^2' )
             if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-                self.Hvar = EnvironmentVariable_2m(Gr, 'half', 'scalar', 's_var', '(J/kg/K)^2')
-                self.HQTcov = EnvironmentVariable_2m(Gr, 'half', 'scalar', 's_qt_covar', '(J/kg/K)(kg/kg)' )
+                self.Hvar = EnvironmentVariable_2m(Gr, Center(), 'scalar', 's_var', '(J/kg/K)^2')
+                self.HQTcov = EnvironmentVariable_2m(Gr, Center(), 'scalar', 's_qt_covar', '(J/kg/K)(kg/kg)' )
             elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-                self.Hvar = EnvironmentVariable_2m(Gr, 'half', 'scalar', 'thetal_var', 'K^2')
-                self.HQTcov = EnvironmentVariable_2m(Gr, 'half', 'scalar', 'thetal_qt_covar', 'K(kg/kg)' )
+                self.Hvar = EnvironmentVariable_2m(Gr, Center(), 'scalar', 'thetal_var', 'K^2')
+                self.HQTcov = EnvironmentVariable_2m(Gr, Center(), 'scalar', 'thetal_qt_covar', 'K(kg/kg)' )
 
         if self.EnvThermo_scheme == 'sommeria_deardorff':
-            self.THVvar = EnvironmentVariable(Gr, 'half', 'scalar', 'thetav_var', 'K^2' )
+            self.THVvar = EnvironmentVariable(Gr, Center(), 'scalar', 'thetav_var', 'K^2' )
 
         #TODO  - most likely a temporary solution (unless it could be useful for testing)
         try:

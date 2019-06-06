@@ -3,7 +3,7 @@ from parameters import *
 import sys
 from EDMF_Updrafts import *
 from EDMF_Environment import *
-from Grid import Grid
+from Grid import Grid, Zmin, Zmax, Center, Node
 from Field import Field
 from Field import Cut
 from Field import Dual
@@ -36,8 +36,8 @@ class ParameterizationBase:
         self.turbulence_tendency = Field.half(Gr)
         self.Gr = Gr # grid class
         self.Ref = Ref # reference state class
-        self.KM = VariableDiagnostic(Gr, 'half', 'scalar','sym', 'diffusivity', 'm^2/s') # eddy viscosity
-        self.KH = VariableDiagnostic(Gr, 'half', 'scalar','sym', 'viscosity', 'm^2/s') # eddy diffusivity
+        self.KM = VariableDiagnostic(Gr, Center(), 'scalar','sym', 'diffusivity', 'm^2/s') # eddy viscosity
+        self.KH = VariableDiagnostic(Gr, Center(), 'scalar','sym', 'viscosity', 'm^2/s') # eddy diffusivity
         # get values from paramlist
         self.prandtl_number = paramlist['turbulence']['prandtl_number']
         self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']

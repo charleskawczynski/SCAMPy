@@ -1,4 +1,5 @@
 import os
+from Grid import Grid, Zmin, Zmax, Center, Node
 import numpy as np
 
 class Cut:
@@ -12,27 +13,28 @@ class Dual:
         return
 
 class Field:
-    def __init__(self, n, full_data):
-        self.full_data = full_data
+    def __init__(self, n, loc):
+        self.loc = loc
         self.values = np.zeros((n,), dtype=np.double, order='c')
         return
 
     @classmethod
     def half(cls, grid):
-        return Field(grid.nzg, False)
+        return Field(grid.nzg, Center())
 
     @classmethod
     def full(cls, grid):
-        return Field(grid.nzg, True)
+        return Field(grid.nzg, Node())
 
     @classmethod
     def field(cls, grid, loc):
-        if loc == 'half':
+        if isinstance(loc, Center):
             return Field.half(grid)
-        elif loc == 'full':
+        elif isinstance(loc, Node):
             return Field.full(grid)
         else:
-            print('Invalid location setting for variable! Must be half or full')
+            print('loc = ', loc)
+            raise TypeError('Bad location in field in Field.py')
 
     def __getitem__(self, key):
         if not (isinstance(key, Dual) or isinstance(key, Cut)):
@@ -40,7 +42,7 @@ class Field:
         elif isinstance(key, Cut):
             return [self.values[k] for k in [key.k-1, key.k, key.k+1]]
         else:
-            if self.full_data:
+            if isinstance(self.loc, Node):
                 if isinstance(key, Dual):
                     return [self.values[k] for k in [key.k-1, key.k]]
                 else:
@@ -61,7 +63,7 @@ class Field:
         return len(self.values)
 
     def export_data(self, grid, file_name):
-        if self.full_data:
+        if isinstance(self.loc, Node):
             a = np.transpose(grid.z)
         else:
             a = np.transpose(grid.z_half)
@@ -78,19 +80,19 @@ class Field:
         return
 
     def surface(self, grid):
-        if self.full_data:
+        if isinstance(self.loc, Node):
             return self.values[grid.surface()]
         else:
             return (self.values[grid.k_surface_bl()]+self.values[grid.k_surface_bl()-1])/2.0
 
     def surface_bl(self, grid):
-        if self.full_data:
+        if isinstance(self.loc, Node):
             return (self.values[grid.surface()]+self.values[grid.surface()+1])/2.0
         else:
             return self.values[grid.k_surface_bl()]
 
     def extrap(self, grid):
-        if self.full_data:
+        if isinstance(self.loc, Node):
             for k in reversed(grid.over_points_full_ghost_surface()):
                 self.values[k] = 2.0*self.values[k+1] - self.values[k+2]
             for k in grid.over_points_full_ghost_top():
@@ -103,7 +105,7 @@ class Field:
 
 
     def apply_Neumann(self, grid, value):
-        if self.full_data:
+        if isinstance(self.loc, Node):
             self.values[0:grid.k_surface()]             = 2.0*self.values[grid.k_surface()  ] - self.values[grid.k_surface()  +1] + 2.0*grid.dz*value*(+1)
             self.values[grid.k_top_atmos_ghost_full():] = 2.0*self.values[grid.k_top_atmos()] - self.values[grid.k_top_atmos()-1] + 2.0*grid.dz*value*(-1)
         else:
@@ -111,7 +113,7 @@ class Field:
             self.values[grid.k_top_atmos_ghost_half():] = self.values[grid.k_top_atmos_bl()] - grid.dz*value
 
     def apply_Dirichlet(self, grid, value):
-        if self.full_data:
+        if isinstance(self.loc, Node):
             self.values[0:grid.k_surface_ghost_full()]  = value
             self.values[grid.k_top_atmos_ghost_full():] = value
         else:

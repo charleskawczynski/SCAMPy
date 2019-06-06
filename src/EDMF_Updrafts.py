@@ -2,7 +2,7 @@ import numpy as np
 from parameters import *
 from thermodynamic_functions import  *
 from microphysics_functions import  *
-import Grid as Grid
+from Grid import Grid, Zmin, Zmax, Center, Node
 from Field import Field
 import ReferenceState
 from Variables import GridMeanVariables
@@ -53,18 +53,18 @@ class UpdraftVariables:
         self.n_updrafts = nu
         nzg = Gr.nzg
 
-        self.W    = UpdraftVariable(Gr, nu, nzg, 'full', 'velocity', 'w','m/s' )
-        self.Area = UpdraftVariable(Gr, nu, nzg, 'full', 'scalar', 'area_fraction','[-]' )
-        self.QT   = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'qt','kg/kg' )
-        self.QL   = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'ql','kg/kg' )
-        self.QR   = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'qr','kg/kg' )
-        self.THL  = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'thetal', 'K')
-        self.T    = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'temperature','K' )
-        self.B    = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'buoyancy','m^2/s^3' )
+        self.W    = UpdraftVariable(Gr, nu, nzg, Node(), 'velocity', 'w','m/s' )
+        self.Area = UpdraftVariable(Gr, nu, nzg, Node(), 'scalar', 'area_fraction','[-]' )
+        self.QT   = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'qt','kg/kg' )
+        self.QL   = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'ql','kg/kg' )
+        self.QR   = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'qr','kg/kg' )
+        self.THL  = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'thetal', 'K')
+        self.T    = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'temperature','K' )
+        self.B    = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'buoyancy','m^2/s^3' )
         if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-            self.H = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 's','J/kg/K' )
+            self.H = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 's','J/kg/K' )
         elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-            self.H = UpdraftVariable(Gr, nu, nzg, 'half', 'scalar', 'thetal','K' )
+            self.H = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'thetal','K' )
 
 
         if namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':

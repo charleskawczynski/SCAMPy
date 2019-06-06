@@ -1,4 +1,4 @@
-from Grid import Grid
+from Grid import Grid, Zmin, Zmax, Center, Node
 from Field import Field
 from NetCDFIO import NetCDFIO_Stats
 import numpy as np
@@ -41,8 +41,8 @@ class ReferenceState:
 
         # Construct arrays for integration points
 
-        z = Gr.z_full_real()
-        z_half = Gr.z_half_real()
+        z = [Gr.z[k] for k in Gr.over_points_full_real()]
+        z_half = [Gr.z_half[k] for k in Gr.over_points_half_real()]
 
         # We are integrating the log pressure so need to take the log of the
         # surface pressure
@@ -52,8 +52,8 @@ class ReferenceState:
         p_half = Field.half(Gr)
 
         # Perform the integration
-        p[Gr.k_full_real()] = odeint(rhs, p0, z, hmax=1.0)[:, 0]
-        p_half[Gr.k_half_real()] = odeint(rhs, p0, z_half, hmax=1.0)[:, 0]
+        p[Gr.slice_real(Node())] = odeint(rhs, p0, z, hmax=1.0)[:, 0]
+        p_half[Gr.slice_real(Center())] = odeint(rhs, p0, z_half, hmax=1.0)[:, 0]
 
         p_half.apply_Neumann(Gr, 0.0)
         p.apply_Neumann(Gr, 0.0)
