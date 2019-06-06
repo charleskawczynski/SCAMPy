@@ -4,7 +4,7 @@ import shutil
 
 from TimeStepping import TimeStepping
 
-from Grid import Grid
+from Grid import Grid, Zmin, Zmax, Center, Node
 import numpy as np
 
 class NetCDFIO_Stats:

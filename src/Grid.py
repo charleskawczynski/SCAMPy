@@ -106,15 +106,24 @@ class Grid:
             print('loc, b = ', loc, b)
             raise TypeError("Bad location in over_elems_ghost in Grid.py")
 
-    def over_points_full(self):
-        return range(self.boundary(Zmin())-1, self.boundary(Zmax())+1+1)
+    def over_elems(self, loc):
+        if isinstance(loc, Center):
+            return range(self.first_interior(Zmin())-1, self.first_interior(Zmax())+1+1)
+        elif isinstance(loc, Node):
+            return range(self.boundary(Zmin())-1, self.boundary(Zmax())+1+1)
+        else:
+            raise TypeError("Bad location in over_elems in Grid.py")
 
-    def over_points_half(self):
-        return range(self.first_interior(Zmin())-1, self.first_interior(Zmax())+1+1)
+    def over_elems_real(self, loc):
+        if isinstance(loc, Center):
+            return range(self.first_interior(Zmin()), self.first_interior(Zmax())+1)
+        elif isinstance(loc, Node):
+            return range(self.boundary(Zmin()), self.boundary(Zmax())+1)
+        else:
+            raise TypeError("Bad location in over_elems_real in Grid.py")
 
-    def over_points_full_real(self):
-        return range(self.boundary(Zmin()), self.boundary(Zmax())+1)
 
-    def over_points_half_real(self):
-        return range(self.first_interior(Zmin()), self.first_interior(Zmax())+1)
+
+
+
 

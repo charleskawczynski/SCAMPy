@@ -1,5 +1,6 @@
 import numpy as np
 from parameters import *
+from Grid import Grid, Zmin, Zmax, Center, Node
 from thermodynamic_functions import *
 from surface_functions import entropy_flux, compute_ustar, buoyancy_flux, exchange_coefficients_byun
 from turbulence_functions import get_wstar, get_inversion
@@ -22,7 +23,7 @@ class SurfaceBase:
         theta_rho = Field.half(self.Gr)
 
         # Need to get theta_rho
-        for k in self.Gr.over_points_half():
+        for k in self.Gr.over_elems(Center()):
             qv = GMV.QT.values[k] - GMV.QL.values[k]
             theta_rho[k] = theta_rho_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
         zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.Gr, self.Ri_bulk_crit)

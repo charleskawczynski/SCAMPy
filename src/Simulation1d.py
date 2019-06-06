@@ -3,7 +3,7 @@ import numpy as np
 from Variables import GridMeanVariables
 from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
-import Grid
+from Grid import Grid, Zmin, Zmax, Center, Node
 from StateVec import StateVec
 from ReferenceState import ReferenceState
 import matplotlib.pyplot as plt
@@ -35,7 +35,7 @@ class Simulation1d:
                      ('p_0', 1),
                      )
 
-        self.Gr = Grid.Grid(z_min, z_max, n_elems_real, n_ghost)
+        self.Gr = Grid(z_min, z_max, n_elems_real, n_ghost)
         self.q = StateVec(unkowns, self.Gr)
         self.tmp = StateVec(temp_vars, self.Gr)
 

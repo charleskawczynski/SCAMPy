@@ -41,8 +41,8 @@ class ReferenceState:
 
         # Construct arrays for integration points
 
-        z = [Gr.z[k] for k in Gr.over_points_full_real()]
-        z_half = [Gr.z_half[k] for k in Gr.over_points_half_real()]
+        z = [Gr.z[k] for k in Gr.over_elems_real(Node())]
+        z_half = [Gr.z_half[k] for k in Gr.over_elems_real(Center())]
 
         # We are integrating the log pressure so need to take the log of the
         # surface pressure
@@ -78,14 +78,14 @@ class ReferenceState:
         qv_half = Field.half(Gr)
 
         # Compute reference state thermodynamic profiles
-        # for k in Gr.over_points_full():
-        for k in Gr.over_points_full_real():
+        # for k in Gr.over_elems(Node()):
+        for k in Gr.over_elems_real(Node()):
             temperature[k], ql[k] = eos(t_to_entropy_c, eos_first_guess_entropy, p_[k], self.qtg, self.sg)
             qv[k] = self.qtg - (ql[k] + qi[k])
             alpha[k] = alpha_c(p_[k], temperature[k], self.qtg, qv[k])
 
-        # for k in Gr.over_points_half():
-        for k in Gr.over_points_half_real():
+        # for k in Gr.over_elems(Center()):
+        for k in Gr.over_elems_real(Center()):
             temperature_half[k], ql_half[k] = eos(t_to_entropy_c, eos_first_guess_entropy, p_half_[k], self.qtg, self.sg)
             qv_half[k] = self.qtg - (ql_half[k] + qi_half[k])
             alpha_half[k] = alpha_c(p_half_[k], temperature_half[k], self.qtg, qv_half[k])
@@ -95,7 +95,7 @@ class ReferenceState:
 
         # Now do a sanity check to make sure that the Reference State entropy profile is uniform following
         # saturation adjustment
-        for k in Gr.over_points_half():
+        for k in Gr.over_elems(Center()):
             s = t_to_entropy_c(p_half[k],temperature_half[k],self.qtg,ql_half[k],qi_half[k])
             if np.abs(s - self.sg)/self.sg > 0.01:
                 print('Error in reference profiles entropy not constant !')

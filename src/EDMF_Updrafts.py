@@ -93,7 +93,7 @@ class UpdraftVariables:
         dz = self.Gr.dz
 
         for i in range(self.n_updrafts):
-            for k in self.Gr.over_points_half():
+            for k in self.Gr.over_elems(Center()):
 
                 self.W.values[i,k] = 0.0
                 # Simple treatment for now, revise when multiple updraft closures
@@ -148,7 +148,7 @@ class UpdraftVariables:
         self.B.bulkvalues[:] = 0.0
 
 
-        for k in self.Gr.over_points_half_real():
+        for k in self.Gr.over_elems_real(Center()):
             if self.Area.bulkvalues[k] > 1.0e-20:
                 for i in range(self.n_updrafts):
                     self.QT.bulkvalues[k] += self.Area.values[i,k] * self.QT.values[i,k]/self.Area.bulkvalues[k]
@@ -172,7 +172,7 @@ class UpdraftVariables:
     # quick utility to set "new" arrays with values in the "values" arrays
     def set_new_with_values(self):
         for i in range(self.n_updrafts):
-            for k in self.Gr.over_points_half():
+            for k in self.Gr.over_elems(Center()):
                 self.W.new[i,k] = self.W.values[i,k]
                 self.Area.new[i,k] = self.Area.values[i,k]
                 self.QT.new[i,k] = self.QT.values[i,k]
@@ -187,7 +187,7 @@ class UpdraftVariables:
     # quick utility to set "new" arrays with values in the "values" arrays
     def set_old_with_values(self):
         for i in range(self.n_updrafts):
-            for k in self.Gr.over_points_half():
+            for k in self.Gr.over_elems(Center()):
                 self.W.old[i,k] = self.W.values[i,k]
                 self.Area.old[i,k] = self.Area.values[i,k]
                 self.QT.old[i,k] = self.QT.values[i,k]
@@ -201,7 +201,7 @@ class UpdraftVariables:
     # quick utility to set "tmp" arrays with values in the "new" arrays
     def set_values_with_new(self):
         for i in range(self.n_updrafts):
-            for k in self.Gr.over_points_half():
+            for k in self.Gr.over_elems(Center()):
                 self.W.values[i,k] = self.W.new[i,k]
                 self.Area.values[i,k] = self.Area.new[i,k]
                 self.QT.values[i,k] = self.QT.new[i,k]
@@ -245,7 +245,7 @@ class UpdraftVariables:
             self.cloud_base[i] = self.Gr.z_half[self.Gr.nzg-self.Gr.gw-1]
             self.cloud_top[i] = 0.0
             self.cloud_cover[i] = 0.0
-            for k in self.Gr.over_points_half_real():
+            for k in self.Gr.over_elems_real(Center()):
                 if self.QL.values[i,k] > 1e-8 and self.Area.values[i,k] > 1e-3:
                     self.cloud_base[i] = np.fmin(self.cloud_base[i], self.Gr.z_half[k])
                     self.cloud_top[i] = np.fmax(self.cloud_top[i], self.Gr.z_half[k])
@@ -268,7 +268,7 @@ class UpdraftThermodynamics:
     def satadjust(self, UpdVar):
         #Update T, QL
         for i in range(self.n_updraft):
-            for k in self.Gr.over_points_half():
+            for k in self.Gr.over_elems(Center()):
                 T, ql = eos(self.t_to_prog_fp, self.prog_to_t_fp, self.Ref.p0_half[k], UpdVar.QT.values[i,k], UpdVar.H.values[i,k])
                 UpdVar.QL.values[i,k] = ql
                 UpdVar.T.values[i,k] = T
@@ -279,13 +279,13 @@ class UpdraftThermodynamics:
         UpdVar.Area.bulkvalues = np.sum(UpdVar.Area.values,axis=0)
         if not extrap:
             for i in range(self.n_updraft):
-                for k in self.Gr.over_points_half():
+                for k in self.Gr.over_elems(Center()):
                     qv = UpdVar.QT.values[i,k] - UpdVar.QL.values[i,k]
                     alpha = alpha_c(self.Ref.p0_half[k], UpdVar.T.values[i,k], UpdVar.QT.values[i,k], qv)
                     UpdVar.B.values[i,k] = buoyancy_c(self.Ref.alpha0_half[k], alpha) #- GMV.B.values[k]
         else:
             for i in range(self.n_updraft):
-                for k in self.Gr.over_points_half_real():
+                for k in self.Gr.over_elems_real(Center()):
                     if UpdVar.Area.values[i,k] > 1e-3:
                         qt = UpdVar.QT.values[i,k]
                         qv = UpdVar.QT.values[i,k] - UpdVar.QL.values[i,k]
@@ -301,7 +301,7 @@ class UpdraftThermodynamics:
                         t = T
                         alpha = alpha_c(self.Ref.p0_half[k], t, qt, qv)
                         UpdVar.B.values[i,k] = buoyancy_c(self.Ref.alpha0_half[k], alpha)
-        for k in self.Gr.over_points_half_real():
+        for k in self.Gr.over_elems_real(Center()):
             GMV.B.values[k] = (1.0 - UpdVar.Area.bulkvalues[k]) * EnvVar.B.values[k]
             for i in range(self.n_updraft):
                 GMV.B.values[k] += UpdVar.Area.values[i,k] * UpdVar.B.values[i,k]
@@ -330,7 +330,7 @@ class UpdraftMicrophysics:
         Compute precipitation source terms for QT, QR and H
         """
         for i in range(self.n_updraft):
-            for k in self.Gr.over_points_half():
+            for k in self.Gr.over_elems(Center()):
                 tmp_qr = acnv_instant(UpdVar.QL.values[i,k], UpdVar.QT.values[i,k], self.max_supersaturation,\
                                       UpdVar.T.values[i,k], self.Ref.p0_half[k])
                 self.prec_source_qt[i,k] = -tmp_qr
@@ -347,7 +347,7 @@ class UpdraftMicrophysics:
         Apply precipitation source terms to QL, QR and H
         """
         for i in range(self.n_updraft):
-            for k in self.Gr.over_points_half():
+            for k in self.Gr.over_elems(Center()):
                 UpdVar.QT.values[i,k] += self.prec_source_qt[i,k]
                 UpdVar.QL.values[i,k] += self.prec_source_qt[i,k]
                 UpdVar.QR.values[i,k] -= self.prec_source_qt[i,k]

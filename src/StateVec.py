@@ -84,7 +84,7 @@ class StateVec:
         return [name for name in self.var_names if not name in names]
 
     def plot_state(self, grid, directory, filename, name_idx = None, i_sd = 0, include_ghost = False):
-        domain_range = grid.over_points_half() if include_ghost else grid.over_points_half_real()
+        domain_range = grid.over_elems(Center()) if include_ghost else grid.over_elems_real(Center())
         # k_stop_local = min(len(domain_range), k_stop_min)
         # domain_range = domain_range[k_start:k_stop_local]
         domain_range = domain_range[0:-1]
@@ -138,10 +138,10 @@ print(state_vec.over_sub_domains(1))
 print(state_vec.over_sub_domains('ρ_0'))
 print(state_vec.var_names_except('ρ_0'))
 
-for k in grid.over_points_half_real():
+for k in grid.over_elems_real(Center()):
     state_vec['ρ_0', k] = 3.0
 
-for k in grid.over_points_half():
+for k in grid.over_elems(Center()):
     state_vec['ρ_0', k] = 2.0
 
 state_vec.plot_state(grid, './', 'test')

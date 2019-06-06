@@ -1,7 +1,7 @@
 import numpy as np
 from parameters import *
 
-from Grid import Grid
+from Grid import Grid, Zmin, Zmax, Center, Node
 from Field import Field
 from Variables import GridMeanVariables
 from ReferenceState import ReferenceState
@@ -88,7 +88,7 @@ class Soares(CasesBase):
         ql = 0.0
         qi = 0.0
 
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             if Gr.z_half[k] <= 1350.0:
                 GMV.QT.values[k] = 5.0e-3 - 3.7e-4* Gr.z_half[k]/1000.0
                 theta[k] = 300.0
@@ -102,12 +102,12 @@ class Soares(CasesBase):
         GMV.QT.set_bcs(Gr)
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.H.values[k] = theta[k]
                 GMV.T.values[k] =  theta[k] * exner_c(Ref.p0_half[k])
                 GMV.THL.values[k] = theta[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.T.values[k] = theta[k] * exner_c(Ref.p0_half[k])
                 GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
@@ -174,7 +174,7 @@ class Bomex(CasesBase):
         ql=0.0
         qi =0.0 # IC of Bomex is cloud-free
 
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             #Set Thetal profile
             if Gr.z_half[k] <= 520.:
                 thetal[k] = 298.7
@@ -203,12 +203,12 @@ class Bomex(CasesBase):
                 GMV.U.values[k] = -8.75 + (Gr.z_half[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
                 GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
@@ -238,7 +238,7 @@ class Bomex(CasesBase):
         self.Fo.Gr = Gr
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             # Geostrophic velocity profiles. vg = 0
             self.Fo.ug[k] = -10.0 + (1.8e-3)*Gr.z_half[k]
             # Set large-scale cooling
@@ -297,7 +297,7 @@ class life_cycle_Tan2018(CasesBase):
         thetal = np.zeros((Gr.nzg,), dtype=np.double, order='c')
         ql=0.0
         qi =0.0 # IC of Bomex is cloud-free
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             #Set Thetal profile
             if Gr.z_half[k] <= 520.:
                 thetal[k] = 298.7
@@ -327,12 +327,12 @@ class life_cycle_Tan2018(CasesBase):
 
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
                 GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
@@ -365,7 +365,7 @@ class life_cycle_Tan2018(CasesBase):
         self.Fo.Gr = Gr
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             # Geostrophic velocity profiles. vg = 0
             self.Fo.ug[k] = -10.0 + (1.8e-3)*Gr.z_half[k]
             # Set large-scale cooling
@@ -430,7 +430,7 @@ class Rico(CasesBase):
         ql=0.0
         qi =0.0 # IC of Rico is cloud-free
 
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             GMV.U.values[k] =  -9.9 + 2.0e-3 * Gr.z_half[k]
             GMV.V.values[k] = -3.8
             #Set Thetal profile
@@ -448,12 +448,12 @@ class Rico(CasesBase):
                 GMV.QT.values[k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(Gr.z_half[k] - 3260.0))/1000.0
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
                 GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
@@ -488,7 +488,7 @@ class Rico(CasesBase):
         self.Fo.Gr = Gr
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in Gr.over_points_half():
+        for k in Gr.over_elems(Center()):
             # Geostrophic velocity profiles
             self.Fo.ug[k] = -9.9 + 2.0e-3 * Gr.z_half[k]
             self.Fo.vg[k] = -3.8
@@ -615,7 +615,7 @@ class TRMM_LBA(CasesBase):
         GMV.T.set_bcs(Gr)
 
 
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             PV_star = pv_star(GMV.T.values[k])
             qv_star = PV_star*epsi/(p1[k]- PV_star + epsi*PV_star*RH[k]/100.0) # eq. 37 in pressel et al and the def of RH
             qv = GMV.QT.values[k] - GMV.QL.values[k]
@@ -775,7 +775,7 @@ class TRMM_LBA(CasesBase):
 
         ind1 = int(mt.trunc(10.0/600.0))
         ind2 = int(mt.ceil(10.0/600.0))
-        for k in Gr.over_points_half():
+        for k in Gr.over_elems(Center()):
             if 10%600.0 == 0:
                 self.Fo.dTdt[k] = self.rad[ind1,k]
             else:
@@ -806,19 +806,19 @@ class TRMM_LBA(CasesBase):
         ind2 = int(mt.ceil(TS.t/600.0))
         ind1 = int(mt.trunc(TS.t/600.0))
         if TS.t<600.0: # first 10 min use the radiative forcing of t=10min (as in the paper)
-            for k in self.Fo.Gr.over_points_half():
+            for k in self.Fo.Gr.over_elems(Center()):
                 self.Fo.dTdt[k] = self.rad[0,k]
         elif TS.t>18900.0:
-            for k in self.Fo.Gr.over_points_half():
+            for k in self.Fo.Gr.over_elems(Center()):
                 self.Fo.dTdt[k] = (self.rad[31,k]-self.rad[30,k])/(self.rad_time[31]-self.rad_time[30])\
                                       *(18900.0/60.0-self.rad_time[30])+self.rad[30,k]
 
         else:
             if TS.t%600.0 == 0:
-                for k in self.Fo.Gr.over_points_half():
+                for k in self.Fo.Gr.over_elems(Center()):
                     self.Fo.dTdt[k] = self.rad[ind1,k]
             else: # in all other cases - interpolate
-                for k in self.Fo.Gr.over_points_half_real():
+                for k in self.Fo.Gr.over_elems_real(Center()):
                     if self.Fo.Gr.z_half[k] < 22699.48:
                         self.Fo.dTdt[k]    = (self.rad[ind2,k]-self.rad[ind1,k])\
                                                  /(self.rad_time[ind2]-self.rad_time[ind1])\
@@ -863,7 +863,7 @@ class ARM_SGP(CasesBase):
         qt = np.interp(Gr.z_half,z_in,qt_in)
 
 
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             GMV.U.values[k] = 10.0
             GMV.QT.values[k] = qt[k]
             GMV.T.values[k] = Theta[k]*exner_c(Ref.p0_half[k])
@@ -902,7 +902,7 @@ class ARM_SGP(CasesBase):
         self.Fo.Gr = Gr
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in Gr.over_points_half():
+        for k in Gr.over_elems(Center()):
             self.Fo.ug[k] = 10.0
             self.Fo.vg[k] = 0.0
 
@@ -942,7 +942,7 @@ class ARM_SGP(CasesBase):
         Rqt_in = np.array([0.08, 0.02, 0.04, -0.1, -0.16, -0.3])/1000.0/3600.0 # Radiative forcing for qt converted to [kg/kg/sec]
         dTdt = np.interp(TS.t,t_in,AT_in) + np.interp(TS.t,t_in,RT_in)
         dqtdt =  np.interp(TS.t,t_in,Rqt_in)
-        for k in self.Fo.Gr.over_points_half():
+        for k in self.Fo.Gr.over_elems(Center()):
                 if self.Fo.Gr.z_half[k] <=1000.0:
                     self.Fo.dTdt[k] = dTdt
                     self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.Ref.p0_half[k])
@@ -1001,7 +1001,7 @@ class GATE_III(CasesBase):
         U = np.interp(Gr.z_half,z_in,U_in)
 
 
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             GMV.QT.values[k] = qt[k]
             GMV.T.values[k] = T[k]
             GMV.U.values[k] = U[k]
@@ -1161,7 +1161,7 @@ class DYCOMS_RF01(CasesBase):
         ql     = np.zeros((Gr.nzg,), dtype=np.double, order='c') # DYCOMS case is saturated
         qi     = 0.0                                             # no ice
 
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             # thetal profile as defined in DYCOMS
             if Gr.z_half[k] <= 840.0:
                thetal[k] = 289.0
@@ -1248,7 +1248,7 @@ class DYCOMS_RF01(CasesBase):
         divergence = 3.75e-6    # divergence is defined twice: here and in __init__ of ForcingDYCOMS_RF01 class
                                 # To be able to have self.Fo.divergence available here,
                                 # we would have to change the signature of ForcingBase class
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             self.Fo.subsidence[k] = - Gr.z_half[k] * divergence
 
         # no large-scale drying
@@ -1301,7 +1301,7 @@ class GABLS(CasesBase):
         qi =0.0 # IC of GABLS cloud-free
         theta_pert = np.random.random_sample(Gr.nzg)
 
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             #Set wind velocity profile
             GMV.U.values[k] =  8.0
             GMV.V.values[k] =  0.0
@@ -1316,12 +1316,12 @@ class GABLS(CasesBase):
             GMV.QT.values[k] = 0.0
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
                 GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k]) # No water content
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
@@ -1396,7 +1396,7 @@ class SP(CasesBase):
         ql=0.0
         qi =0.0 # IC of SP cloud-free
 
-        for k in Gr.over_points_half_real():
+        for k in Gr.over_elems_real(Center()):
             GMV.U.values[k] =  1.0
             GMV.V.values[k] =  0.0
             #Set Thetal profile
@@ -1411,12 +1411,12 @@ class SP(CasesBase):
             GMV.QT.values[k] = 0.0
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
                 GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_points_half_real():
+            for k in Gr.over_elems_real(Center()):
                 GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
