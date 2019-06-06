@@ -32,33 +32,51 @@ class Grid:
             count += 1
         return
 
+    def n_hat(self, b):
+        if isinstance(b, Zmin):
+            return -1
+        elif isinstance(b, Zmax):
+            return 1
+        else:
+            raise TypeError("Bad boundary in n_hat in Grid.py")
+
+    def binary(self, b):
+        if isinstance(b, Zmin):
+            return 0
+        elif isinstance(b, Zmax):
+            return 1
+        else:
+            raise TypeError("Bad boundary in n_hat in Grid.py")
+
+    def first_interior(self, b):
+        if isinstance(b, Zmin):
+            return self.gw
+        elif isinstance(b, Zmax):
+            return self.nz+self.gw-1
+        else:
+            raise TypeError("Bad boundary in n_hat in Grid.py")
+
     def k_surface(self): # Index for fields at full location
-        return self.gw-1
+        return self.first_interior(Zmin())-1
 
-    def k_surface_bl(self): # Index for fields at half location
-        return self.gw
-
-    def k_top_atmos(self): # Index for fields at full location
-        return self.nz+self.gw-1
-
-    def k_top_atmos_bl(self): # Index for fields at half location
-        return self.nz+self.gw-1 # = nzg - 1
+    def k_top_atmos(self):
+        return self.first_interior(Zmax())
 
     def k_surface_ghost_full(self):
         return self.k_surface()-1
 
     def k_surface_ghost_half(self):
-        return self.k_surface_bl()-1
+        return self.first_interior(Zmin())-1
 
     def k_top_atmos_ghost_full(self):
         return self.k_top_atmos()+1
 
     def k_top_atmos_ghost_half(self):
-        return self.k_top_atmos_bl()+1
+        return self.first_interior(Zmax())+1
 
     def slice_real(self, loc):
         if isinstance(loc, Center):
-            return slice(self.k_surface_bl(),self.k_top_atmos_bl()+1,1)
+            return slice(self.first_interior(Zmin()),self.first_interior(Zmax())+1,1)
         elif isinstance(loc, Node):
             return slice(self.k_surface(),self.k_top_atmos()+1,1)
         else:
@@ -77,7 +95,7 @@ class Grid:
         return list(range(self.k_top_atmos_ghost_full(), self.nzg))
 
     def over_points_half_ghost_surface(self):
-        return list(range(0, self.k_surface_bl()))
+        return list(range(0, self.first_interior(Zmin())))
 
     def over_points_half_ghost_top(self):
         return list(range(self.k_top_atmos_ghost_half(), self.nzg))
@@ -89,5 +107,5 @@ class Grid:
         return range(self.k_surface(), self.k_top_atmos()+1)
 
     def over_points_half_real(self):
-        return range(self.k_surface_bl(), self.k_top_atmos_bl()+1)
+        return range(self.first_interior(Zmin()), self.first_interior(Zmax())+1)
 

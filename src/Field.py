@@ -83,13 +83,13 @@ class Field:
         if isinstance(self.loc, Node):
             return self.values[grid.surface()]
         else:
-            return (self.values[grid.k_surface_bl()]+self.values[grid.k_surface_bl()-1])/2.0
+            return (self.values[grid.first_interior(Zmin())]+self.values[grid.first_interior(Zmin())-1])/2.0
 
     def surface_bl(self, grid):
         if isinstance(self.loc, Node):
             return (self.values[grid.surface()]+self.values[grid.surface()+1])/2.0
         else:
-            return self.values[grid.k_surface_bl()]
+            return self.values[grid.first_interior(Zmin())]
 
     def extrap(self, grid):
         if isinstance(self.loc, Node):
@@ -109,13 +109,13 @@ class Field:
             self.values[0:grid.k_surface()]             = 2.0*self.values[grid.k_surface()  ] - self.values[grid.k_surface()  +1] + 2.0*grid.dz*value*(+1)
             self.values[grid.k_top_atmos_ghost_full():] = 2.0*self.values[grid.k_top_atmos()] - self.values[grid.k_top_atmos()-1] + 2.0*grid.dz*value*(-1)
         else:
-            self.values[0:grid.k_surface_bl()]          = self.values[grid.k_surface_bl()  ] + grid.dz*value
-            self.values[grid.k_top_atmos_ghost_half():] = self.values[grid.k_top_atmos_bl()] - grid.dz*value
+            self.values[0:grid.first_interior(Zmin())]          = self.values[grid.first_interior(Zmin())  ] + grid.dz*value
+            self.values[grid.k_top_atmos_ghost_half():] = self.values[grid.first_interior(Zmax())] - grid.dz*value
 
     def apply_Dirichlet(self, grid, value):
         if isinstance(self.loc, Node):
             self.values[0:grid.k_surface_ghost_full()]  = value
             self.values[grid.k_top_atmos_ghost_full():] = value
         else:
-            self.values[0:grid.k_surface_ghost_half()]  = 2*value - self.values[grid.k_surface_bl()  ]
-            self.values[grid.k_top_atmos_ghost_half():] = 2*value - self.values[grid.k_top_atmos_bl()]
+            self.values[0:grid.k_surface_ghost_half()]  = 2*value - self.values[grid.first_interior(Zmin())  ]
+            self.values[grid.k_top_atmos_ghost_half():] = 2*value - self.values[grid.first_interior(Zmax())]

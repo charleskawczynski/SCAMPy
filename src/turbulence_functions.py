@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+from Grid import Grid, Zmin, Zmax, Center, Node
 from parameters import *
 from thermodynamic_functions import *
 
@@ -171,7 +172,7 @@ def get_inversion(theta_rho, u, v, grid, Ri_bulk_crit):
     h = 0.0
     Ri_bulk=0.0
     Ri_bulk_low = 0.0
-    kmin = grid.k_surface_bl()
+    kmin = grid.first_interior(Zmin())
     k = kmin
     z_half = grid.z_half
     # test if we need to look at the free convective limit
