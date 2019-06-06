@@ -157,7 +157,9 @@ class SimilarityED(ParameterizationBase):
         b = np.zeros((nz,),dtype=np.double, order='c')
         c = np.zeros((nz,),dtype=np.double, order='c')
         x = np.zeros((nz,),dtype=np.double, order='c')
-        dummy_ae = np.ones((nzg,),dtype=np.double, order='c')
+        dummy_ae = Field.half(self.Gr)
+        for k in self.Gr.over_elems(Center()):
+            dummy_ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
         rho_K_m = np.zeros((nzg,),dtype=np.double, order='c')
 
         for k in range(nzg-1):
@@ -824,7 +826,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                         phi_e,  psi_e,
                         covar_e,
                        gmv_phi, gmv_psi, gmv_covar):
-        ae = np.subtract(np.ones((self.Gr.nzg,),dtype=np.double, order='c'),au.bulkvalues)
+        ae = Field.half(self.Gr)
+        for k in self.Gr.over_elems(Center()):
+            ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
         tke_factor = 1.0
 
 
@@ -857,7 +861,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                                 phi_e, psi_e,
                                 covar_e,
                                 gmv_phi, gmv_psi, gmv_covar):
-        ae = np.subtract(np.ones((self.Gr.nzg,),dtype=np.double, order='c'),au.bulkvalues)
+        ae = Field.half(self.Gr)
+        for k in self.Gr.over_elems(Center()):
+            ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
         tke_factor = 1.0
         if covar_e.name == 'tke':
             tke_factor = 0.5
@@ -1288,7 +1294,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         grad_qt_minus=0.0
         grad_thl_plus=0
         grad_qt_plus=0
-        ae = np.subtract(np.ones((self.Gr.nzg,),dtype=np.double, order='c'),self.UpdVar.Area.bulkvalues)
+        ae = Field.half(self.Gr)
+        for k in self.Gr.over_elems(Center()):
+            ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
         # Note that source terms at the gw grid point are not really used because that is where tke boundary condition is
         # enforced (according to MO similarity). Thus here I am being sloppy about lowest grid point
@@ -1435,7 +1443,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
 
     def compute_covariance_shear(self, GMV, Covar, UpdVar1, UpdVar2, EnvVar1, EnvVar2):
-        ae = np.subtract(np.ones((self.Gr.nzg,),dtype=np.double, order='c'),self.UpdVar.Area.bulkvalues)
+        ae = Field.half(self.Gr)
+        for k in self.Gr.over_elems(Center()):
+            ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
         diff_var1 = 0.0
         diff_var2 = 0.0
         du = 0.0
@@ -1521,7 +1531,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def compute_covariance_rain(self, TS, GMV):
         # TODO defined again in compute_covariance_shear and compute_covaraince
-        ae = np.subtract(np.ones((self.Gr.nzg,),dtype=np.double, order='c'),self.UpdVar.Area.bulkvalues) # area of environment
+        ae = Field.half(self.Gr)
+        for k in self.Gr.over_elems(Center()):
+            ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
         for k in self.Gr.over_elems_real(Center()):
             self.EnvVar.TKE.rain_src[k] = 0.0
@@ -1532,7 +1544,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
 
     def compute_covariance_dissipation(self, Covar):
-        ae = np.subtract(np.ones((self.Gr.nzg,),dtype=np.double, order='c'),self.UpdVar.Area.bulkvalues)
+        ae = Field.half(self.Gr)
+        for k in self.Gr.over_elems(Center()):
+            ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
         for k in self.Gr.over_elems_real(Center()):
             Covar.dissipation[k] = (self.Ref.rho0_half[k] * ae[k] * Covar.values[k]
@@ -1553,7 +1567,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         b = np.zeros((nz,),dtype=np.double, order='c')
         c = np.zeros((nz,),dtype=np.double, order='c')
         x = np.zeros((nz,),dtype=np.double, order='c')
-        ae = np.subtract(np.ones((nzg,),dtype=np.double, order='c'),self.UpdVar.Area.bulkvalues)
+        ae = Field.half(self.Gr)
+        for k in self.Gr.over_elems(Center()):
+            ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
         ae_old = np.subtract(np.ones((nzg,),dtype=np.double, order='c'), np.sum(self.UpdVar.Area.old,axis=0))
         rho_ae_K_m = np.zeros((nzg,),dtype=np.double, order='c')
         whalf = np.zeros((nzg,),dtype=np.double, order='c')
