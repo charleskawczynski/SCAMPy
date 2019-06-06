@@ -1205,19 +1205,17 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         b = np.zeros((nz,),dtype=np.double, order='c') # for tridiag solver
         c = np.zeros((nz,),dtype=np.double, order='c') # for tridiag solver
         x = Field.half(self.Gr)
-
         ae = Field.half(self.Gr)
+        rho_ae_K_m = Field.full(self.Gr)
+
         for k in self.Gr.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
-        rho_ae_K_m = np.zeros((nzg,),dtype=np.double, order='c')
-
-        for k in range(nzg-1):
+        for k in self.Gr.over_elems_real(Node()):
             rho_ae_K_m[k] = 0.5 * (ae[k]*self.KH.values[k]+ ae[k+1]*self.KH.values[k+1]) * self.Ref.rho0[k]
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
-        construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half,
-                                    ae, a, b, c)
+        construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half, ae, a, b, c)
 
         slice_real = self.Gr.slice_real(Center())
         # Solve QT
@@ -1232,9 +1230,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         # get the diffusive flux
         self.diffusive_tendency_qt[k] = (GMV.QT.new[k] - GMV.QT.mf_update[k]) * TS.dti
-        self.diffusive_flux_qt[ki] = interp2pt(Case.Sur.rho_qtflux, -rho_ae_K_m[ki] * dzi *(self.EnvVar.QT.values[ki+1]-self.EnvVar.QT.values[ki]) )
-        for k in range(self.Gr.gw+1, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_elems(Center()):
             self.diffusive_flux_qt[k] = -0.5 * self.Ref.rho0_half[k]*ae[k] * self.KH.values[k] * dzi * (self.EnvVar.QT.values[k+1]-self.EnvVar.QT.values[k-1])
+        bo = self.Gr.boundary(Zmin())
+        self.diffusive_flux_qt[ki] = interp2pt(Case.Sur.rho_qtflux, -rho_ae_K_m[bo+1] * dzi *(self.EnvVar.QT.values[ki+1]-self.EnvVar.QT.values[ki]) )
 
         # Solve H
         for k in self.Gr.over_elems(Center()):
@@ -1244,14 +1243,16 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         for k in self.Gr.over_elems(Center()):
             GMV.H.new[k] = GMV.H.mf_update[k] + ae[k] *(x[k] - self.EnvVar.H.values[k])
-            self.diffusive_tendency_h[k] = (GMV.H.new[k] - GMV.H.mf_update[k]) * TS.dti
+            self.diffusive_flux_qt[k] = (GMV.H.new[k] - GMV.H.mf_update[k]) * TS.dti
         # get the diffusive flux
-        self.diffusive_flux_h[gw] = interp2pt(Case.Sur.rho_hflux, -rho_ae_K_m[gw] * dzi *(self.EnvVar.H.values[gw+1]-self.EnvVar.H.values[gw]) )
-        for k in range(self.Gr.gw+1, self.Gr.nzg-self.Gr.gw):
+        for k in self.Gr.over_elems(Center()):
             self.diffusive_flux_h[k] = -0.5 * self.Ref.rho0_half[k]*ae[k] * self.KH.values[k] * dzi * (self.EnvVar.H.values[k+1]-self.EnvVar.H.values[k-1])
 
+        bo = self.Gr.boundary(Zmin())
+        self.diffusive_flux_h[ki] = interp2pt(Case.Sur.rho_hflux, -rho_ae_K_m[bo+1] * dzi *(self.EnvVar.H.values[ki+1]-self.EnvVar.H.values[ki]) )
+
         # Solve U
-        for k in range(nzg-1):
+        for k in self.Gr.over_elems_real(Node()):
             rho_ae_K_m[k] = 0.5 * (ae[k]*self.KM.values[k]+ ae[k+1]*self.KM.values[k+1]) * self.Ref.rho0[k]
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
@@ -1422,24 +1423,15 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def cleanup_covariance(self, GMV):
         tmp_eps = 1e-18
-
         for k in self.Gr.over_elems_real(Center()):
-            if GMV.TKE.values[k] < tmp_eps:
-                GMV.TKE.values[k] = 0.0
-            if GMV.Hvar.values[k] < tmp_eps:
-                GMV.Hvar.values[k] = 0.0
-            if GMV.QTvar.values[k] < tmp_eps:
-                GMV.QTvar.values[k] = 0.0
-            if np.fabs(GMV.HQTcov.values[k]) < tmp_eps:
-                GMV.HQTcov.values[k] = 0.0
-            if self.EnvVar.Hvar.values[k] < tmp_eps:
-                self.EnvVar.Hvar.values[k] = 0.0
-            if self.EnvVar.TKE.values[k] < tmp_eps:
-                self.EnvVar.TKE.values[k] = 0.0
-            if self.EnvVar.QTvar.values[k] < tmp_eps:
-                self.EnvVar.QTvar.values[k] = 0.0
-            if np.fabs(self.EnvVar.HQTcov.values[k]) < tmp_eps:
-                self.EnvVar.HQTcov.values[k] = 0.0
+            if GMV.TKE.values[k] < tmp_eps:                     GMV.TKE.values[k] = 0.0
+            if GMV.Hvar.values[k] < tmp_eps:                    GMV.Hvar.values[k] = 0.0
+            if GMV.QTvar.values[k] < tmp_eps:                   GMV.QTvar.values[k] = 0.0
+            if np.fabs(GMV.HQTcov.values[k]) < tmp_eps:         GMV.HQTcov.values[k] = 0.0
+            if self.EnvVar.Hvar.values[k] < tmp_eps:            self.EnvVar.Hvar.values[k] = 0.0
+            if self.EnvVar.TKE.values[k] < tmp_eps:             self.EnvVar.TKE.values[k] = 0.0
+            if self.EnvVar.QTvar.values[k] < tmp_eps:           self.EnvVar.QTvar.values[k] = 0.0
+            if np.fabs(self.EnvVar.HQTcov.values[k]) < tmp_eps: self.EnvVar.HQTcov.values[k] = 0.0
 
 
     def compute_covariance_shear(self, GMV, Covar, UpdVar1, UpdVar2, EnvVar1, EnvVar2):
@@ -1536,7 +1528,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.EnvVar.Hvar.rain_src[k]   = self.Ref.rho0_half[k] * ae[k] * 2. * self.EnvThermo.Hvar_rain_dt[k]   * TS.dti
             self.EnvVar.QTvar.rain_src[k]  = self.Ref.rho0_half[k] * ae[k] * 2. * self.EnvThermo.QTvar_rain_dt[k]  * TS.dti
             self.EnvVar.HQTcov.rain_src[k] = self.Ref.rho0_half[k] * ae[k] *      self.EnvThermo.HQTcov_rain_dt[k] * TS.dti
-
         return
 
 
