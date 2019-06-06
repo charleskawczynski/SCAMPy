@@ -56,20 +56,8 @@ class Grid:
         else:
             raise TypeError("Bad boundary in n_hat in Grid.py")
 
-    def boundary(self, b): # Index for fields at full location
+    def boundary(self, b): # Index for fields at full location only (maybe add location to be sure it's not misused?)
         return self.first_interior(b)-1+self.binary(b)
-
-    def k_surface_ghost_full(self):
-        return self.boundary(Zmin())-1
-
-    def k_surface_ghost_half(self):
-        return self.first_interior(Zmin())-1
-
-    def k_top_atmos_ghost_full(self):
-        return self.boundary(Zmax())+1
-
-    def k_top_atmos_ghost_half(self):
-        return self.first_interior(Zmax())+1
 
     def slice_real(self, loc):
         if isinstance(loc, Center):
@@ -79,26 +67,50 @@ class Grid:
         else:
             raise TypeError("Bad location in slice_real in Grid.py")
 
+    def slice_ghost(self, loc, b):
+        if isinstance(loc, Center):
+            if isinstance(b, Zmin):
+                return slice(0, self.first_interior(b)-1,1)
+            elif isinstance(b, Zmax):
+                return slice(self.first_interior(b)+1, self.nzg,1)
+            else:
+                raise TypeError("Bad boundary 1 in slice_ghost in Grid.py")
+        elif isinstance(loc, Node):
+            if isinstance(b, Zmin):
+                return slice(0, self.boundary(b)-1,1)
+            elif isinstance(b, Zmax):
+                return slice(self.boundary(b)+1, self.nzg,1)
+            else:
+                raise TypeError("Bad boundary 2 in slice_ghost in Grid.py")
+        else:
+            raise TypeError("Bad location in slice_ghost in Grid.py")
+
+    def over_elems_ghost(self, loc, b):
+        if isinstance(loc, Center):
+            if isinstance(b, Zmin):
+                return list(range(0, self.first_interior(b)))
+            elif isinstance(b, Zmax):
+                return list(range(self.first_interior(b)+1, self.nzg))
+            else:
+                print('loc, b = ', loc, b)
+                raise TypeError("Bad boundary 1 in over_elems_ghost in Grid.py")
+        elif isinstance(loc, Node):
+            if isinstance(b, Zmin):
+                return list(range(0, self.boundary(b)+1))
+            elif isinstance(b, Zmax):
+                return list(range(self.boundary(b)+1, self.nzg))
+            else:
+                print('loc, b = ', loc, b)
+                raise TypeError("Bad boundary 2 in over_elems_ghost in Grid.py")
+        else:
+            print('loc, b = ', loc, b)
+            raise TypeError("Bad location in over_elems_ghost in Grid.py")
+
     def over_points_full(self):
-        return range(self.k_surface_ghost_full(), self.k_top_atmos_ghost_full()+1)
+        return range(self.boundary(Zmin())-1, self.boundary(Zmax())+1+1)
 
     def over_points_half(self):
-        return range(self.k_surface_ghost_half(), self.k_top_atmos_ghost_half()+1)
-
-    def over_points_full_ghost_surface(self):
-        return list(range(0, self.boundary(Zmin())+1))
-
-    def over_points_full_ghost_top(self):
-        return list(range(self.k_top_atmos_ghost_full(), self.nzg))
-
-    def over_points_half_ghost_surface(self):
-        return list(range(0, self.first_interior(Zmin())))
-
-    def over_points_half_ghost_top(self):
-        return list(range(self.k_top_atmos_ghost_half(), self.nzg))
-
-    def over_points_half_ghost(self):
-        return list(range(self.k_surface_ghost_half(), self.k_top_atmos_ghost_half()))
+        return range(self.first_interior(Zmin())-1, self.first_interior(Zmax())+1+1)
 
     def over_points_full_real(self):
         return range(self.boundary(Zmin()), self.boundary(Zmax())+1)

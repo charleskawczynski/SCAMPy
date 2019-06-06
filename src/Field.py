@@ -93,29 +93,31 @@ class Field:
 
     def extrap(self, grid):
         if isinstance(self.loc, Node):
-            for k in reversed(grid.over_points_full_ghost_surface()):
+            for k in reversed(grid.over_elems_ghost(Node(), Zmin())):
                 self.values[k] = 2.0*self.values[k+1] - self.values[k+2]
-            for k in grid.over_points_full_ghost_top():
+            for k in grid.over_elems_ghost(Node(), Zmax()):
                 self.values[k] = 2.0*self.values[k-1] - self.values[k-2]
         else:
-            for k in reversed(grid.over_points_half_ghost_surface()):
+            for k in reversed(grid.over_elems_ghost(Center(), Zmin())):
                 self.values[k] = 2.0*self.values[k+1] - self.values[k+2]
-            for k in grid.over_points_half_ghost_top():
+            for k in grid.over_elems_ghost(Center(), Zmax()):
                 self.values[k] = 2.0*self.values[k-1] - self.values[k-2]
 
 
     def apply_Neumann(self, grid, value):
+        n_hat_zmin = grid.n_hat(Zmin())
+        n_hat_zmax = grid.n_hat(Zmax())
         if isinstance(self.loc, Node):
-            self.values[0:grid.boundary(Zmin())]             = 2.0*self.values[grid.boundary(Zmin())  ] - self.values[grid.boundary(Zmin())  +1] + 2.0*grid.dz*value*(+1)
-            self.values[grid.k_top_atmos_ghost_full():] = 2.0*self.values[grid.boundary(Zmax())] - self.values[grid.boundary(Zmax())-1] + 2.0*grid.dz*value*(-1)
+            self.values[0:grid.boundary(Zmin())]  = 2.0*self.values[grid.boundary(Zmin())] - self.values[grid.boundary(Zmin())-n_hat_zmin] + 2.0*grid.dz*value*n_hat_zmin
+            self.values[grid.boundary(Zmax())+1:] = 2.0*self.values[grid.boundary(Zmax())] - self.values[grid.boundary(Zmax())-n_hat_zmax] + 2.0*grid.dz*value*n_hat_zmax
         else:
-            self.values[0:grid.first_interior(Zmin())]          = self.values[grid.first_interior(Zmin())  ] + grid.dz*value
-            self.values[grid.k_top_atmos_ghost_half():] = self.values[grid.first_interior(Zmax())] - grid.dz*value
+            self.values[0:grid.first_interior(Zmin())]  = self.values[grid.first_interior(Zmin())] - n_hat_zmin*grid.dz*value
+            self.values[grid.first_interior(Zmax())+1:] = self.values[grid.first_interior(Zmax())] - n_hat_zmax*grid.dz*value
 
     def apply_Dirichlet(self, grid, value):
         if isinstance(self.loc, Node):
-            self.values[0:grid.k_surface_ghost_full()]  = value
-            self.values[grid.k_top_atmos_ghost_full():] = value
+            self.values[0:grid.boundary(Zmin())+1]  = value
+            self.values[grid.boundary(Zmax()):] = value
         else:
-            self.values[0:grid.k_surface_ghost_half()]  = 2*value - self.values[grid.first_interior(Zmin())  ]
-            self.values[grid.k_top_atmos_ghost_half():] = 2*value - self.values[grid.first_interior(Zmax())]
+            self.values[0:grid.first_interior(Zmin())] = 2*value - self.values[grid.first_interior(Zmin())]
+            self.values[grid.first_interior(Zmax())+1:]  = 2*value - self.values[grid.first_interior(Zmax())]
