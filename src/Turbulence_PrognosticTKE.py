@@ -1205,7 +1205,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         b = np.zeros((nz,),dtype=np.double, order='c') # for tridiag solver
         c = np.zeros((nz,),dtype=np.double, order='c') # for tridiag solver
         x = np.zeros((nz,),dtype=np.double, order='c') # for tridiag solver
-        ae = np.subtract(np.ones((nzg,),dtype=np.double, order='c'),self.UpdVar.Area.bulkvalues) # area of environment
+
+        ae = Field.half(self.Gr)
+        for k in self.Gr.over_elems(Center()):
+            ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
+
         rho_ae_K_m = np.zeros((nzg,),dtype=np.double, order='c')
 
         for k in range(nzg-1):

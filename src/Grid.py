@@ -123,7 +123,3 @@ class Grid:
             raise TypeError("Bad location in over_elems_real in Grid.py")
 
 
-
-
-
-
