@@ -1204,7 +1204,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         a = np.zeros((nz,),dtype=np.double, order='c') # for tridiag solver
         b = np.zeros((nz,),dtype=np.double, order='c') # for tridiag solver
         c = np.zeros((nz,),dtype=np.double, order='c') # for tridiag solver
-        x = np.zeros((nz,),dtype=np.double, order='c') # for tridiag solver
+        x = Field.half(self.Gr)
 
         ae = Field.half(self.Gr)
         for k in self.Gr.over_elems(Center()):
@@ -1219,29 +1219,32 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half,
                                     ae, a, b, c)
 
+        slice_real = self.Gr.slice_real(Center())
         # Solve QT
-        for k in range(nz):
-            x[k] =  self.EnvVar.QT.values[k+gw]
-        x[0] = x[0] + TS.dt * Case.Sur.rho_qtflux * dzi * self.Ref.alpha0_half[gw]/ae[gw]
-        tridiag_solve(self.Gr.nz, x, a, b, c)
+        for k in self.Gr.over_elems(Center()):
+            x[k] =  self.EnvVar.QT.values[k]
+        ki = self.Gr.first_interior(Zmin())
+        x[ki] = x[ki] + TS.dt * Case.Sur.rho_qtflux * dzi * self.Ref.alpha0_half[ki]/ae[ki]
+        tridiag_solve(self.Gr.nz, x[slice_real], a, b, c)
 
-        for k in range(nz):
-            GMV.QT.new[k+gw] = GMV.QT.mf_update[k+gw] + ae[k+gw] *(x[k] - self.EnvVar.QT.values[k+gw])
+        for k in self.Gr.over_elems(Center()):
+            GMV.QT.new[k] = GMV.QT.mf_update[k] + ae[k] *(x[k] - self.EnvVar.QT.values[k])
+
         # get the diffusive flux
-        self.diffusive_tendency_qt[k+gw] = (GMV.QT.new[k+gw] - GMV.QT.mf_update[k+gw]) * TS.dti
-        self.diffusive_flux_qt[gw] = interp2pt(Case.Sur.rho_qtflux, -rho_ae_K_m[gw] * dzi *(self.EnvVar.QT.values[gw+1]-self.EnvVar.QT.values[gw]) )
+        self.diffusive_tendency_qt[k] = (GMV.QT.new[k] - GMV.QT.mf_update[k]) * TS.dti
+        self.diffusive_flux_qt[ki] = interp2pt(Case.Sur.rho_qtflux, -rho_ae_K_m[ki] * dzi *(self.EnvVar.QT.values[ki+1]-self.EnvVar.QT.values[ki]) )
         for k in range(self.Gr.gw+1, self.Gr.nzg-self.Gr.gw):
             self.diffusive_flux_qt[k] = -0.5 * self.Ref.rho0_half[k]*ae[k] * self.KH.values[k] * dzi * (self.EnvVar.QT.values[k+1]-self.EnvVar.QT.values[k-1])
 
         # Solve H
-        for k in range(nz):
-            x[k] = self.EnvVar.H.values[k+gw]
-        x[0] = x[0] + TS.dt * Case.Sur.rho_hflux * dzi * self.Ref.alpha0_half[gw]/ae[gw]
-        tridiag_solve(self.Gr.nz, x, a, b, c)
+        for k in self.Gr.over_elems(Center()):
+            x[k] = self.EnvVar.H.values[k]
+        x[ki] = x[ki] + TS.dt * Case.Sur.rho_hflux * dzi * self.Ref.alpha0_half[ki]/ae[ki]
+        tridiag_solve(self.Gr.nz, x[slice_real], a, b, c)
 
-        for k in range(nz):
-            GMV.H.new[k+gw] = GMV.H.mf_update[k+gw] + ae[k+gw] *(x[k] - self.EnvVar.H.values[k+gw])
-            self.diffusive_tendency_h[k+gw] = (GMV.H.new[k+gw] - GMV.H.mf_update[k+gw]) * TS.dti
+        for k in self.Gr.over_elems(Center()):
+            GMV.H.new[k] = GMV.H.mf_update[k] + ae[k] *(x[k] - self.EnvVar.H.values[k])
+            self.diffusive_tendency_h[k] = (GMV.H.new[k] - GMV.H.mf_update[k]) * TS.dti
         # get the diffusive flux
         self.diffusive_flux_h[gw] = interp2pt(Case.Sur.rho_hflux, -rho_ae_K_m[gw] * dzi *(self.EnvVar.H.values[gw+1]-self.EnvVar.H.values[gw]) )
         for k in range(self.Gr.gw+1, self.Gr.nzg-self.Gr.gw):
@@ -1254,22 +1257,22 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
         construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half,
                                     ae, a, b, c)
-        for k in range(nz):
-            x[k] = GMV.U.values[k+gw]
-        x[0] = x[0] + TS.dt * Case.Sur.rho_uflux * dzi * self.Ref.alpha0_half[gw]/ae[gw]
-        tridiag_solve(self.Gr.nz, x, a, b, c)
+        for k in self.Gr.over_elems(Center()):
+            x[k] = GMV.U.values[k]
+        x[ki] = x[ki] + TS.dt * Case.Sur.rho_uflux * dzi * self.Ref.alpha0_half[ki]/ae[ki]
+        tridiag_solve(self.Gr.nz, x[slice_real], a, b, c)
 
-        for k in range(nz):
-            GMV.U.new[k+gw] = x[k]
+        for k in self.Gr.over_elems(Center()):
+            GMV.U.new[k] = x[k]
 
         # Solve V
-        for k in range(nz):
-            x[k] = GMV.V.values[k+gw]
-        x[0] = x[0] + TS.dt * Case.Sur.rho_vflux * dzi * self.Ref.alpha0_half[gw]/ae[gw]
-        tridiag_solve(self.Gr.nz, x, a, b, c)
+        for k in self.Gr.over_elems(Center()):
+            x[k] = GMV.V.values[k]
+        x[ki] = x[ki] + TS.dt * Case.Sur.rho_vflux * dzi * self.Ref.alpha0_half[ki]/ae[ki]
+        tridiag_solve(self.Gr.nz, x[slice_real], a, b, c)
 
-        for k in range(nz):
-            GMV.V.new[k+gw] = x[k]
+        for k in self.Gr.over_elems(Center()):
+            GMV.V.new[k] = x[k]
 
         GMV.QT.set_bcs(self.Gr)
         GMV.QR.set_bcs(self.Gr)
@@ -1345,21 +1348,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def update_GMV_diagnostics(self, GMV):
         for k in self.Gr.over_elems_real(Center()):
-            GMV.QL.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.QL.bulkvalues[k]
-                                + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.QL.values[k])
-
-            # TODO - change to prognostic?
-            GMV.QR.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.QR.bulkvalues[k]
-                                + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.QR.values[k])
-
-            GMV.T.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.T.bulkvalues[k]
-                                + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.T.values[k])
+            GMV.QL.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.QL.bulkvalues[k] + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.QL.values[k])
+            GMV.QR.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.QR.bulkvalues[k] + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.QR.values[k])
+            GMV.T.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.T.bulkvalues[k] + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.T.values[k])
             qv = GMV.QT.values[k] - GMV.QL.values[k]
-
-            GMV.THL.values[k] = t_to_thetali_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k],
-                                               GMV.QL.values[k], 0.0)
-            GMV.B.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.B.bulkvalues[k]
-                                + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.B.values[k])
+            GMV.THL.values[k] = t_to_thetali_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], 0.0)
+            GMV.B.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.B.bulkvalues[k] + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.B.values[k])
         return
 
 
