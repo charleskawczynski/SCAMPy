@@ -20,7 +20,6 @@ def psi_h_unstable(zeta, zeta0):
     psi_h = 2.0 * np.log((1.0 + y)/(1.0 + y0))
     return psi_h
 
-
 def psi_m_stable(zeta, zeta0):
     psi_m = -beta_m * (zeta - zeta0)
     return  psi_m
@@ -28,7 +27,6 @@ def psi_m_stable(zeta, zeta0):
 def psi_h_stable(zeta, zeta0):
     psi_h = -beta_h * (zeta - zeta0)
     return  psi_h
-
 
 def entropy_flux(tflux,qtflux, p0_1, T_1, qt_1):
         cp_1 = cpm_c(qt_1)

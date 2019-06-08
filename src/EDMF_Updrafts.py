@@ -12,7 +12,7 @@ import pylab as plt
 
 
 class UpdraftVariable:
-    def __init__(self, Gr, nu, nz, loc, kind, name, units):
+    def __init__(self, Gr, nu, nz, loc, name, units):
         self.values     = np.zeros((nu,nz),dtype=np.double, order='c')
         self.old        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
         self.new        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
@@ -53,18 +53,18 @@ class UpdraftVariables:
         self.n_updrafts = nu
         nzg = Gr.nzg
 
-        self.W    = UpdraftVariable(Gr, nu, nzg, Node(), 'velocity', 'w','m/s' )
-        self.Area = UpdraftVariable(Gr, nu, nzg, Node(), 'scalar', 'area_fraction','[-]' )
-        self.QT   = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'qt','kg/kg' )
-        self.QL   = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'ql','kg/kg' )
-        self.QR   = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'qr','kg/kg' )
-        self.THL  = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'thetal', 'K')
-        self.T    = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'temperature','K' )
-        self.B    = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'buoyancy','m^2/s^3' )
+        self.W    = UpdraftVariable(Gr, nu, nzg, Node(), 'w','m/s' )
+        self.Area = UpdraftVariable(Gr, nu, nzg, Node(), 'area_fraction','[-]' )
+        self.QT   = UpdraftVariable(Gr, nu, nzg, Center(), 'qt','kg/kg' )
+        self.QL   = UpdraftVariable(Gr, nu, nzg, Center(), 'ql','kg/kg' )
+        self.QR   = UpdraftVariable(Gr, nu, nzg, Center(), 'qr','kg/kg' )
+        self.THL  = UpdraftVariable(Gr, nu, nzg, Center(), 'thetal', 'K')
+        self.T    = UpdraftVariable(Gr, nu, nzg, Center(), 'temperature','K' )
+        self.B    = UpdraftVariable(Gr, nu, nzg, Center(), 'buoyancy','m^2/s^3' )
         if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-            self.H = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 's','J/kg/K' )
+            self.H = UpdraftVariable(Gr, nu, nzg, Center(), 's','J/kg/K' )
         elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-            self.H = UpdraftVariable(Gr, nu, nzg, Center(), 'scalar', 'thetal','K' )
+            self.H = UpdraftVariable(Gr, nu, nzg, Center(), 'thetal','K' )
 
 
         if namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':

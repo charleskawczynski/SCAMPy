@@ -10,16 +10,13 @@ from thermodynamic_functions import  *
 from microphysics_functions import *
 
 class EnvironmentVariable:
-    def __init__(self, Gr, loc, kind, name, units):
+    def __init__(self, Gr, loc, name, units):
         self.values = Field.field(Gr, loc)
-        if kind != 'scalar' and kind != 'velocity':
-            print ('Invalid kind setting for variable! Must be scalar or velocity')
-        self.kind = kind
         self.name = name
         self.units = units
 
 class EnvironmentVariable_2m:
-    def __init__(self, Gr, loc, kind, name, units):
+    def __init__(self, Gr, loc, name, units):
         self.values      = Field.field(Gr, loc)
         self.dissipation = Field.field(Gr, loc)
         self.entr_gain   = Field.field(Gr, loc)
@@ -29,9 +26,6 @@ class EnvironmentVariable_2m:
         self.shear       = Field.field(Gr, loc)
         self.interdomain = Field.field(Gr, loc)
         self.rain_src    = Field.field(Gr, loc)
-        if kind != 'scalar' and kind != 'velocity':
-            print ('Invalid kind setting for variable! Must be scalar or velocity')
-        self.kind = kind
         self.name = name
         self.units = units
 
@@ -41,18 +35,18 @@ class EnvironmentVariables:
         nz = Gr.nzg
         self.Gr = Gr
 
-        self.W   = EnvironmentVariable(Gr, Node(), 'velocity', 'w','m/s' )
-        self.QT  = EnvironmentVariable(Gr, Center(), 'scalar', 'qt','kg/kg' )
-        self.QL  = EnvironmentVariable(Gr, Center(), 'scalar', 'ql','kg/kg' )
-        self.QR  = EnvironmentVariable(Gr, Center(), 'scalar', 'qr','kg/kg' )
-        self.THL = EnvironmentVariable(Gr, Center(), 'scalar', 'thetal', 'K')
-        self.T   = EnvironmentVariable(Gr, Center(), 'scalar', 'temperature','K' )
-        self.B   = EnvironmentVariable(Gr, Center(), 'scalar', 'buoyancy','m^2/s^3' )
-        self.CF  = EnvironmentVariable(Gr, Center(), 'scalar','cloud_fraction', '-')
+        self.W   = EnvironmentVariable(Gr, Node(), 'w','m/s' )
+        self.QT  = EnvironmentVariable(Gr, Center(), 'qt','kg/kg' )
+        self.QL  = EnvironmentVariable(Gr, Center(), 'ql','kg/kg' )
+        self.QR  = EnvironmentVariable(Gr, Center(), 'qr','kg/kg' )
+        self.THL = EnvironmentVariable(Gr, Center(), 'thetal', 'K')
+        self.T   = EnvironmentVariable(Gr, Center(), 'temperature','K' )
+        self.B   = EnvironmentVariable(Gr, Center(), 'buoyancy','m^2/s^3' )
+        self.CF  = EnvironmentVariable(Gr, Center(),'cloud_fraction', '-')
         if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-            self.H = EnvironmentVariable(Gr, Center(), 'scalar', 's','J/kg/K' )
+            self.H = EnvironmentVariable(Gr, Center(), 's','J/kg/K' )
         elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-            self.H = EnvironmentVariable(Gr, Center(), 'scalar', 'thetal','K' )
+            self.H = EnvironmentVariable(Gr, Center(), 'thetal','K' )
 
         # TKE   TODO   repeated from Variables.pyx logic
         if  namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':
@@ -77,19 +71,19 @@ class EnvironmentVariables:
             print('Defaulting to saturation adjustment with respect to environmental means')
 
         if self.calc_tke:
-            self.TKE = EnvironmentVariable_2m(Gr, Center(), 'scalar', 'tke','m^2/s^2' )
+            self.TKE = EnvironmentVariable_2m(Gr, Center(), 'tke','m^2/s^2' )
 
         if self.calc_scalar_var:
-            self.QTvar = EnvironmentVariable_2m(Gr, Center(), 'scalar', 'qt_var','kg^2/kg^2' )
+            self.QTvar = EnvironmentVariable_2m(Gr, Center(), 'qt_var','kg^2/kg^2' )
             if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-                self.Hvar = EnvironmentVariable_2m(Gr, Center(), 'scalar', 's_var', '(J/kg/K)^2')
-                self.HQTcov = EnvironmentVariable_2m(Gr, Center(), 'scalar', 's_qt_covar', '(J/kg/K)(kg/kg)' )
+                self.Hvar = EnvironmentVariable_2m(Gr, Center(), 's_var', '(J/kg/K)^2')
+                self.HQTcov = EnvironmentVariable_2m(Gr, Center(), 's_qt_covar', '(J/kg/K)(kg/kg)' )
             elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-                self.Hvar = EnvironmentVariable_2m(Gr, Center(), 'scalar', 'thetal_var', 'K^2')
-                self.HQTcov = EnvironmentVariable_2m(Gr, Center(), 'scalar', 'thetal_qt_covar', 'K(kg/kg)' )
+                self.Hvar = EnvironmentVariable_2m(Gr, Center(), 'thetal_var', 'K^2')
+                self.HQTcov = EnvironmentVariable_2m(Gr, Center(), 'thetal_qt_covar', 'K(kg/kg)' )
 
         if self.EnvThermo_scheme == 'sommeria_deardorff':
-            self.THVvar = EnvironmentVariable(Gr, Center(), 'scalar', 'thetav_var', 'K^2' )
+            self.THVvar = EnvironmentVariable(Gr, Center(), 'thetav_var', 'K^2' )
 
         #TODO  - most likely a temporary solution (unless it could be useful for testing)
         try:
