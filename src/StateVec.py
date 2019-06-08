@@ -30,7 +30,7 @@ class StateVec:
         self.n_subdomains = max([nsd for v, nsd in var_tuple])
         self.n_vars = sum([nsd for v, nsd in var_tuple])
         self.var_names, self.var_mapper = get_var_mapper(var_tuple)
-        self.fields = np.zeros((self.n_vars, grid.nz))
+        self.fields = np.zeros((self.n_vars, grid.nzg))
         return
 
     def __getitem__(self, tup):

@@ -13,16 +13,11 @@ import pylab as plt
 
 class UpdraftVariable:
     def __init__(self, Gr, nu, nz, loc, name, units):
-        self.values     = np.zeros((nu,nz),dtype=np.double, order='c')
-        self.old        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
-        self.new        = np.zeros((nu,nz),dtype=np.double, order='c') # needed for prognostic updrafts
-        self.tendencies = np.zeros((nu,nz),dtype=np.double, order='c')
-        self.bulkvalues = np.zeros((nz,)  ,dtype=np.double, order='c')
-        # self.values     = [Field.field(Gr, loc) for i in 1:nu]
-        # self.old        = [Field.field(Gr, loc) for i in 1:nu]
-        # self.new        = [Field.field(Gr, loc) for i in 1:nu]
-        # self.tendencies = [Field.field(Gr, loc) for i in 1:nu]
-        # self.bulkvalues = Field.field(Gr, loc)
+        self.values     = [Field.field(Gr, loc) for i in range(nu)]
+        self.old        = [Field.field(Gr, loc) for i in range(nu)]
+        self.new        = [Field.field(Gr, loc) for i in range(nu)]
+        self.tendencies = [Field.field(Gr, loc) for i in range(nu)]
+        self.bulkvalues = Field.field(Gr, loc)
         self.name = name
         self.units = units
 
@@ -34,16 +29,16 @@ class UpdraftVariable:
 
         if self.name == 'w':
             for i in range(n_updrafts):
-                self.values[i,start_high] = 0.0
-                self.values[i,start_low] = 0.0
+                self.values[i][start_high] = 0.0
+                self.values[i][start_low] = 0.0
                 for k in range(1,Gr.gw):
-                    self.values[i,start_high+ k] = -self.values[i,start_high - k ]
-                    self.values[i,start_low- k] = -self.values[i,start_low + k  ]
+                    self.values[i][start_high+ k] = -self.values[i][start_high - k ]
+                    self.values[i][start_low- k] = -self.values[i][start_low + k  ]
         else:
             for k in range(Gr.gw):
                 for i in range(n_updrafts):
-                    self.values[i,start_high + k +1] = self.values[i,start_high  - k]
-                    self.values[i,start_low - k] = self.values[i,start_low + 1 + k]
+                    self.values[i][start_high + k +1] = self.values[i][start_high  - k]
+                    self.values[i][start_low - k] = self.values[i][start_low + 1 + k]
         return
 
 
@@ -95,20 +90,20 @@ class UpdraftVariables:
         for i in range(self.n_updrafts):
             for k in self.Gr.over_elems(Center()):
 
-                self.W.values[i,k] = 0.0
+                self.W.values[i][k] = 0.0
                 # Simple treatment for now, revise when multiple updraft closures
                 # become more well defined
                 if self.prognostic:
-                    self.Area.values[i,k] = 0.0 #self.updraft_fraction/self.n_updrafts
+                    self.Area.values[i][k] = 0.0 #self.updraft_fraction/self.n_updrafts
                 else:
-                    self.Area.values[i,k] = self.updraft_fraction/self.n_updrafts
-                self.QT.values[i,k] = GMV.QT.values[k]
-                self.QL.values[i,k] = GMV.QL.values[k]
-                self.QR.values[i,k] = GMV.QR.values[k]
-                self.H.values[i,k] = GMV.H.values[k]
-                self.T.values[i,k] = GMV.T.values[k]
-                self.B.values[i,k] = 0.0
-            self.Area.values[i,gw] = self.updraft_fraction/self.n_updrafts
+                    self.Area.values[i][k] = self.updraft_fraction/self.n_updrafts
+                self.QT.values[i][k] = GMV.QT.values[k]
+                self.QL.values[i][k] = GMV.QL.values[k]
+                self.QR.values[i][k] = GMV.QR.values[k]
+                self.H.values[i][k] = GMV.H.values[k]
+                self.T.values[i][k] = GMV.T.values[k]
+                self.B.values[i][k] = 0.0
+            self.Area.values[i][gw] = self.updraft_fraction/self.n_updrafts
 
         self.QT.set_bcs(self.Gr)
         self.QR.set_bcs(self.Gr)
@@ -151,13 +146,13 @@ class UpdraftVariables:
         for k in self.Gr.over_elems_real(Center()):
             if self.Area.bulkvalues[k] > 1.0e-20:
                 for i in range(self.n_updrafts):
-                    self.QT.bulkvalues[k] += self.Area.values[i,k] * self.QT.values[i,k]/self.Area.bulkvalues[k]
-                    self.QL.bulkvalues[k] += self.Area.values[i,k] * self.QL.values[i,k]/self.Area.bulkvalues[k]
-                    self.QR.bulkvalues[k] += self.Area.values[i,k] * self.QR.values[i,k]/self.Area.bulkvalues[k]
-                    self.H.bulkvalues[k] += self.Area.values[i,k] * self.H.values[i,k]/self.Area.bulkvalues[k]
-                    self.T.bulkvalues[k] += self.Area.values[i,k] * self.T.values[i,k]/self.Area.bulkvalues[k]
-                    self.B.bulkvalues[k] += self.Area.values[i,k] * self.B.values[i,k]/self.Area.bulkvalues[k]
-                    self.W.bulkvalues[k] += ((self.Area.values[i,k] + self.Area.values[i,k+1]) * self.W.values[i,k]
+                    self.QT.bulkvalues[k] += self.Area.values[i][k] * self.QT.values[i][k]/self.Area.bulkvalues[k]
+                    self.QL.bulkvalues[k] += self.Area.values[i][k] * self.QL.values[i][k]/self.Area.bulkvalues[k]
+                    self.QR.bulkvalues[k] += self.Area.values[i][k] * self.QR.values[i][k]/self.Area.bulkvalues[k]
+                    self.H.bulkvalues[k] += self.Area.values[i][k] * self.H.values[i][k]/self.Area.bulkvalues[k]
+                    self.T.bulkvalues[k] += self.Area.values[i][k] * self.T.values[i][k]/self.Area.bulkvalues[k]
+                    self.B.bulkvalues[k] += self.Area.values[i][k] * self.B.values[i][k]/self.Area.bulkvalues[k]
+                    self.W.bulkvalues[k] += ((self.Area.values[i][k] + self.Area.values[i][k+1]) * self.W.values[i][k]
                                         /(self.Area.bulkvalues[k] + self.Area.bulkvalues[k+1]))
             else:
                 self.QT.bulkvalues[k] = GMV.QT.values[k]
@@ -173,44 +168,44 @@ class UpdraftVariables:
     def set_new_with_values(self):
         for i in range(self.n_updrafts):
             for k in self.Gr.over_elems(Center()):
-                self.W.new[i,k] = self.W.values[i,k]
-                self.Area.new[i,k] = self.Area.values[i,k]
-                self.QT.new[i,k] = self.QT.values[i,k]
-                self.QL.new[i,k] = self.QL.values[i,k]
-                self.QR.new[i,k] = self.QR.values[i,k]
-                self.H.new[i,k] = self.H.values[i,k]
-                self.THL.new[i,k] = self.THL.values[i,k]
-                self.T.new[i,k] = self.T.values[i,k]
-                self.B.new[i,k] = self.B.values[i,k]
+                self.W.new[i][k] = self.W.values[i][k]
+                self.Area.new[i][k] = self.Area.values[i][k]
+                self.QT.new[i][k] = self.QT.values[i][k]
+                self.QL.new[i][k] = self.QL.values[i][k]
+                self.QR.new[i][k] = self.QR.values[i][k]
+                self.H.new[i][k] = self.H.values[i][k]
+                self.THL.new[i][k] = self.THL.values[i][k]
+                self.T.new[i][k] = self.T.values[i][k]
+                self.B.new[i][k] = self.B.values[i][k]
         return
 
     # quick utility to set "new" arrays with values in the "values" arrays
     def set_old_with_values(self):
         for i in range(self.n_updrafts):
             for k in self.Gr.over_elems(Center()):
-                self.W.old[i,k] = self.W.values[i,k]
-                self.Area.old[i,k] = self.Area.values[i,k]
-                self.QT.old[i,k] = self.QT.values[i,k]
-                self.QL.old[i,k] = self.QL.values[i,k]
-                self.QR.old[i,k] = self.QR.values[i,k]
-                self.H.old[i,k] = self.H.values[i,k]
-                self.THL.old[i,k] = self.THL.values[i,k]
-                self.T.old[i,k] = self.T.values[i,k]
-                self.B.old[i,k] = self.B.values[i,k]
+                self.W.old[i][k] = self.W.values[i][k]
+                self.Area.old[i][k] = self.Area.values[i][k]
+                self.QT.old[i][k] = self.QT.values[i][k]
+                self.QL.old[i][k] = self.QL.values[i][k]
+                self.QR.old[i][k] = self.QR.values[i][k]
+                self.H.old[i][k] = self.H.values[i][k]
+                self.THL.old[i][k] = self.THL.values[i][k]
+                self.T.old[i][k] = self.T.values[i][k]
+                self.B.old[i][k] = self.B.values[i][k]
         return
     # quick utility to set "tmp" arrays with values in the "new" arrays
     def set_values_with_new(self):
         for i in range(self.n_updrafts):
             for k in self.Gr.over_elems(Center()):
-                self.W.values[i,k] = self.W.new[i,k]
-                self.Area.values[i,k] = self.Area.new[i,k]
-                self.QT.values[i,k] = self.QT.new[i,k]
-                self.QL.values[i,k] = self.QL.new[i,k]
-                self.QR.values[i,k] = self.QR.new[i,k]
-                self.H.values[i,k] = self.H.new[i,k]
-                self.THL.values[i,k] = self.THL.new[i,k]
-                self.T.values[i,k] = self.T.new[i,k]
-                self.B.values[i,k] = self.B.new[i,k]
+                self.W.values[i][k] = self.W.new[i][k]
+                self.Area.values[i][k] = self.Area.new[i][k]
+                self.QT.values[i][k] = self.QT.new[i][k]
+                self.QL.values[i][k] = self.QL.new[i][k]
+                self.QR.values[i][k] = self.QR.new[i][k]
+                self.H.values[i][k] = self.H.new[i][k]
+                self.THL.values[i][k] = self.THL.new[i][k]
+                self.T.values[i][k] = self.T.new[i][k]
+                self.B.values[i][k] = self.B.new[i][k]
         return
 
 
@@ -246,10 +241,10 @@ class UpdraftVariables:
             self.cloud_top[i] = 0.0
             self.cloud_cover[i] = 0.0
             for k in self.Gr.over_elems_real(Center()):
-                if self.QL.values[i,k] > 1e-8 and self.Area.values[i,k] > 1e-3:
+                if self.QL.values[i][k] > 1e-8 and self.Area.values[i][k] > 1e-3:
                     self.cloud_base[i] = np.fmin(self.cloud_base[i], self.Gr.z_half[k])
                     self.cloud_top[i] = np.fmax(self.cloud_top[i], self.Gr.z_half[k])
-                    self.cloud_cover[i] = np.fmax(self.cloud_cover[i], self.Area.values[i,k])
+                    self.cloud_cover[i] = np.fmax(self.cloud_cover[i], self.Area.values[i][k])
         return
 
 class UpdraftThermodynamics:
@@ -269,9 +264,9 @@ class UpdraftThermodynamics:
         #Update T, QL
         for i in range(self.n_updraft):
             for k in self.Gr.over_elems(Center()):
-                T, ql = eos(self.t_to_prog_fp, self.prog_to_t_fp, self.Ref.p0_half[k], UpdVar.QT.values[i,k], UpdVar.H.values[i,k])
-                UpdVar.QL.values[i,k] = ql
-                UpdVar.T.values[i,k] = T
+                T, ql = eos(self.t_to_prog_fp, self.prog_to_t_fp, self.Ref.p0_half[k], UpdVar.QT.values[i][k], UpdVar.H.values[i][k])
+                UpdVar.QL.values[i][k] = ql
+                UpdVar.T.values[i][k] = T
         return
 
     def buoyancy(self,  UpdVar, EnvVar,GMV, extrap):
@@ -280,19 +275,19 @@ class UpdraftThermodynamics:
         if not extrap:
             for i in range(self.n_updraft):
                 for k in self.Gr.over_elems(Center()):
-                    qv = UpdVar.QT.values[i,k] - UpdVar.QL.values[i,k]
-                    alpha = alpha_c(self.Ref.p0_half[k], UpdVar.T.values[i,k], UpdVar.QT.values[i,k], qv)
-                    UpdVar.B.values[i,k] = buoyancy_c(self.Ref.alpha0_half[k], alpha) #- GMV.B.values[k]
+                    qv = UpdVar.QT.values[i][k] - UpdVar.QL.values[i][k]
+                    alpha = alpha_c(self.Ref.p0_half[k], UpdVar.T.values[i][k], UpdVar.QT.values[i][k], qv)
+                    UpdVar.B.values[i][k] = buoyancy_c(self.Ref.alpha0_half[k], alpha) #- GMV.B.values[k]
         else:
             for i in range(self.n_updraft):
                 for k in self.Gr.over_elems_real(Center()):
-                    if UpdVar.Area.values[i,k] > 1e-3:
-                        qt = UpdVar.QT.values[i,k]
-                        qv = UpdVar.QT.values[i,k] - UpdVar.QL.values[i,k]
-                        h = UpdVar.H.values[i,k]
-                        t = UpdVar.T.values[i,k]
+                    if UpdVar.Area.values[i][k] > 1e-3:
+                        qt = UpdVar.QT.values[i][k]
+                        qv = UpdVar.QT.values[i][k] - UpdVar.QL.values[i][k]
+                        h = UpdVar.H.values[i][k]
+                        t = UpdVar.T.values[i][k]
                         alpha = alpha_c(self.Ref.p0_half[k], t, qt, qv)
-                        UpdVar.B.values[i,k] = buoyancy_c(self.Ref.alpha0_half[k], alpha)
+                        UpdVar.B.values[i][k] = buoyancy_c(self.Ref.alpha0_half[k], alpha)
 
                     else:
                         T, q_l = eos(self.t_to_prog_fp,self.prog_to_t_fp, self.Ref.p0_half[k], qt, h)
@@ -300,13 +295,13 @@ class UpdraftThermodynamics:
                         qv = qt
                         t = T
                         alpha = alpha_c(self.Ref.p0_half[k], t, qt, qv)
-                        UpdVar.B.values[i,k] = buoyancy_c(self.Ref.alpha0_half[k], alpha)
+                        UpdVar.B.values[i][k] = buoyancy_c(self.Ref.alpha0_half[k], alpha)
         for k in self.Gr.over_elems_real(Center()):
             GMV.B.values[k] = (1.0 - UpdVar.Area.bulkvalues[k]) * EnvVar.B.values[k]
             for i in range(self.n_updraft):
-                GMV.B.values[k] += UpdVar.Area.values[i,k] * UpdVar.B.values[i,k]
+                GMV.B.values[k] += UpdVar.Area.values[i][k] * UpdVar.B.values[i][k]
             for i in range(self.n_updraft):
-                UpdVar.B.values[i,k] -= GMV.B.values[k]
+                UpdVar.B.values[i][k] -= GMV.B.values[k]
             EnvVar.B.values[k] -= GMV.B.values[k]
 
         return
@@ -331,11 +326,11 @@ class UpdraftMicrophysics:
         """
         for i in range(self.n_updraft):
             for k in self.Gr.over_elems(Center()):
-                tmp_qr = acnv_instant(UpdVar.QL.values[i,k], UpdVar.QT.values[i,k], self.max_supersaturation,\
-                                      UpdVar.T.values[i,k], self.Ref.p0_half[k])
-                self.prec_source_qt[i,k] = -tmp_qr
-                self.prec_source_h[i,k]  = rain_source_to_thetal(self.Ref.p0_half[k], UpdVar.T.values[i,k],\
-                                             UpdVar.QT.values[i,k], UpdVar.QL.values[i,k], 0.0, tmp_qr)
+                tmp_qr = acnv_instant(UpdVar.QL.values[i][k], UpdVar.QT.values[i][k], self.max_supersaturation,\
+                                      UpdVar.T.values[i][k], self.Ref.p0_half[k])
+                self.prec_source_qt[i][k] = -tmp_qr
+                self.prec_source_h[i][k]  = rain_source_to_thetal(self.Ref.p0_half[k], UpdVar.T.values[i][k],\
+                                             UpdVar.QT.values[i][k], UpdVar.QL.values[i][k], 0.0, tmp_qr)
                                                                                           #TODO assumes no ice
         self.prec_source_h_tot  = np.sum(np.multiply(self.prec_source_h,  UpdVar.Area.values), axis=0)
         self.prec_source_qt_tot = np.sum(np.multiply(self.prec_source_qt, UpdVar.Area.values), axis=0)
@@ -348,10 +343,10 @@ class UpdraftMicrophysics:
         """
         for i in range(self.n_updraft):
             for k in self.Gr.over_elems(Center()):
-                UpdVar.QT.values[i,k] += self.prec_source_qt[i,k]
-                UpdVar.QL.values[i,k] += self.prec_source_qt[i,k]
-                UpdVar.QR.values[i,k] -= self.prec_source_qt[i,k]
-                UpdVar.H.values[i,k] += self.prec_source_h[i,k]
+                UpdVar.QT.values[i][k] += self.prec_source_qt[i][k]
+                UpdVar.QL.values[i][k] += self.prec_source_qt[i][k]
+                UpdVar.QR.values[i][k] -= self.prec_source_qt[i][k]
+                UpdVar.H.values[i][k] += self.prec_source_h[i][k]
         return
 
     def compute_update_combined_local_thetal(self, p0, T, qt, ql, qr, h, i, k):
@@ -359,13 +354,13 @@ class UpdraftMicrophysics:
         # Language note: array indexing must be used to dereference pointers in Cython. * notation (C-style dereferencing)
         # is reserved for packing tuples
 
-        tmp_qr = acnv_instant(ql[i,k], qt[i,k], self.max_supersaturation, T[i,k], p0[k])
-        self.prec_source_qt[i,k] = -tmp_qr
-        self.prec_source_h[i,k]  = rain_source_to_thetal(p0[k], T[i,k], qt[i,k], ql[i,k], 0.0, tmp_qr)
+        tmp_qr = acnv_instant(ql[i][k], qt[i][k], self.max_supersaturation, T[i][k], p0[k])
+        self.prec_source_qt[i][k] = -tmp_qr
+        self.prec_source_h[i][k]  = rain_source_to_thetal(p0[k], T[i][k], qt[i][k], ql[i][k], 0.0, tmp_qr)
                                                                              #TODO - assumes no ice
-        qt[i,k] += self.prec_source_qt[i,k]
-        ql[i,k] += self.prec_source_qt[i,k]
-        qr[i,k] -= self.prec_source_qt[i,k]
-        h[i,k]  += self.prec_source_h[i,k]
+        qt[i][k] += self.prec_source_qt[i][k]
+        ql[i][k] += self.prec_source_qt[i][k]
+        qr[i][k] -= self.prec_source_qt[i][k]
+        h[i][k]  += self.prec_source_h[i][k]
 
         return
