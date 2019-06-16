@@ -18,19 +18,7 @@ class ReferenceState:
         return
 
     def initialize(self, Gr, Stats, tmp):
-        '''
-        Initilize the reference profiles. The function is typically called from the case
-        specific initialization fucntion defined in Initialization.pyx
-        :param Gr: Grid class
-        :param Thermodynamics: Thermodynamics class
-        :param NS: StatsIO class
-        :param Pa:  ParallelMPI class
-        :return:
-        '''
-
         self.sg = t_to_entropy_c(self.Pg, self.Tg, self.qtg, 0.0, 0.0)
-
-
         # Form a right hand side for integrating the hydrostatic equation to
         # determine the reference pressure
         def rhs(p, z):
@@ -89,9 +77,6 @@ class ReferenceState:
             temperature_half[k], ql_half[k] = eos(t_to_entropy_c, eos_first_guess_entropy, p_half_[k], self.qtg, self.sg)
             qv_half[k] = self.qtg - (ql_half[k] + qi_half[k])
             alpha_half[k] = alpha_c(p_half_[k], temperature_half[k], self.qtg, qv_half[k])
-            # tmp['α_0', k] = alpha_half[k]
-            # tmp['ρ_0', k] = 1.0/tmp['α_0', k]
-            # tmp['p_0', k] = p_[k]
 
         # Now do a sanity check to make sure that the Reference State entropy profile is uniform following
         # saturation adjustment
@@ -115,12 +100,17 @@ class ReferenceState:
         self.rho0.extrap(Gr)
         self.rho0_half.extrap(Gr)
 
-        plt.plot(self.p0.values         , Gr.z); plt.savefig(Stats.outpath+'p0.png'         ); plt.close()
-        plt.plot(self.p0_half.values    , Gr.z); plt.savefig(Stats.outpath+'p0_half.png'    ); plt.close()
-        plt.plot(self.rho0.values       , Gr.z); plt.savefig(Stats.outpath+'rho0.png'       ); plt.close()
-        plt.plot(self.rho0_half.values  , Gr.z); plt.savefig(Stats.outpath+'rho0_half.png'  ); plt.close()
-        plt.plot(self.alpha0.values     , Gr.z); plt.savefig(Stats.outpath+'alpha0.png'     ); plt.close()
-        plt.plot(self.alpha0_half.values, Gr.z); plt.savefig(Stats.outpath+'alpha0_half.png'); plt.close()
+        for k in Gr.over_elems(Center()):
+            tmp['α_0', k] = self.alpha0_half[k]
+            tmp['ρ_0', k] = 1.0/tmp['α_0', k]
+            tmp['p_0', k] = self.p0_half[k]
+
+        plt.plot(self.p0.values         , Gr.z     ); plt.savefig(Stats.outpath+'p0.png'         ); plt.close()
+        plt.plot(self.p0_half.values    , Gr.z_half); plt.savefig(Stats.outpath+'p0_half.png'    ); plt.close()
+        plt.plot(self.rho0.values       , Gr.z     ); plt.savefig(Stats.outpath+'rho0.png'       ); plt.close()
+        plt.plot(self.rho0_half.values  , Gr.z_half); plt.savefig(Stats.outpath+'rho0_half.png'  ); plt.close()
+        plt.plot(self.alpha0.values     , Gr.z     ); plt.savefig(Stats.outpath+'alpha0.png'     ); plt.close()
+        plt.plot(self.alpha0_half.values, Gr.z_half); plt.savefig(Stats.outpath+'alpha0_half.png'); plt.close()
 
         self.p0.export_data(Gr         ,Stats.outpath+'p0.dat')
         self.p0_half.export_data(Gr    ,Stats.outpath+'p0_half.dat')
@@ -128,6 +118,10 @@ class ReferenceState:
         self.rho0_half.export_data(Gr  ,Stats.outpath+'rho0_half.dat')
         self.alpha0.export_data(Gr     ,Stats.outpath+'alpha0.dat')
         self.alpha0_half.export_data(Gr,Stats.outpath+'alpha0_half.dat')
+        tmp.plot_state(Gr, Stats.outpath, 'tmp', name_idx = 'α_0')
+        # tmp.plot_state(Gr, Stats.outpath, 'tmp')
+        # tmp.export_state(Gr, Stats.outpath, 'tmp')
+        # raise NameErorr('done')
 
         Stats.add_reference_profile('alpha0')
         Stats.write_reference_profile('alpha0', alpha[Gr.gw:-Gr.gw])

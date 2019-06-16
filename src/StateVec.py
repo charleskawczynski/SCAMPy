@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-markershapes = ['r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^']
+# markershapes = ['r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^']
+markershapes = ['b-', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^']
 
 class Cut:
     def __init__(self, k):
@@ -16,6 +17,16 @@ class Dual:
     def __init__(self, k):
         self.k = k
         return
+
+class UseDat:
+    def __init__(self):
+        return
+
+def friendly_name(s):
+    s = s.replace('ρ', 'rho')
+    s = s.replace('α', 'alpha')
+    s = s.replace('θ', 'theta')
+    return s
 
 def get_var_mapper(var_tuple):
     var_names = [v for (v, nsd) in var_tuple]
@@ -28,9 +39,12 @@ def get_var_mapper(var_tuple):
 class StateVec:
     def __init__(self, var_tuple, grid):
         self.n_subdomains = max([nsd for v, nsd in var_tuple])
+        self.i_gm = 0
+        self.i_env = 1
         self.n_vars = sum([nsd for v, nsd in var_tuple])
         self.var_names, self.var_mapper = get_var_mapper(var_tuple)
-        self.fields = np.zeros((self.n_vars, grid.nzg))
+        n = len(list(grid.over_elems(Center())))
+        self.fields = np.zeros((self.n_vars, n))
         return
 
     def __getitem__(self, tup):
@@ -47,7 +61,8 @@ class StateVec:
             if isinstance(k, Cut):
                 return [self.fields[self.var_mapper[name][i], j] for j in range(k.k-1,k.k+2)]
             elif isinstance(k, Dual):
-                return [(self.fields[self.var_mapper[name][i], j]+self.fields[self.var_mapper[name][i], j+1])/2 for j in range(k.k-1,k.k+1)]
+                return [(self.fields[self.var_mapper[name][i], j]+
+                    self.fields[self.var_mapper[name][i], j+1])/2 for j in range(k.k-1,k.k+1)]
 
     def __setitem__(self, tup, value):
         if len(tup)==2:
@@ -83,21 +98,18 @@ class StateVec:
     def var_names_except(self, names=()):
         return [name for name in self.var_names if not name in names]
 
-    def plot_state(self, grid, directory, filename, name_idx = None, i_sd = 0, include_ghost = False):
+    def plot_state(self, grid, directory, filename, name_idx = None, i_sd = 0, include_ghost = True):
         domain_range = grid.over_elems(Center()) if include_ghost else grid.over_elems_real(Center())
         # k_stop_local = min(len(domain_range), k_stop_min)
         # domain_range = domain_range[k_start:k_stop_local]
-        domain_range = domain_range[0:-1]
-        print('domain_range = ', domain_range)
 
         x = [grid.z_half[k] for k in domain_range]
         if name_idx == None:
             r = 0
             for name_idx in self.var_names:
-                print('name_idx = ', name_idx)
-                print('i_sd = ', i_sd)
-                y = [self[str(name_idx), k, i_sd] for k in domain_range]
-                plt.plot(y, x, markershapes[r])
+                y = [self[name_idx, k, i_sd] for k in domain_range]
+                plt.plot(y, x, markershapes[r], label=friendly_name(name_idx))
+                plt.hold()
                 r+=1
             plt.title('state vector vs z')
             plt.xlabel('state vector')
@@ -113,6 +125,33 @@ class StateVec:
         plt.savefig(directory + filename)
         plt.close()
 
+    def export_state(self, grid, directory, filename, ExportType = UseDat()):
+        domain = grid.over_elems(Center())
+        headers = [ str(name) if len(self.over_sub_domains(name))==1 else str(name)+'_'+str(i_sd)
+          for name in self.var_names for i_sd in self.over_sub_domains(name)]
+        headers = [friendly_name(s) for s in headers]
+        n_vars = len(headers)
+        n_elem = len(domain)
+        data = np.array([self[name, k, i_sd] for name in self.var_names for
+          i_sd in self.over_sub_domains(name) for k in domain])
+        data = data.reshape(n_elem, n_vars)
+        z = grid.z[domain]
+
+        # TODO: Clean up using numpy export
+        data_all = []
+        data_all.append(z)
+        data_all.append(data)
+        # print('data_all = ', data_all)
+        # data_all = hcat(z, data)
+        file_name = str(directory+filename+'_vs_z.dat')
+        with open(file_name, 'w') as f:
+            f.write(', '.join(headers)+'\n')
+            for k in domain:
+                row = data_all[k]
+                # print('row = ', row)
+                f.write('\t'.join(row))
+            # f.writedlm(data_all)
+        return
 
 
 """

@@ -23,8 +23,8 @@ class Grid:
         self.gw = n_ghost
         self.nz = n_elems_real
         self.nzg = self.nz + 2 * self.gw
-        self.z_half = np.empty((self.nzg),dtype=np.double,order='c')
-        self.z      = np.empty((self.nzg),dtype=np.double,order='c')
+        self.z_half = np.empty((self.nzg), dtype=np.double, order='c')
+        self.z      = np.empty((self.nzg), dtype=np.double, order='c')
         count = 0
         for i in range(-self.gw, self.nz+self.gw,1):
             self.z[count] = (i + 1) * self.dz
@@ -108,9 +108,11 @@ class Grid:
 
     def over_elems(self, loc):
         if isinstance(loc, Center):
-            return range(self.first_interior(Zmin())-1, self.first_interior(Zmax())+1+1)
+            # return range(self.first_interior(Zmin())-1, self.first_interior(Zmax())+1+1)
+            return range(0, self.first_interior(Zmax())+1+1)
         elif isinstance(loc, Node):
-            return range(self.boundary(Zmin())-1, self.boundary(Zmax())+1+1)
+            # return range(self.boundary(Zmin())-1, self.boundary(Zmax())+1+1)
+            return range(0, self.boundary(Zmax())+1+1)
         else:
             raise TypeError("Bad location in over_elems in Grid.py")
 

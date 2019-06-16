@@ -42,13 +42,13 @@ def CasesFactory(namelist, paramlist):
 class CasesBase:
     def __init__(self, paramlist):
         return
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         return
-    def initialize_profiles(self, Gr, GMV, Ref):
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
         return
-    def initialize_surface(self, Gr, Ref ):
+    def initialize_surface(self, grid, Ref, tmp):
         return
-    def initialize_forcing(self, Gr,  Ref, GMV):
+    def initialize_forcing(self, grid,  Ref, GMV, tmp):
         return
     def initialize_io(self, Stats):
         Stats.add_ts('Tsurface')
@@ -77,64 +77,63 @@ class Soares(CasesBase):
         self.Fo.apply_coriolis = False
         self.Fo.apply_subsidence = False
         return
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 1000.0 * 100.0
         Ref.qtg = 4.5e-3
         Ref.Tg = 300.0
-        Ref.initialize(Gr, Stats, tmp)
+        Ref.initialize(grid, Stats, tmp)
         return
-    def initialize_profiles(self, Gr, GMV, Ref):
-        theta = np.zeros((Gr.nzg,),dtype=np.double, order='c')
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        theta = Field.half(grid)
         ql = 0.0
         qi = 0.0
 
-        for k in Gr.over_elems_real(Center()):
-            if Gr.z_half[k] <= 1350.0:
-                GMV.QT.values[k] = 5.0e-3 - 3.7e-4* Gr.z_half[k]/1000.0
+        z = grid.z_half
+        for k in grid.over_elems_real(Center()):
+            if z[k] <= 1350.0:
+                GMV.QT.values[k] = 5.0e-3 - 3.7e-4* z[k]/1000.0
                 theta[k] = 300.0
 
             else:
-                GMV.QT.values[k] = 5.0e-3 - 3.7e-4 * 1.35 - 9.4e-4 * (Gr.z_half[k]-1350.0)/1000.0
-                theta[k] = 300.0 + 2.0 * (Gr.z_half[k]-1350.0)/1000.0
+                GMV.QT.values[k] = 5.0e-3 - 3.7e-4 * 1.35 - 9.4e-4 * (z[k]-1350.0)/1000.0
+                theta[k] = 300.0 + 2.0 * (z[k]-1350.0)/1000.0
             GMV.U.values[k] = 0.01
 
-        GMV.U.set_bcs(Gr)
-        GMV.QT.set_bcs(Gr)
+        GMV.U.set_bcs(grid)
+        GMV.QT.set_bcs(grid)
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = theta[k]
-                GMV.T.values[k] =  theta[k] * exner_c(Ref.p0_half[k])
+                GMV.T.values[k] =  theta[k] * exner_c(tmp['p_0', k])
                 GMV.THL.values[k] = theta[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_elems_real(Center()):
-                GMV.T.values[k] = theta[k] * exner_c(Ref.p0_half[k])
-                GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
-                                                 GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
-                                                 GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
+            for k in grid.over_elems_real(Center()):
+                GMV.T.values[k] = theta[k] * exner_c(tmp['p_0', k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], ql, qi)
+                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k], GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
-        GMV.H.set_bcs(Gr)
-        GMV.T.set_bcs(Gr)
+        GMV.H.set_bcs(grid)
+        GMV.T.set_bcs(grid)
         GMV.satadjust()
 
         return
 
-    def initialize_surface(self, Gr, Ref ):
+    def initialize_surface(self, grid, Ref, tmp):
         self.Sur.zrough = 1.0e-4
         self.Sur.Tsurface = 300.0
         self.Sur.qsurface = 5e-3
-        self.Sur.lhf = 2.5e-5 * Ref.rho0[Gr.gw -1] * latent_heat(self.Sur.Tsurface)
-        self.Sur.shf = 6.0e-2 * cpm_c(self.Sur.qsurface) * Ref.rho0[Gr.gw-1]
+        self.Sur.lhf = 2.5e-5 * Ref.rho0[grid.gw -1] * latent_heat(self.Sur.Tsurface)
+        self.Sur.shf = 6.0e-2 * cpm_c(self.Sur.qsurface) * Ref.rho0[grid.gw-1]
         self.Sur.ustar_fixed = False
-        self.Sur.Gr = Gr
+        self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.bflux = g * ( 6.0e-2/self.Sur.Tsurface + (eps_vi -1.0)* 2.5e-5) # This will be overwritten
         self.Sur.initialize()
 
         return
-    def initialize_forcing(self, Gr, Ref, GMV):
-        self.Fo.Gr = Gr
+    def initialize_forcing(self, grid, Ref, GMV, tmp):
+        self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
         return
@@ -163,101 +162,101 @@ class Bomex(CasesBase):
         self.Fo.coriolis_param = 0.376e-4 # s^{-1}
         self.Fo.apply_subsidence = True
         return
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 1.015e5  #Pressure at ground
         Ref.Tg = 300.4  #Temperature at ground
         Ref.qtg = 0.02245   #Total water mixing ratio at surface
-        Ref.initialize(Gr, Stats, tmp)
+        Ref.initialize(grid, Stats, tmp)
         return
-    def initialize_profiles(self, Gr, GMV, Ref):
-        thetal = np.zeros((Gr.nzg,), dtype=np.double, order='c')
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        thetal = Field.half(grid)
         ql=0.0
         qi =0.0 # IC of Bomex is cloud-free
+        z = grid.z_half
 
-        for k in Gr.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             #Set Thetal profile
-            if Gr.z_half[k] <= 520.:
+            if z[k] <= 520.:
                 thetal[k] = 298.7
-            if Gr.z_half[k] > 520.0 and Gr.z_half[k] <= 1480.0:
-                thetal[k] = 298.7 + (Gr.z_half[k] - 520)  * (302.4 - 298.7)/(1480.0 - 520.0)
-            if Gr.z_half[k] > 1480.0 and Gr.z_half[k] <= 2000:
-                thetal[k] = 302.4 + (Gr.z_half[k] - 1480.0) * (308.2 - 302.4)/(2000.0 - 1480.0)
-            if Gr.z_half[k] > 2000.0:
-                thetal[k] = 308.2 + (Gr.z_half[k] - 2000.0) * (311.85 - 308.2)/(3000.0 - 2000.0)
+            if z[k] > 520.0 and z[k] <= 1480.0:
+                thetal[k] = 298.7 + (z[k] - 520)  * (302.4 - 298.7)/(1480.0 - 520.0)
+            if z[k] > 1480.0 and z[k] <= 2000:
+                thetal[k] = 302.4 + (z[k] - 1480.0) * (308.2 - 302.4)/(2000.0 - 1480.0)
+            if z[k] > 2000.0:
+                thetal[k] = 308.2 + (z[k] - 2000.0) * (311.85 - 308.2)/(3000.0 - 2000.0)
 
             #Set qt profile
-            if Gr.z_half[k] <= 520:
-                GMV.QT.values[k] = (17.0 + (Gr.z_half[k]) * (16.3-17.0)/520.0)/1000.0
-            if Gr.z_half[k] > 520.0 and Gr.z_half[k] <= 1480.0:
-                GMV.QT.values[k] = (16.3 + (Gr.z_half[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
-            if Gr.z_half[k] > 1480.0 and Gr.z_half[k] <= 2000.0:
-                GMV.QT.values[k] = (10.7 + (Gr.z_half[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
-            if Gr.z_half[k] > 2000.0:
-                GMV.QT.values[k] = (4.2 + (Gr.z_half[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
+            if z[k] <= 520:
+                GMV.QT.values[k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
+            if z[k] > 520.0 and z[k] <= 1480.0:
+                GMV.QT.values[k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
+            if z[k] > 1480.0 and z[k] <= 2000.0:
+                GMV.QT.values[k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
+            if z[k] > 2000.0:
+                GMV.QT.values[k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
 
 
             #Set u profile
-            if Gr.z_half[k] <= 700.0:
+            if z[k] <= 700.0:
                 GMV.U.values[k] = -8.75
-            if Gr.z_half[k] > 700.0:
-                GMV.U.values[k] = -8.75 + (Gr.z_half[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+            if z[k] > 700.0:
+                GMV.U.values[k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
-                GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
+                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0', k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_elems_real(Center()):
-                GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
-                GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
-                                                 GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
-                                                 GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
+            for k in grid.over_elems_real(Center()):
+                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0', k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k], GMV.QT.values[k], ql, qi)
+                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k], GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
-        GMV.U.set_bcs(Gr)
-        GMV.QT.set_bcs(Gr)
-        GMV.H.set_bcs(Gr)
-        GMV.T.set_bcs(Gr)
+        GMV.U.set_bcs(grid)
+        GMV.QT.set_bcs(grid)
+        GMV.H.set_bcs(grid)
+        GMV.T.set_bcs(grid)
         GMV.satadjust()
 
         return
-    def initialize_surface(self, Gr, Ref):
+    def initialize_surface(self, grid, Ref, tmp):
         self.Sur.zrough = 1.0e-4 # not actually used, but initialized to reasonable value
         self.Sur.Tsurface = 299.1 * exner_c(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
-        self.Sur.lhf = 5.2e-5 * Ref.rho0[Gr.gw -1] * latent_heat(self.Sur.Tsurface)
-        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * Ref.rho0[Gr.gw-1]
+        self.Sur.lhf = 5.2e-5 * Ref.rho0[grid.gw -1] * latent_heat(self.Sur.Tsurface)
+        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * Ref.rho0[grid.gw-1]
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # m/s
-        self.Sur.Gr = Gr
+        self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.initialize()
         return
-    def initialize_forcing(self, Gr, Ref, GMV):
-        self.Fo.Gr = Gr
+    def initialize_forcing(self, grid, Ref, GMV, tmp):
+        self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in Gr.over_elems_real(Center()):
+        z = grid.z_half
+        for k in grid.over_elems_real(Center()):
             # Geostrophic velocity profiles. vg = 0
-            self.Fo.ug[k] = -10.0 + (1.8e-3)*Gr.z_half[k]
+            self.Fo.ug[k] = -10.0 + (1.8e-3)*z[k]
             # Set large-scale cooling
-            if Gr.z_half[k] <= 1500.0:
-                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(Ref.p0_half[k])
+            if z[k] <= 1500.0:
+                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(tmp['p_0', k])
             else:
-                self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (Gr.z_half[k] - 1500.0)
-                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(Ref.p0_half[k])
+                self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (z[k] - 1500.0)
+                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(tmp['p_0', k])
             # Set large-scale drying
-            if Gr.z_half[k] <= 300.0:
+            if z[k] <= 300.0:
                 self.Fo.dqtdt[k] = -1.2e-8   #kg/(kg * s)
-            if Gr.z_half[k] > 300.0 and Gr.z_half[k] <= 500.0:
-                self.Fo.dqtdt[k] = -1.2e-8 + (Gr.z_half[k] - 300.0)*(0.0 - -1.2e-8)/(500.0 - 300.0) #kg/(kg * s)
+            if z[k] > 300.0 and z[k] <= 500.0:
+                self.Fo.dqtdt[k] = -1.2e-8 + (z[k] - 300.0)*(0.0 - -1.2e-8)/(500.0 - 300.0) #kg/(kg * s)
 
             #Set large scale subsidence
-            if Gr.z_half[k] <= 1500.0:
-                self.Fo.subsidence[k] = 0.0 + Gr.z_half[k]*(-0.65/100.0 - 0.0)/(1500.0 - 0.0)
-            if Gr.z_half[k] > 1500.0 and Gr.z_half[k] <= 2100.0:
-                self.Fo.subsidence[k] = -0.65/100 + (Gr.z_half[k] - 1500.0)* (0.0 - -0.65/100.0)/(2100.0 - 1500.0)
+            if z[k] <= 1500.0:
+                self.Fo.subsidence[k] = 0.0 + z[k]*(-0.65/100.0 - 0.0)/(1500.0 - 0.0)
+            if z[k] > 1500.0 and z[k] <= 2100.0:
+                self.Fo.subsidence[k] = -0.65/100 + (z[k] - 1500.0)* (0.0 - -0.65/100.0)/(2100.0 - 1500.0)
         return
 
     def initialize_io(self, Stats):
@@ -287,104 +286,104 @@ class life_cycle_Tan2018(CasesBase):
         self.Fo.coriolis_param = 0.376e-4 # s^{-1}
         self.Fo.apply_subsidence = True
         return
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 1.015e5  #Pressure at ground
         Ref.Tg = 300.4  #Temperature at ground
         Ref.qtg = 0.02245   #Total water mixing ratio at surface
-        Ref.initialize(Gr, Stats)
+        Ref.initialize(grid, Stats)
         return
-    def initialize_profiles(self, Gr, GMV, Ref):
-        thetal = np.zeros((Gr.nzg,), dtype=np.double, order='c')
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        thetal = np.zeros((grid.nzg,), dtype=np.double, order='c')
         ql=0.0
         qi =0.0 # IC of Bomex is cloud-free
-        for k in Gr.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             #Set Thetal profile
-            if Gr.z_half[k] <= 520.:
+            if grid.z_half[k] <= 520.:
                 thetal[k] = 298.7
-            if Gr.z_half[k] > 520.0 and Gr.z_half[k] <= 1480.0:
-                thetal[k] = 298.7 + (Gr.z_half[k] - 520)  * (302.4 - 298.7)/(1480.0 - 520.0)
-            if Gr.z_half[k] > 1480.0 and Gr.z_half[k] <= 2000:
-                thetal[k] = 302.4 + (Gr.z_half[k] - 1480.0) * (308.2 - 302.4)/(2000.0 - 1480.0)
-            if Gr.z_half[k] > 2000.0:
-                thetal[k] = 308.2 + (Gr.z_half[k] - 2000.0) * (311.85 - 308.2)/(3000.0 - 2000.0)
+            if grid.z_half[k] > 520.0 and grid.z_half[k] <= 1480.0:
+                thetal[k] = 298.7 + (grid.z_half[k] - 520)  * (302.4 - 298.7)/(1480.0 - 520.0)
+            if grid.z_half[k] > 1480.0 and grid.z_half[k] <= 2000:
+                thetal[k] = 302.4 + (grid.z_half[k] - 1480.0) * (308.2 - 302.4)/(2000.0 - 1480.0)
+            if grid.z_half[k] > 2000.0:
+                thetal[k] = 308.2 + (grid.z_half[k] - 2000.0) * (311.85 - 308.2)/(3000.0 - 2000.0)
 
             #Set qt profile
-            if Gr.z_half[k] <= 520:
-                GMV.QT.values[k] = (17.0 + (Gr.z_half[k]) * (16.3-17.0)/520.0)/1000.0
-            if Gr.z_half[k] > 520.0 and Gr.z_half[k] <= 1480.0:
-                GMV.QT.values[k] = (16.3 + (Gr.z_half[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
-            if Gr.z_half[k] > 1480.0 and Gr.z_half[k] <= 2000.0:
-                GMV.QT.values[k] = (10.7 + (Gr.z_half[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
-            if Gr.z_half[k] > 2000.0:
-                GMV.QT.values[k] = (4.2 + (Gr.z_half[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
+            if grid.z_half[k] <= 520:
+                GMV.QT.values[k] = (17.0 + (grid.z_half[k]) * (16.3-17.0)/520.0)/1000.0
+            if grid.z_half[k] > 520.0 and grid.z_half[k] <= 1480.0:
+                GMV.QT.values[k] = (16.3 + (grid.z_half[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
+            if grid.z_half[k] > 1480.0 and grid.z_half[k] <= 2000.0:
+                GMV.QT.values[k] = (10.7 + (grid.z_half[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
+            if grid.z_half[k] > 2000.0:
+                GMV.QT.values[k] = (4.2 + (grid.z_half[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
 
 
             #Set u profile
-            if Gr.z_half[k] <= 700.0:
+            if grid.z_half[k] <= 700.0:
                 GMV.U.values[k] = -8.75
-            if Gr.z_half[k] > 700.0:
-                GMV.U.values[k] = -8.75 + (Gr.z_half[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+            if grid.z_half[k] > 700.0:
+                GMV.U.values[k] = -8.75 + (grid.z_half[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
                 GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
                 GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
-        GMV.U.set_bcs(Gr)
-        GMV.QT.set_bcs(Gr)
-        GMV.H.set_bcs(Gr)
-        GMV.T.set_bcs(Gr)
+        GMV.U.set_bcs(grid)
+        GMV.QT.set_bcs(grid)
+        GMV.H.set_bcs(grid)
+        GMV.T.set_bcs(grid)
         GMV.satadjust()
 
         return
-    def initialize_surface(self, Gr, Ref):
+    def initialize_surface(self, grid, Ref, tmp):
         self.Sur.zrough = 1.0e-4 # not actually used, but initialized to reasonable value
         self.Sur.Tsurface = 299.1 * exner_c(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
-        self.Sur.lhf = 5.2e-5 * Ref.rho0[Gr.gw -1] * latent_heat(self.Sur.Tsurface)
-        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * Ref.rho0[Gr.gw-1]
+        self.Sur.lhf = 5.2e-5 * Ref.rho0[grid.gw -1] * latent_heat(self.Sur.Tsurface)
+        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * Ref.rho0[grid.gw-1]
         self.lhf0 = self.Sur.lhf
         self.shf0 = self.Sur.shf
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # m/s
-        self.Sur.Gr = Gr
+        self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.bflux = (g * ((8.0e-3 + (eps_vi-1.0)*(299.1 * 5.2e-5  + 22.45e-3 * 8.0e-3)) /(299.1 * (1.0 + (eps_vi-1) * 22.45e-3))))
         self.Sur.initialize()
         return
-    def initialize_forcing(self, Gr, Ref, GMV):
-        self.Fo.Gr = Gr
+    def initialize_forcing(self, grid, Ref, GMV, tmp):
+        self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in Gr.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             # Geostrophic velocity profiles. vg = 0
-            self.Fo.ug[k] = -10.0 + (1.8e-3)*Gr.z_half[k]
+            self.Fo.ug[k] = -10.0 + (1.8e-3)*grid.z_half[k]
             # Set large-scale cooling
-            if Gr.z_half[k] <= 1500.0:
+            if grid.z_half[k] <= 1500.0:
                 self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(Ref.p0_half[k])
             else:
-                self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (Gr.z_half[k] - 1500.0)
+                self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (grid.z_half[k] - 1500.0)
                                     * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(Ref.p0_half[k])
             # Set large-scale drying
-            if Gr.z_half[k] <= 300.0:
+            if grid.z_half[k] <= 300.0:
                 self.Fo.dqtdt[k] = -1.2e-8   #kg/(kg * s)
-            if Gr.z_half[k] > 300.0 and Gr.z_half[k] <= 500.0:
-                self.Fo.dqtdt[k] = -1.2e-8 + (Gr.z_half[k] - 300.0)*(0.0 - -1.2e-8)/(500.0 - 300.0) #kg/(kg * s)
+            if grid.z_half[k] > 300.0 and grid.z_half[k] <= 500.0:
+                self.Fo.dqtdt[k] = -1.2e-8 + (grid.z_half[k] - 300.0)*(0.0 - -1.2e-8)/(500.0 - 300.0) #kg/(kg * s)
 
             #Set large scale subsidence
-            if Gr.z_half[k] <= 1500.0:
-                self.Fo.subsidence[k] = 0.0 + Gr.z_half[k]*(-0.65/100.0 - 0.0)/(1500.0 - 0.0)
-            if Gr.z_half[k] > 1500.0 and Gr.z_half[k] <= 2100.0:
-                self.Fo.subsidence[k] = -0.65/100 + (Gr.z_half[k] - 1500.0)* (0.0 - -0.65/100.0)/(2100.0 - 1500.0)
+            if grid.z_half[k] <= 1500.0:
+                self.Fo.subsidence[k] = 0.0 + grid.z_half[k]*(-0.65/100.0 - 0.0)/(1500.0 - 0.0)
+            if grid.z_half[k] > 1500.0 and grid.z_half[k] <= 2100.0:
+                self.Fo.subsidence[k] = -0.65/100 + (grid.z_half[k] - 1500.0)* (0.0 - -0.65/100.0)/(2100.0 - 1500.0)
         return
 
     def initialize_io(self, Stats):
@@ -418,65 +417,65 @@ class Rico(CasesBase):
         self.Fo.apply_subsidence = True
         return
 
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 1.0154e5  #Pressure at ground
         Ref.Tg = 299.8  #Temperature at ground
         pvg = pv_star(Ref.Tg)
         Ref.qtg = eps_v * pvg/(Ref.Pg - pvg)   #Total water mixing ratio at surface
-        Ref.initialize(Gr, Stats)
+        Ref.initialize(grid, Stats)
         return
-    def initialize_profiles(self, Gr, GMV, Ref):
-        thetal = np.zeros((Gr.nzg,), dtype=np.double, order='c')
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        thetal = np.zeros((grid.nzg,), dtype=np.double, order='c')
         ql=0.0
         qi =0.0 # IC of Rico is cloud-free
 
-        for k in Gr.over_elems_real(Center()):
-            GMV.U.values[k] =  -9.9 + 2.0e-3 * Gr.z_half[k]
+        for k in grid.over_elems_real(Center()):
+            GMV.U.values[k] =  -9.9 + 2.0e-3 * grid.z_half[k]
             GMV.V.values[k] = -3.8
             #Set Thetal profile
-            if Gr.z_half[k] <= 740.0:
+            if grid.z_half[k] <= 740.0:
                 thetal[k] = 297.9
             else:
-                thetal[k] = 297.9 + (317.0-297.9)/(4000.0-740.0)*(Gr.z_half[k] - 740.0)
+                thetal[k] = 297.9 + (317.0-297.9)/(4000.0-740.0)*(grid.z_half[k] - 740.0)
 
             #Set qt profile
-            if Gr.z_half[k] <= 740.0:
-                GMV.QT.values[k] =  (16.0 + (13.8 - 16.0)/740.0 * Gr.z_half[k])/1000.0
-            elif Gr.z_half[k] > 740.0 and Gr.z_half[k] <= 3260.0:
-                GMV.QT.values[k] = (13.8 + (2.4 - 13.8)/(3260.0-740.0) * (Gr.z_half[k] - 740.0))/1000.0
+            if grid.z_half[k] <= 740.0:
+                GMV.QT.values[k] =  (16.0 + (13.8 - 16.0)/740.0 * grid.z_half[k])/1000.0
+            elif grid.z_half[k] > 740.0 and grid.z_half[k] <= 3260.0:
+                GMV.QT.values[k] = (13.8 + (2.4 - 13.8)/(3260.0-740.0) * (grid.z_half[k] - 740.0))/1000.0
             else:
-                GMV.QT.values[k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(Gr.z_half[k] - 3260.0))/1000.0
+                GMV.QT.values[k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(grid.z_half[k] - 3260.0))/1000.0
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
                 GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
                 GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
-        GMV.U.set_bcs(Gr)
-        GMV.QT.set_bcs(Gr)
-        GMV.H.set_bcs(Gr)
-        GMV.T.set_bcs(Gr)
+        GMV.U.set_bcs(grid)
+        GMV.QT.set_bcs(grid)
+        GMV.H.set_bcs(grid)
+        GMV.T.set_bcs(grid)
         GMV.satadjust()
 
 
         return
-    def initialize_surface(self, Gr, Ref):
-        self.Sur.Gr = Gr
+    def initialize_surface(self, grid, Ref, tmp):
+        self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.zrough = 0.00015
         self.Sur.cm  = 0.001229
         self.Sur.ch = 0.001094
         self.Sur.cq = 0.001133
         # Adjust for non-IC grid spacing
-        grid_adjust = (np.log(20.0/self.Sur.zrough)/np.log(Gr.z_half[Gr.gw]/self.Sur.zrough))**2
+        grid_adjust = (np.log(20.0/self.Sur.zrough)/np.log(grid.z_half[grid.gw]/self.Sur.zrough))**2
         self.Sur.cm = self.Sur.cm * grid_adjust
         self.Sur.ch = self.Sur.ch * grid_adjust
         self.Sur.cq = self.Sur.cq * grid_adjust
@@ -484,26 +483,26 @@ class Rico(CasesBase):
         self.Sur.initialize()
         return
 
-    def initialize_forcing(self, Gr, Ref, GMV):
-        self.Fo.Gr = Gr
+    def initialize_forcing(self, grid, Ref, GMV, tmp):
+        self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in Gr.over_elems(Center()):
+        for k in grid.over_elems(Center()):
             # Geostrophic velocity profiles
-            self.Fo.ug[k] = -9.9 + 2.0e-3 * Gr.z_half[k]
+            self.Fo.ug[k] = -9.9 + 2.0e-3 * grid.z_half[k]
             self.Fo.vg[k] = -3.8
             # Set large-scale cooling
             self.Fo.dTdt[k] =  (-2.5/(3600.0 * 24.0))  * exner_c(Ref.p0_half[k])
 
             # Set large-scale moistening
-            if Gr.z_half[k] <= 2980.0:
-                self.Fo.dqtdt[k] =  (-1.0 + 1.3456/2980.0 * Gr.z_half[k])/86400.0/1000.0   #kg/(kg * s)
+            if grid.z_half[k] <= 2980.0:
+                self.Fo.dqtdt[k] =  (-1.0 + 1.3456/2980.0 * grid.z_half[k])/86400.0/1000.0   #kg/(kg * s)
             else:
                 self.Fo.dqtdt[k] = 0.3456/86400.0/1000.0
 
             #Set large scale subsidence
-            if Gr.z_half[k] <= 2260.0:
-                self.Fo.subsidence[k] = -(0.005/2260.0) * Gr.z_half[k]
+            if grid.z_half[k] <= 2260.0:
+                self.Fo.subsidence[k] = -(0.005/2260.0) * grid.z_half[k]
             else:
                 self.Fo.subsidence[k] = -0.005
         return
@@ -534,15 +533,15 @@ class TRMM_LBA(CasesBase):
         self.Fo.apply_coriolis = False
         self.Fo.apply_subsidence = False
         return
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 991.3*100  #Pressure at ground
         Ref.Tg = 296.85   # surface values for reference state (RS) which outputs p0 rho0 alpha0
         pvg = pv_star(Ref.Tg)
         Ref.qtg = eps_v * pvg/(Ref.Pg - pvg)#Total water mixing ratio at surface
-        Ref.initialize(Gr, Stats)
+        Ref.initialize(grid, Stats)
         return
-    def initialize_profiles(self, Gr, GMV, Ref):
-        p1 = np.zeros((Gr.nzg,),dtype=np.double,order='c')
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        p1 = np.zeros((grid.nzg,),dtype=np.double,order='c')
 
         # TRMM_LBA inputs from Grabowski et al. 2006
         z_in = np.array([0.130,  0.464,  0.573,  1.100,  1.653,  2.216,  2.760,
@@ -594,28 +593,28 @@ class TRMM_LBA(CasesBase):
                           5.32,   1.14,  -0.65,   5.27,   5.27])
         # interpolate to the model grid-points
 
-        p1 = np.interp(Gr.z_half,z_in,p_in)
-        GMV.U.values = np.interp(Gr.z_half,z_in,u_in)
-        GMV.V.values = np.interp(Gr.z_half,z_in,v_in)
+        p1 = np.interp(grid.z_half,z_in,p_in)
+        GMV.U.values = np.interp(grid.z_half,z_in,u_in)
+        GMV.V.values = np.interp(grid.z_half,z_in,v_in)
 
         # get the entropy from RH, p, T
-        RH = np.zeros(Gr.nzg)
-        RH[Gr.gw:Gr.nzg-Gr.gw] = np.interp(Gr.z_half[Gr.gw:Gr.nzg-Gr.gw],z_in,RH_in)
+        RH = np.zeros(grid.nzg)
+        RH[grid.gw:grid.nzg-grid.gw] = np.interp(grid.z_half[grid.gw:grid.nzg-grid.gw],z_in,RH_in)
         RH[0] = RH[3]
         RH[1] = RH[2]
-        RH[Gr.nzg-Gr.gw+1] = RH[Gr.nzg-Gr.gw-1]
+        RH[grid.nzg-grid.gw+1] = RH[grid.nzg-grid.gw-1]
 
-        T = np.zeros(Gr.nzg)
-        T[Gr.gw:Gr.nzg-Gr.gw] = np.interp(Gr.z_half[Gr.gw:Gr.nzg-Gr.gw],z_in,T_in)
+        T = np.zeros(grid.nzg)
+        T[grid.gw:grid.nzg-grid.gw] = np.interp(grid.z_half[grid.gw:grid.nzg-grid.gw],z_in,T_in)
         GMV.T.values = T
         theta_rho = RH*0.0
         epsi = 287.1/461.5
 
-        GMV.U.set_bcs(Gr)
-        GMV.T.set_bcs(Gr)
+        GMV.U.set_bcs(grid)
+        GMV.T.set_bcs(grid)
 
 
-        for k in Gr.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             PV_star = pv_star(GMV.T.values[k])
             qv_star = PV_star*epsi/(p1[k]- PV_star + epsi*PV_star*RH[k]/100.0) # eq. 37 in pressel et al and the def of RH
             qv = GMV.QT.values[k] - GMV.QL.values[k]
@@ -631,29 +630,29 @@ class TRMM_LBA(CasesBase):
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
             theta_rho[k] = theta_rho_c(Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
 
-        GMV.QT.set_bcs(Gr)
-        GMV.H.set_bcs(Gr)
+        GMV.QT.set_bcs(grid)
+        GMV.H.set_bcs(grid)
         GMV.satadjust()
         return
 
-    def initialize_surface(self, Gr, Ref):
+    def initialize_surface(self, grid, Ref, tmp):
         #self.Sur.zrough = 1.0e-4 # not actually used, but initialized to reasonable value
         self.Sur.Tsurface = (273.15+23) * exner_c(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
-        self.Sur.lhf = 5.2e-5 * Ref.rho0[Gr.gw -1] * latent_heat(self.Sur.Tsurface)
-        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * Ref.rho0[Gr.gw-1]
+        self.Sur.lhf = 5.2e-5 * Ref.rho0[grid.gw -1] * latent_heat(self.Sur.Tsurface)
+        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * Ref.rho0[grid.gw-1]
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # this is taken from Bomex -- better option is to approximate from LES tke above the surface
-        self.Sur.Gr = Gr
+        self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.initialize()
 
         return
-    def initialize_forcing(self, Gr, Ref, GMV):
-        self.Fo.Gr = Gr
+    def initialize_forcing(self, grid, Ref, GMV, tmp):
+        self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        self.Fo.dTdt = np.zeros(Gr.nzg, dtype=np.double)
+        self.Fo.dTdt = np.zeros(grid.nzg, dtype=np.double)
         self.rad_time = np.linspace(10,360,36)*60
         z_in         = np.array([42.5, 200.92, 456.28, 743, 1061.08, 1410.52, 1791.32, 2203.48, 2647,3121.88, 3628.12,
                                  4165.72, 4734.68, 5335, 5966.68, 6629.72, 7324.12,
@@ -768,14 +767,14 @@ class TRMM_LBA(CasesBase):
                                0.316,  0.287,  0.293,  0.361,  0.345,  0.225,  0.082,  0.035,  0.071,  0.046,  0.172,  0.708,
                                0.255,   0.21,  0.325,  0.146,      0,      0,      0,      0,      0]])/86400
 
-        A = np.interp(Gr.z_half,z_in,rad_in[0,:])
+        A = np.interp(grid.z_half,z_in,rad_in[0,:])
         for tt in range(1,36):
-            A = np.vstack((A, np.interp(Gr.z_half,z_in,rad_in[tt,:])))
+            A = np.vstack((A, np.interp(grid.z_half,z_in,rad_in[tt,:])))
         self.rad = np.multiply(A,1.0) # store matrix in self
 
         ind1 = int(mt.trunc(10.0/600.0))
         ind2 = int(mt.ceil(10.0/600.0))
-        for k in Gr.over_elems(Center()):
+        for k in grid.over_elems(Center()):
             if 10%600.0 == 0:
                 self.Fo.dTdt[k] = self.rad[ind1,k]
             else:
@@ -806,20 +805,20 @@ class TRMM_LBA(CasesBase):
         ind2 = int(mt.ceil(TS.t/600.0))
         ind1 = int(mt.trunc(TS.t/600.0))
         if TS.t<600.0: # first 10 min use the radiative forcing of t=10min (as in the paper)
-            for k in self.Fo.Gr.over_elems(Center()):
+            for k in self.Fo.grid.over_elems(Center()):
                 self.Fo.dTdt[k] = self.rad[0,k]
         elif TS.t>18900.0:
-            for k in self.Fo.Gr.over_elems(Center()):
+            for k in self.Fo.grid.over_elems(Center()):
                 self.Fo.dTdt[k] = (self.rad[31,k]-self.rad[30,k])/(self.rad_time[31]-self.rad_time[30])\
                                       *(18900.0/60.0-self.rad_time[30])+self.rad[30,k]
 
         else:
             if TS.t%600.0 == 0:
-                for k in self.Fo.Gr.over_elems(Center()):
+                for k in self.Fo.grid.over_elems(Center()):
                     self.Fo.dTdt[k] = self.rad[ind1,k]
             else: # in all other cases - interpolate
-                for k in self.Fo.Gr.over_elems_real(Center()):
-                    if self.Fo.Gr.z_half[k] < 22699.48:
+                for k in self.Fo.grid.over_elems_real(Center()):
+                    if self.Fo.grid.z_half[k] < 22699.48:
                         self.Fo.dTdt[k]    = (self.rad[ind2,k]-self.rad[ind1,k])\
                                                  /(self.rad_time[ind2]-self.rad_time[ind1])\
                                                  *(TS.t/60.0-self.rad_time[ind1])+self.rad[ind1,k]
@@ -842,14 +841,14 @@ class ARM_SGP(CasesBase):
         self.Fo.apply_subsidence =False
 
         return
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 970.0*100 #Pressure at ground
         Ref.Tg = 299.0   # surface values for reference state (RS) which outputs p0 rho0 alpha0
         Ref.qtg = 15.2/1000#Total water mixing ratio at surface
-        Ref.initialize(Gr, Stats)
+        Ref.initialize(grid, Stats)
         return
-    def initialize_profiles(self, Gr, GMV, Ref):
-        p1 = np.zeros((Gr.nzg,),dtype=np.double,order='c')
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        p1 = np.zeros((grid.nzg,),dtype=np.double,order='c')
 
         # ARM_SGP inputs
         z_in = np.array([0.0, 50.0, 350.0, 650.0, 700.0, 1300.0, 2500.0, 5500.0 ]) #LES z is in meters
@@ -859,11 +858,11 @@ class ARM_SGP(CasesBase):
         print(qt_in)
 
         # interpolate to the model grid-points
-        Theta = np.interp(Gr.z_half,z_in,Theta_in)
-        qt = np.interp(Gr.z_half,z_in,qt_in)
+        Theta = np.interp(grid.z_half,z_in,Theta_in)
+        qt = np.interp(grid.z_half,z_in,qt_in)
 
 
-        for k in Gr.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             GMV.U.values[k] = 10.0
             GMV.QT.values[k] = qt[k]
             GMV.T.values[k] = Theta[k]*exner_c(Ref.p0_half[k])
@@ -878,31 +877,31 @@ class ARM_SGP(CasesBase):
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
 
 
-        GMV.U.set_bcs(Gr)
-        GMV.QT.set_bcs(Gr)
-        GMV.H.set_bcs(Gr)
-        GMV.T.set_bcs(Gr)
+        GMV.U.set_bcs(grid)
+        GMV.QT.set_bcs(grid)
+        GMV.H.set_bcs(grid)
+        GMV.T.set_bcs(grid)
         GMV.satadjust()
 
         return
 
-    def initialize_surface(self, Gr, Ref):
+    def initialize_surface(self, grid, Ref, tmp):
         self.Sur.Tsurface = 299.0 * exner_c(Ref.Pg)
         self.Sur.qsurface = 15.2e-3 # kg/kg
         self.Sur.lhf = 5.0
         self.Sur.shf = -30.0
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # this is taken from Bomex -- better option is to approximate from LES tke above the surface
-        self.Sur.Gr = Gr
+        self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.initialize()
 
         return
-    def initialize_forcing(self, Gr, Ref, GMV):
-        self.Fo.Gr = Gr
+    def initialize_forcing(self, grid, Ref, GMV, tmp):
+        self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in Gr.over_elems(Center()):
+        for k in grid.over_elems(Center()):
             self.Fo.ug[k] = 10.0
             self.Fo.vg[k] = 0.0
 
@@ -942,14 +941,14 @@ class ARM_SGP(CasesBase):
         Rqt_in = np.array([0.08, 0.02, 0.04, -0.1, -0.16, -0.3])/1000.0/3600.0 # Radiative forcing for qt converted to [kg/kg/sec]
         dTdt = np.interp(TS.t,t_in,AT_in) + np.interp(TS.t,t_in,RT_in)
         dqtdt =  np.interp(TS.t,t_in,Rqt_in)
-        for k in self.Fo.Gr.over_elems(Center()):
-                if self.Fo.Gr.z_half[k] <=1000.0:
+        for k in self.Fo.grid.over_elems(Center()):
+                if self.Fo.grid.z_half[k] <=1000.0:
                     self.Fo.dTdt[k] = dTdt
                     self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.Ref.p0_half[k])
-                elif self.Fo.Gr.z_half[k] > 1000.0  and self.Fo.Gr.z_half[k] <= 2000.0:
-                    self.Fo.dTdt[k] = dTdt*(1-(self.Fo.Gr.z_half[k]-1000.0)/1000.0)
+                elif self.Fo.grid.z_half[k] > 1000.0  and self.Fo.grid.z_half[k] <= 2000.0:
+                    self.Fo.dTdt[k] = dTdt*(1-(self.Fo.grid.z_half[k]-1000.0)/1000.0)
                     self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.Ref.p0_half[k])\
-                                        *(1-(self.Fo.Gr.z_half[k]-1000.0)/1000.0)
+                                        *(1-(self.Fo.grid.z_half[k]-1000.0)/1000.0)
         self.Fo.update(GMV)
 
         return
@@ -967,17 +966,17 @@ class GATE_III(CasesBase):
         self.Fo.apply_coriolis = False
 
         return
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 1013.0*100  #Pressure at ground
         Ref.Tg = 299.184   # surface values for reference state (RS) which outputs p0 rho0 alpha0
         Ref.qtg = 16.5/1000#Total water mixing ratio at surface
-        Ref.initialize(Gr, Stats)
+        Ref.initialize(grid, Stats)
         return
-    def initialize_profiles(self, Gr, GMV, Ref):
-        qt = np.zeros((Gr.nzg,),dtype=np.double,order='c')
-        T = np.zeros((Gr.nzg,),dtype=np.double,order='c') # Gr.nzg = Gr.nz + 2*Gr.gw
-        U = np.zeros((Gr.nzg,),dtype=np.double,order='c')
-        theta_rho = np.zeros((Gr.nzg,),dtype=np.double,order='c')
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        qt = np.zeros((grid.nzg,),dtype=np.double,order='c')
+        T = np.zeros((grid.nzg,),dtype=np.double,order='c') # grid.nzg = grid.nz + 2*grid.gw
+        U = np.zeros((grid.nzg,),dtype=np.double,order='c')
+        theta_rho = np.zeros((grid.nzg,),dtype=np.double,order='c')
 
         # GATE_III inputs - I extended them to z=22 km
         z_in  = np.array([ 0.0,   0.5,  1.0,  1.5,  2.0,   2.5,    3.0,   3.5,   4.0,   4.5,   5.0,  5.5,  6.0,  6.5,
@@ -996,12 +995,12 @@ class GATE_III(CasesBase):
         z_T_in = np.array([0.0, 0.492, 0.700, 1.698, 3.928, 6.039, 7.795, 9.137, 11.055, 12.645, 13.521, 14.486, 15.448, 16.436, 17.293, 22.0])*1000.0 # for km
 
         # interpolate to the model grid-points
-        T = np.interp(Gr.z_half,z_T_in,T_in) # interpolate to ref pressure level
-        qt = np.interp(Gr.z_half,z_in,qt_in)
-        U = np.interp(Gr.z_half,z_in,U_in)
+        T = np.interp(grid.z_half,z_T_in,T_in) # interpolate to ref pressure level
+        qt = np.interp(grid.z_half,z_in,qt_in)
+        U = np.interp(grid.z_half,z_in,U_in)
 
 
-        for k in Gr.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             GMV.QT.values[k] = qt[k]
             GMV.T.values[k] = T[k]
             GMV.U.values[k] = U[k]
@@ -1015,18 +1014,18 @@ class GATE_III(CasesBase):
 
             GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
-        GMV.U.set_bcs(Gr)
-        GMV.QT.set_bcs(Gr)
-        GMV.T.set_bcs(Gr)
-        GMV.H.set_bcs(Gr)
+        GMV.U.set_bcs(grid)
+        GMV.QT.set_bcs(grid)
+        GMV.T.set_bcs(grid)
+        GMV.H.set_bcs(grid)
         GMV.satadjust()
         return
 
-    def initialize_surface(self, Gr, Ref):
-        self.Sur.Gr = Gr
+    def initialize_surface(self, grid, Ref, tmp):
+        self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.qsurface = 16.5/1000.0 # kg/kg
-        self.Sur.Gr = Gr
+        self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.cm  = 0.0012
         self.Sur.ch = 0.0034337
@@ -1035,8 +1034,8 @@ class GATE_III(CasesBase):
         self.Sur.initialize()
 
         return
-    def initialize_forcing(self, Gr, Ref, GMV):
-        self.Fo.Gr = Gr
+    def initialize_forcing(self, grid, Ref, GMV, tmp):
+        self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
         #LES z is in meters
@@ -1061,8 +1060,8 @@ class GATE_III(CasesBase):
 
         Qtend_in = np.divide(r_tend_in,(1+r_tend_in)) # convert mixing ratio to specific humidity
 
-        self.Fo.dqtdt = np.interp(Gr.z_half,z_in,Qtend_in)
-        self.Fo.dTdt = np.interp(Gr.z_half,z_in,Ttend_in) + np.interp(Gr.z_half,z_in,RAD_in)
+        self.Fo.dqtdt = np.interp(grid.z_half,z_in,Qtend_in)
+        self.Fo.dTdt = np.interp(grid.z_half,z_in,Ttend_in) + np.interp(grid.z_half,z_in,RAD_in)
         return
 
 
@@ -1096,12 +1095,12 @@ class DYCOMS_RF01(CasesBase):
         self.inversion_option = 'thetal_maxgrad'
         return
 
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg   = 1017.8 * 100.0
         Ref.qtg  = 9.0 / 1000.0
         # Use an exner function with values for Rd, and cp given in Stevens 2005 to compute temperature
         Ref.Tg   = 289.0 * exner_c(Ref.Pg, kappa = dycoms_Rd / dycoms_cp)
-        Ref.initialize(Gr, Stats)
+        Ref.initialize(grid, Stats)
         return
 
     # helper function
@@ -1156,22 +1155,22 @@ class DYCOMS_RF01(CasesBase):
 
             return t_2, ql_2
 
-    def initialize_profiles(self, Gr, GMV, Ref):
-        thetal = np.zeros((Gr.nzg,), dtype=np.double, order='c') # helper variable to recalculate temperature
-        ql     = np.zeros((Gr.nzg,), dtype=np.double, order='c') # DYCOMS case is saturated
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        thetal = np.zeros((grid.nzg,), dtype=np.double, order='c') # helper variable to recalculate temperature
+        ql     = np.zeros((grid.nzg,), dtype=np.double, order='c') # DYCOMS case is saturated
         qi     = 0.0                                             # no ice
 
-        for k in Gr.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             # thetal profile as defined in DYCOMS
-            if Gr.z_half[k] <= 840.0:
+            if grid.z_half[k] <= 840.0:
                thetal[k] = 289.0
-            if Gr.z_half[k] > 840.0:
-               thetal[k] = (297.5 + (Gr.z_half[k] - 840.0)**(1.0/3.0))
+            if grid.z_half[k] > 840.0:
+               thetal[k] = (297.5 + (grid.z_half[k] - 840.0)**(1.0/3.0))
 
             # qt profile as defined in DYCOMS
-            if Gr.z_half[k] <= 840.0:
+            if grid.z_half[k] <= 840.0:
                GMV.QT.values[k] = 9. / 1000.0
-            if Gr.z_half[k] > 840.0:
+            if grid.z_half[k] > 840.0:
                GMV.QT.values[k] = 1.5 / 1000.0
 
             # ql and T profile
@@ -1198,18 +1197,18 @@ class DYCOMS_RF01(CasesBase):
             GMV.V.values[k] = -5.5
 
         # fill out boundary conditions
-        GMV.U.set_bcs(Gr)
-        GMV.V.set_bcs(Gr)
-        GMV.QT.set_bcs(Gr)
-        GMV.QL.set_bcs(Gr)
-        GMV.H.set_bcs(Gr)
-        GMV.THL.set_bcs(Gr)
-        GMV.T.set_bcs(Gr)
-        GMV.B.set_bcs(Gr)
+        GMV.U.set_bcs(grid)
+        GMV.V.set_bcs(grid)
+        GMV.QT.set_bcs(grid)
+        GMV.QL.set_bcs(grid)
+        GMV.H.set_bcs(grid)
+        GMV.THL.set_bcs(grid)
+        GMV.T.set_bcs(grid)
+        GMV.B.set_bcs(grid)
 
         return
 
-    def initialize_surface(self, Gr, Ref ):
+    def initialize_surface(self, grid, Ref, tmp):
         self.Sur.zrough      = 1.0e-4
         self.Sur.ustar_fixed = False
         self.Sur.cm          = 0.0011
@@ -1224,19 +1223,19 @@ class DYCOMS_RF01(CasesBase):
         #density_surface  = 1.22     # kg/m^3
 
         # buoyancy flux
-        theta_flux       = self.Sur.shf / cpm_c(self.Sur.qsurface)        / Ref.rho0[Gr.gw-1]
-        qt_flux          = self.Sur.lhf / latent_heat(self.Sur.Tsurface)  / Ref.rho0[Gr.gw-1]
+        theta_flux       = self.Sur.shf / cpm_c(self.Sur.qsurface)        / Ref.rho0[grid.gw-1]
+        qt_flux          = self.Sur.lhf / latent_heat(self.Sur.Tsurface)  / Ref.rho0[grid.gw-1]
         theta_surface    = self.Sur.Tsurface / exner_c(Ref.Pg)
         self.Sur.bflux   =  g * ((theta_flux + (eps_vi - 1.0) * (theta_surface * qt_flux + self.Sur.qsurface * theta_flux))
                                  / (theta_surface * (1.0 + (eps_vi-1) * self.Sur.qsurface)))
-        self.Sur.Gr  = Gr
+        self.Sur.grid  = grid
         self.Sur.Ref = Ref
         self.Sur.initialize()
 
         return
 
-    def initialize_forcing(self, Gr, Ref, GMV):
-        self.Fo.Gr = Gr
+    def initialize_forcing(self, grid, Ref, GMV, tmp):
+        self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
 
@@ -1248,8 +1247,8 @@ class DYCOMS_RF01(CasesBase):
         divergence = 3.75e-6    # divergence is defined twice: here and in __init__ of ForcingDYCOMS_RF01 class
                                 # To be able to have self.Fo.divergence available here,
                                 # we would have to change the signature of ForcingBase class
-        for k in Gr.over_elems_real(Center()):
-            self.Fo.subsidence[k] = - Gr.z_half[k] * divergence
+        for k in grid.over_elems_real(Center()):
+            self.Fo.subsidence[k] = - grid.z_half[k] * divergence
 
         # no large-scale drying
         self.Fo.dqtdt[:] = 0. #kg/(kg * s)
@@ -1289,66 +1288,66 @@ class GABLS(CasesBase):
         self.Fo.apply_subsidence = False
         return
 
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 1.0e5  #Pressure at ground
         Ref.Tg = 265.0  #Temperature at ground
         Ref.qtg = 1.0e-4 #Total water mixing ratio at surface. if set to 0, alpha0, rho0, p0 are NaN (TBD)
-        Ref.initialize(Gr, Stats)
+        Ref.initialize(grid, Stats)
         return
-    def initialize_profiles(self, Gr, GMV, Ref):
-        thetal = np.zeros((Gr.nzg,), dtype=np.double, order='c')
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        thetal = np.zeros((grid.nzg,), dtype=np.double, order='c')
         ql=0.0
         qi =0.0 # IC of GABLS cloud-free
-        theta_pert = np.random.random_sample(Gr.nzg)
+        theta_pert = np.random.random_sample(grid.nzg)
 
-        for k in Gr.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             #Set wind velocity profile
             GMV.U.values[k] =  8.0
             GMV.V.values[k] =  0.0
 
             #Set Thetal profile
-            if Gr.z_half[k] <= 100.0:
+            if grid.z_half[k] <= 100.0:
                 thetal[k] = 265.0
             else:
-                thetal[k] = 265.0 + (Gr.z_half[k] - 100.0) * 0.01
+                thetal[k] = 265.0 + (grid.z_half[k] - 100.0) * 0.01
 
             #Set qt profile
             GMV.QT.values[k] = 0.0
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
                 GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k]) # No water content
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
                 GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
-        GMV.U.set_bcs(Gr)
-        GMV.V.set_bcs(Gr)
-        GMV.QT.set_bcs(Gr)
-        GMV.H.set_bcs(Gr)
-        GMV.T.set_bcs(Gr)
+        GMV.U.set_bcs(grid)
+        GMV.V.set_bcs(grid)
+        GMV.QT.set_bcs(grid)
+        GMV.H.set_bcs(grid)
+        GMV.T.set_bcs(grid)
         GMV.satadjust()
         return
 
-    def initialize_surface(self, Gr, Ref):
-        self.Sur.Gr = Gr
+    def initialize_surface(self, grid, Ref, tmp):
+        self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.zrough = 0.1
         self.Sur.Tsurface = 265.0
         self.Sur.initialize()
         return
 
-    def initialize_forcing(self, Gr, Ref, GMV):
-        self.Fo.Gr = Gr
+    def initialize_forcing(self, grid, Ref, GMV, tmp):
+        self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in range(Gr.gw, Gr.nzg - Gr.gw):
+        for k in range(grid.gw, grid.nzg - grid.gw):
             # Geostrophic velocity profiles.
             self.Fo.ug[k] = 8.0
             self.Fo.vg[k] = 0.0
@@ -1384,70 +1383,70 @@ class SP(CasesBase):
         self.Fo.apply_subsidence = False
         return
 
-    def initialize_reference(self, Gr, Ref, Stats, tmp):
+    def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 1.0e5  #Pressure at ground
         Ref.Tg = 300.0  #Temperature at ground
         Ref.qtg = 1.0e-4   #Total water mixing ratio at surface. if set to 0, alpha0, rho0, p0 are NaN.
-        Ref.initialize(Gr, Stats)
+        Ref.initialize(grid, Stats)
         return
 
-    def initialize_profiles(self, Gr, GMV, Ref):
-        thetal = np.zeros((Gr.nzg,), dtype=np.double, order='c')
+    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        thetal = np.zeros((grid.nzg,), dtype=np.double, order='c')
         ql=0.0
         qi =0.0 # IC of SP cloud-free
 
-        for k in Gr.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             GMV.U.values[k] =  1.0
             GMV.V.values[k] =  0.0
             #Set Thetal profile
-            if Gr.z_half[k] <= 974.0:
+            if grid.z_half[k] <= 974.0:
                 thetal[k] = 300.0
-            elif Gr.z_half[k] < 1074.0:
-                thetal[k] = 300.0 + (Gr.z_half[k] - 974.0) * 0.08
+            elif grid.z_half[k] < 1074.0:
+                thetal[k] = 300.0 + (grid.z_half[k] - 974.0) * 0.08
             else:
-                thetal[k] = 308.0 + (Gr.z_half[k] - 1074.0) * 0.003
+                thetal[k] = 308.0 + (grid.z_half[k] - 1074.0) * 0.003
 
             #Set qt profile
             GMV.QT.values[k] = 0.0
 
         if GMV.H.name == 'thetal':
-            for k in Gr.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
                 GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
-            for k in Gr.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
                 GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
                 GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
-        GMV.U.set_bcs(Gr)
-        GMV.V.set_bcs(Gr)
-        GMV.QT.set_bcs(Gr)
-        GMV.H.set_bcs(Gr)
-        GMV.T.set_bcs(Gr)
+        GMV.U.set_bcs(grid)
+        GMV.V.set_bcs(grid)
+        GMV.QT.set_bcs(grid)
+        GMV.H.set_bcs(grid)
+        GMV.T.set_bcs(grid)
         GMV.satadjust()
         return
 
-    def initialize_surface(self, Gr, Ref):
-        self.Sur.Gr = Gr
+    def initialize_surface(self, grid, Ref, tmp):
+        self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.zrough = 0.1
         self.Sur.Tsurface = 300.0
         theta_surface    = self.Sur.Tsurface / exner_c(Ref.Pg)
         theta_flux = 0.24
         self.Sur.bflux   =  g * theta_flux / theta_surface
-        # self.Sur.bflux = 0.24 * exner_c(Ref.p0_half[Gr.gw]) * g / (Ref.p0_half[Gr.gw]*Ref.alpha0_half[Gr.gw]/Rd)
+        # self.Sur.bflux = 0.24 * exner_c(Ref.p0_half[grid.gw]) * g / (Ref.p0_half[grid.gw]*Ref.alpha0_half[grid.gw]/Rd)
         self.Sur.initialize()
         return
 
-    def initialize_forcing(self, Gr, Ref, GMV):
-        self.Fo.Gr = Gr
+    def initialize_forcing(self, grid, Ref, GMV, tmp):
+        self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in range(Gr.gw, Gr.nzg - Gr.gw):
+        for k in range(grid.gw, grid.nzg - grid.gw):
             # Geostrophic velocity profiles. vg = 0
             self.Fo.ug[k] = 1.0
             self.Fo.vg[k] = 0.0

@@ -20,13 +20,13 @@ class SurfaceBase:
     def update(self, GMV):
         return
     def free_convection_windspeed(self, GMV):
-        theta_rho = Field.half(self.Gr)
+        theta_rho = Field.half(self.grid)
 
         # Need to get theta_rho
-        for k in self.Gr.over_elems(Center()):
+        for k in self.grid.over_elems(Center()):
             qv = GMV.QT.values[k] - GMV.QL.values[k]
             theta_rho[k] = theta_rho_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
-        zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.Gr, self.Ri_bulk_crit)
+        zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.grid, self.Ri_bulk_crit)
         wstar = get_wstar(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
         return
@@ -40,7 +40,7 @@ class SurfaceFixedFlux(SurfaceBase):
         return
 
     def update(self, GMV):
-        gw = self.Gr.gw
+        gw = self.grid.gw
         rho_tflux =  self.shf /(cpm_c(self.qsurface))
 
         self.windspeed = np.sqrt(GMV.U.values[gw]*GMV.U.values[gw] + GMV.V.values[gw] * GMV.V.values[gw])
@@ -69,7 +69,7 @@ class SurfaceFixedFlux(SurfaceBase):
                     print('GMV.QT.values[gw] ==>',GMV.QT.values[gw])
                     print('self.Ref.alpha0[gw-1] ==>',self.Ref.alpha0[gw-1])
 
-            self.ustar = compute_ustar(self.windspeed, self.bflux, self.zrough, self.Gr.z_half[gw])
+            self.ustar = compute_ustar(self.windspeed, self.bflux, self.zrough, self.grid.z_half[gw])
 
         self.obukhov_length = -self.ustar *self.ustar *self.ustar /self.bflux /vkb
         self.rho_uflux = - self.Ref.rho0[gw-1] *  self.ustar * self.ustar / self.windspeed * GMV.U.values[gw]
@@ -93,7 +93,7 @@ class SurfaceFixedCoeffs(SurfaceBase):
         return
 
     def update(self, GMV):
-        gw = self.Gr.gw
+        gw = self.grid.gw
         windspeed = np.maximum(np.sqrt(GMV.U.values[gw]*GMV.U.values[gw] + GMV.V.values[gw] * GMV.V.values[gw]), 0.01)
         cp_ = cpm_c(GMV.QT.values[gw])
         lv = latent_heat(GMV.T.values[gw])
@@ -138,8 +138,8 @@ class SurfaceMoninObukhov(SurfaceBase):
         return
     def update(self, GMV):
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
-        gw = self.Gr.gw
-        zb = self.Gr.z_half[gw]
+        gw = self.grid.gw
+        zb = self.grid.z_half[gw]
         theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
         theta_rho_b = theta_rho_c(self.Ref.p0_half[gw], GMV.T.values[gw], self.qsurface, self.qsurface)
         lv = latent_heat(GMV.T.values[gw])
@@ -154,7 +154,7 @@ class SurfaceMoninObukhov(SurfaceBase):
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/zb
         Ri = Nb2 * zb * zb/(self.windspeed * self.windspeed)
 
-        exchange_coefficients_byun(Ri, self.Gr.z_half[gw], self.zrough, self.cm, self.ch, self.obukhov_length)
+        exchange_coefficients_byun(Ri, self.grid.z_half[gw], self.zrough, self.cm, self.ch, self.obukhov_length)
         self.rho_uflux = -self.cm * self.windspeed * (GMV.U.values[gw] ) * self.Ref.rho0[gw-1]
         self.rho_vflux = -self.cm * self.windspeed * (GMV.V.values[gw] ) * self.Ref.rho0[gw-1]
 
@@ -194,8 +194,8 @@ class SurfaceSullivanPatton(SurfaceBase):
     def initialize(self):
         return
     def update(self, GMV):
-        gw = self.Gr.gw
-        zb = self.Gr.z_half[gw]
+        gw = self.grid.gw
+        zb = self.grid.z_half[gw]
         theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
         theta_rho_b = theta_rho_c(self.Ref.p0_half[gw], GMV.T.values[gw], self.qsurface, self.qsurface)
         lv = latent_heat(GMV.T.values[gw])
@@ -216,7 +216,7 @@ class SurfaceSullivanPatton(SurfaceBase):
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/zb
         Ri = Nb2 * zb * zb/(self.windspeed * self.windspeed)
 
-        exchange_coefficients_byun(Ri, self.Gr.z_half[gw], self.zrough, self.cm, self.ch, self.obukhov_length)
+        exchange_coefficients_byun(Ri, self.grid.z_half[gw], self.zrough, self.cm, self.ch, self.obukhov_length)
         self.rho_uflux = -self.cm * self.windspeed * (GMV.U.values[gw] ) * self.Ref.rho0[gw-1]
         self.rho_vflux = -self.cm * self.windspeed * (GMV.V.values[gw] ) * self.Ref.rho0[gw-1]
 

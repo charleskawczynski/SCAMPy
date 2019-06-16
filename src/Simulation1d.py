@@ -35,24 +35,24 @@ class Simulation1d:
                      ('p_0', 1),
                      )
 
-        self.Gr = Grid(z_min, z_max, n_elems_real, n_ghost)
-        self.q = StateVec(unkowns, self.Gr)
-        self.tmp = StateVec(temp_vars, self.Gr)
+        self.grid = Grid(z_min, z_max, n_elems_real, n_ghost)
+        self.q = StateVec(unkowns, self.grid)
+        self.tmp = StateVec(temp_vars, self.grid)
 
-        self.Ref = ReferenceState(self.Gr)
-        self.GMV = GridMeanVariables(namelist, self.Gr, self.Ref)
+        self.Ref = ReferenceState(self.grid)
+        self.GMV = GridMeanVariables(namelist, self.grid, self.Ref)
         self.Case = CasesFactory(namelist, paramlist)
-        self.Turb = ParameterizationFactory(namelist, paramlist, self.Gr, self.Ref)
+        self.Turb = ParameterizationFactory(namelist, paramlist, self.grid, self.Ref)
         self.TS = TimeStepping(namelist)
-        self.Stats = NetCDFIO_Stats(namelist, paramlist, self.Gr, root_dir)
+        self.Stats = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
         return
 
     def initialize(self, namelist):
-        self.Case.initialize_reference(self.Gr, self.Ref, self.Stats, self.tmp)
-        self.Case.initialize_profiles(self.Gr, self.GMV, self.Ref)
-        self.Case.initialize_surface(self.Gr, self.Ref )
-        self.Case.initialize_forcing(self.Gr, self.Ref, self.GMV)
-        self.Turb.initialize(self.GMV)
+        self.Case.initialize_reference(self.grid, self.Ref, self.Stats, self.tmp)
+        self.Case.initialize_profiles(self.grid, self.GMV, self.Ref, self.tmp, self.q)
+        self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
+        self.Case.initialize_forcing(self.grid, self.Ref, self.GMV, self.tmp)
+        self.Turb.initialize(self.GMV, self.tmp)
         self.initialize_io()
         self.io()
         return
@@ -73,8 +73,8 @@ class Simulation1d:
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
 
-        sol.z = self.Gr.z
-        sol.z_half = self.Gr.z_half
+        sol.z = self.grid.z
+        sol.z_half = self.grid.z_half
 
         sol.e_W = self.Turb.EnvVar.W.values
         sol.e_QT = self.Turb.EnvVar.QT.values

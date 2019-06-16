@@ -32,8 +32,7 @@ class EnvironmentVariable_2m:
 
 class EnvironmentVariables:
     def __init__(self,  namelist, Gr  ):
-        nz = Gr.nzg
-        self.Gr = Gr
+        self.grid = Gr
 
         self.W   = EnvironmentVariable(Gr, Node(), 'w','m/s' )
         self.QT  = EnvironmentVariable(Gr, Center(), 'qt','kg/kg' )
@@ -122,24 +121,24 @@ class EnvironmentVariables:
         return
 
     def io(self, Stats):
-        Stats.write_profile_new('env_w'          , self.Gr, self.W.values)
-        Stats.write_profile_new('env_qt'         , self.Gr, self.QT.values)
-        Stats.write_profile_new('env_ql'         , self.Gr, self.QL.values)
-        Stats.write_profile_new('env_qr'         , self.Gr, self.QR.values)
+        Stats.write_profile_new('env_w'          , self.grid, self.W.values)
+        Stats.write_profile_new('env_qt'         , self.grid, self.QT.values)
+        Stats.write_profile_new('env_ql'         , self.grid, self.QL.values)
+        Stats.write_profile_new('env_qr'         , self.grid, self.QR.values)
         if self.H.name == 's':
-            Stats.write_profile_new('env_s'      , self.Gr, self.H.values)
+            Stats.write_profile_new('env_s'      , self.grid, self.H.values)
         else:
-            Stats.write_profile_new('env_thetal' , self.Gr, self.H.values)
+            Stats.write_profile_new('env_thetal' , self.grid, self.H.values)
 
-        Stats.write_profile_new('env_temperature', self.Gr, self.T.values)
+        Stats.write_profile_new('env_temperature', self.grid, self.T.values)
         if self.calc_tke:
-            Stats.write_profile_new('env_tke'    , self.Gr, self.TKE.values)
+            Stats.write_profile_new('env_tke'    , self.grid, self.TKE.values)
         if self.calc_scalar_var:
-            Stats.write_profile_new('env_Hvar'   , self.Gr, self.Hvar.values)
-            Stats.write_profile_new('env_QTvar'  , self.Gr, self.QTvar.values)
-            Stats.write_profile_new('env_HQTcov' , self.Gr, self.HQTcov.values)
+            Stats.write_profile_new('env_Hvar'   , self.grid, self.Hvar.values)
+            Stats.write_profile_new('env_QTvar'  , self.grid, self.QTvar.values)
+            Stats.write_profile_new('env_HQTcov' , self.grid, self.HQTcov.values)
         if self.EnvThermo_scheme  == 'sommeria_deardorff':
-            Stats.write_profile_new('env_THVvar' , self.Gr, self.THVvar.values)
+            Stats.write_profile_new('env_THVvar' , self.grid, self.THVvar.values)
 
         #ToDo [suggested by CK for AJ ;]
         # Add output of environmental cloud fraction, cloud base, cloud top (while the latter can be gleaned from ql profiles
@@ -149,7 +148,7 @@ class EnvironmentVariables:
 
 class EnvironmentThermodynamics:
     def __init__(self, namelist, paramlist, Gr, Ref, EnvVar):
-        self.Gr = Gr
+        self.grid = Gr
         self.Ref = Ref
         try:
             self.quadrature_order = namelist['condensation']['quadrature_order']
@@ -162,17 +161,17 @@ class EnvironmentThermodynamics:
             self.t_to_prog_fp = t_to_thetali_c
             self.prog_to_t_fp = eos_first_guess_thetal
 
-        self.qt_dry = np.zeros(self.Gr.nzg, dtype=np.double, order='c')
-        self.th_dry = np.zeros(self.Gr.nzg, dtype=np.double, order='c')
+        self.qt_dry         = Field.half(Gr)
+        self.th_dry         = Field.half(Gr)
 
-        self.t_cloudy  = np.zeros(self.Gr.nzg, dtype=np.double, order ='c')
-        self.qv_cloudy = np.zeros(self.Gr.nzg, dtype=np.double, order ='c')
-        self.qt_cloudy = np.zeros(self.Gr.nzg, dtype=np.double, order='c')
-        self.th_cloudy = np.zeros(self.Gr.nzg, dtype=np.double, order='c')
+        self.t_cloudy       = Field.half(Gr)
+        self.qv_cloudy      = Field.half(Gr)
+        self.qt_cloudy      = Field.half(Gr)
+        self.th_cloudy      = Field.half(Gr)
 
-        self.Hvar_rain_dt   = np.zeros(self.Gr.nzg, dtype=np.double, order='c')
-        self.QTvar_rain_dt  = np.zeros(self.Gr.nzg, dtype=np.double, order='c')
-        self.HQTcov_rain_dt = np.zeros(self.Gr.nzg, dtype=np.double, order='c')
+        self.Hvar_rain_dt   = Field.half(Gr)
+        self.QTvar_rain_dt  = Field.half(Gr)
+        self.HQTcov_rain_dt = Field.half(Gr)
 
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
 
@@ -208,7 +207,7 @@ class EnvironmentThermodynamics:
         if EnvVar.H.name != 'thetal':
             sys.exit('EDMF_Environment: rain source terms are defined for thetal as model variable')
 
-        for k in self.Gr.over_elems_real(Center()):
+        for k in self.grid.over_elems_real(Center()):
             # condensation + autoconversion
             T, ql  = eos(self.t_to_prog_fp, self.prog_to_t_fp, self.Ref.p0_half[k], EnvVar.QT.values[k], EnvVar.H.values[k])
             mph = microphysics(T, ql, self.Ref.p0_half[k], EnvVar.QT.values[k], self.max_supersaturation, in_Env)
@@ -239,16 +238,16 @@ class EnvironmentThermodynamics:
 
         # for testing (to be removed)
         if EnvVar.use_prescribed_scalar_var:
-            for k in self.Gr.over_elems_real(Center()):
-                if k * self.Gr.dz <= 1500:
+            for k in self.grid.over_elems_real(Center()):
+                if k * self.grid.dz <= 1500:
                     EnvVar.QTvar.values[k]  = EnvVar.prescribed_QTvar
                 else:
                     EnvVar.QTvar.values[k]  = 0.
-                if k * self.Gr.dz <= 1500 and k * self.Gr.dz > 500:
+                if k * self.grid.dz <= 1500 and k * self.grid.dz > 500:
                     EnvVar.Hvar.values[k]   = EnvVar.prescribed_Hvar
                 else:
                     EnvVar.Hvar.values[k]   = 0.
-                if k * self.Gr.dz <= 1500 and k * self.Gr.dz > 200:
+                if k * self.grid.dz <= 1500 and k * self.grid.dz > 200:
                     EnvVar.HQTcov.values[k] = EnvVar.prescribed_HQTcov
                 else:
                     EnvVar.HQTcov.values[k] = 0.
@@ -261,7 +260,7 @@ class EnvironmentThermodynamics:
         i_ql, i_T, i_thl, i_alpha, i_cf, i_qr, i_qt_cld, i_qt_dry, i_T_cld, i_T_dry = range(env_len)
         i_SH_qt, i_Sqt_H, i_SH_H, i_Sqt_qt, i_Sqt, i_SH = range(src_len)
 
-        for k in self.Gr.over_elems_real(Center()):
+        for k in self.grid.over_elems_real(Center()):
             if EnvVar.QTvar.values[k] != 0.0 and EnvVar.Hvar.values[k] != 0.0 and EnvVar.HQTcov.values[k] != 0.0:
                 sd_q = np.sqrt(EnvVar.QTvar.values[k])
                 sd_h = np.sqrt(EnvVar.Hvar.values[k])
@@ -367,7 +366,7 @@ class EnvironmentThermodynamics:
         # J. Atmos. Sci., 34, 344-355.
 
         if EnvVar.H.name == 'thetal':
-            for k in self.Gr.over_elems_real(Center()):
+            for k in self.grid.over_elems_real(Center()):
                 Lv = latent_heat(EnvVar.T.values[k])
                 cp = cpd
                 # paper notation used below

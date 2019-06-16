@@ -93,7 +93,7 @@ class VariableDiagnostic:
 
 class GridMeanVariables:
     def __init__(self, namelist, Gr, Ref):
-        self.Gr = Gr
+        self.grid = Gr
         self.Ref = Ref
 
         self.U = VariablePrognostic(Gr, Center(), 'sym','u', 'm/s' )
@@ -161,37 +161,37 @@ class GridMeanVariables:
         return
 
     def zero_tendencies(self):
-        self.U.zero_tendencies(self.Gr)
-        self.V.zero_tendencies(self.Gr)
-        self.QT.zero_tendencies(self.Gr)
-        self.QR.zero_tendencies(self.Gr)
-        self.H.zero_tendencies(self.Gr)
+        self.U.zero_tendencies(self.grid)
+        self.V.zero_tendencies(self.grid)
+        self.QT.zero_tendencies(self.grid)
+        self.QR.zero_tendencies(self.grid)
+        self.H.zero_tendencies(self.grid)
         return
 
     def update(self, TS):
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
+        for k in range(self.grid.gw, self.grid.nzg-self.grid.gw):
             self.U.values[k]  +=  self.U.tendencies[k] * TS.dt
             self.V.values[k]  +=  self.V.tendencies[k] * TS.dt
             self.H.values[k]  +=  self.H.tendencies[k] * TS.dt
             self.QT.values[k] +=  self.QT.tendencies[k] * TS.dt
             self.QR.values[k] +=  self.QR.tendencies[k] * TS.dt
 
-        self.U.set_bcs(self.Gr)
-        self.V.set_bcs(self.Gr)
-        self.H.set_bcs(self.Gr)
-        self.QT.set_bcs(self.Gr)
-        self.QR.set_bcs(self.Gr)
+        self.U.set_bcs(self.grid)
+        self.V.set_bcs(self.grid)
+        self.H.set_bcs(self.grid)
+        self.QT.set_bcs(self.grid)
+        self.QR.set_bcs(self.grid)
 
         if self.calc_tke:
-            self.TKE.set_bcs(self.Gr)
+            self.TKE.set_bcs(self.grid)
 
         if self.calc_scalar_var:
-            self.QTvar.set_bcs(self.Gr)
-            self.Hvar.set_bcs(self.Gr)
-            self.HQTcov.set_bcs(self.Gr)
+            self.QTvar.set_bcs(self.grid)
+            self.Hvar.set_bcs(self.grid)
+            self.HQTcov.set_bcs(self.grid)
 
         if self.EnvThermo_scheme == 'sommeria_deardorff':
-            self.THVvar.set_bcs(self.Gr)
+            self.THVvar.set_bcs(self.grid)
 
         self.zero_tendencies()
         return
@@ -222,33 +222,33 @@ class GridMeanVariables:
 
     def io(self, Stats):
         lwp = 0.0
-        Stats.write_profile_new('u_mean'           , self.Gr, self.U.values)
-        Stats.write_profile_new('v_mean'           , self.Gr, self.V.values)
-        Stats.write_profile_new('qt_mean'          , self.Gr, self.QT.values)
-        Stats.write_profile_new('ql_mean'          , self.Gr, self.QL.values)
-        Stats.write_profile_new('qr_mean'          , self.Gr, self.QR.values)
-        Stats.write_profile_new('temperature_mean' , self.Gr, self.T.values)
-        Stats.write_profile_new('buoyancy_mean'    , self.Gr, self.B.values)
+        Stats.write_profile_new('u_mean'           , self.grid, self.U.values)
+        Stats.write_profile_new('v_mean'           , self.grid, self.V.values)
+        Stats.write_profile_new('qt_mean'          , self.grid, self.QT.values)
+        Stats.write_profile_new('ql_mean'          , self.grid, self.QL.values)
+        Stats.write_profile_new('qr_mean'          , self.grid, self.QR.values)
+        Stats.write_profile_new('temperature_mean' , self.grid, self.T.values)
+        Stats.write_profile_new('buoyancy_mean'    , self.grid, self.B.values)
         if self.H.name == 's':
-            Stats.write_profile_new('s_mean'     , self.Gr, self.H.values)
-            Stats.write_profile_new('thetal_mean', self.Gr, self.THL.values)
+            Stats.write_profile_new('s_mean'     , self.grid, self.H.values)
+            Stats.write_profile_new('thetal_mean', self.grid, self.THL.values)
         elif self.H.name == 'thetal':
-            Stats.write_profile_new('thetal_mean', self.Gr, self.H.values)
+            Stats.write_profile_new('thetal_mean', self.grid, self.H.values)
         if self.calc_tke:
-            Stats.write_profile_new('tke_mean'   , self.Gr, self.TKE.values)
+            Stats.write_profile_new('tke_mean'   , self.grid, self.TKE.values)
         if self.calc_scalar_var:
-            Stats.write_profile_new('Hvar_mean'  , self.Gr, self.Hvar.values)
-            Stats.write_profile_new('QTvar_mean' , self.Gr, self.QTvar.values)
-            Stats.write_profile_new('HQTcov_mean', self.Gr, self.HQTcov.values)
+            Stats.write_profile_new('Hvar_mean'  , self.grid, self.Hvar.values)
+            Stats.write_profile_new('QTvar_mean' , self.grid, self.QTvar.values)
+            Stats.write_profile_new('HQTcov_mean', self.grid, self.HQTcov.values)
 
-        for k in range(self.Gr.gw, self.Gr.nzg-self.Gr.gw):
-            lwp += self.Ref.rho0_half[k]*self.QL.values[k]*self.Gr.dz
+        for k in range(self.grid.gw, self.grid.nzg-self.grid.gw):
+            lwp += self.Ref.rho0_half[k]*self.QL.values[k]*self.grid.dz
         Stats.write_ts('lwp', lwp)
 
         return
 
     def satadjust(self):
-        for k in range(self.Gr.nzg):
+        for k in range(self.grid.nzg):
             h = self.H.values[k]
             qt = self.QT.values[k]
             p0 = self.Ref.p0_half[k]
