@@ -220,7 +220,7 @@ class GridMeanVariables:
         Stats.add_ts('lwp')
         return
 
-    def io(self, Stats):
+    def io(self, Stats, tmp):
         lwp = 0.0
         Stats.write_profile_new('u_mean'           , self.grid, self.U.values)
         Stats.write_profile_new('v_mean'           , self.grid, self.V.values)
@@ -242,21 +242,21 @@ class GridMeanVariables:
             Stats.write_profile_new('HQTcov_mean', self.grid, self.HQTcov.values)
 
         for k in range(self.grid.gw, self.grid.nzg-self.grid.gw):
-            lwp += self.Ref.rho0_half[k]*self.QL.values[k]*self.grid.dz
+            lwp += tmp['ρ_0', k]*self.QL.values[k]*self.grid.dz
         Stats.write_ts('lwp', lwp)
 
         return
 
-    def satadjust(self):
-        for k in range(self.grid.nzg):
+    def satadjust(self, tmp):
+        for k in self.grid.over_elems(Center()):
             h = self.H.values[k]
             qt = self.QT.values[k]
-            p0 = self.Ref.p0_half[k]
-            T, ql = eos(self.t_to_prog_fp,self.prog_to_t_fp, p0, qt, h )
+            p0 = tmp['p_0', k]
+            T, ql = eos(self.t_to_prog_fp, self.prog_to_t_fp, p0, qt, h )
             self.QL.values[k] = ql
             self.T.values[k] = T
             qv = qt - ql
             self.THL.values[k] = t_to_thetali_c(p0, T, qt, ql,0.0)
             alpha = alpha_c(p0, T, qt, qv)
-            self.B.values[k] = buoyancy_c(self.Ref.alpha0_half[k], alpha)
+            self.B.values[k] = buoyancy_c(tmp['α_0', k], alpha)
         return

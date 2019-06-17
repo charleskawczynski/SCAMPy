@@ -62,9 +62,9 @@ class CasesBase:
         Stats.write_ts('lhf', self.Sur.lhf)
         Stats.write_ts('ustar', self.Sur.ustar)
         return
-    def update_surface(self, GMV, TS):
+    def update_surface(self, GMV, TS, tmp):
         return
-    def update_forcing(self, GMV,  TS):
+    def update_forcing(self, GMV, TS, tmp):
         return
 
 
@@ -115,7 +115,7 @@ class Soares(CasesBase):
 
         GMV.H.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust()
+        GMV.satadjust(tmp)
 
         return
 
@@ -123,8 +123,8 @@ class Soares(CasesBase):
         self.Sur.zrough = 1.0e-4
         self.Sur.Tsurface = 300.0
         self.Sur.qsurface = 5e-3
-        self.Sur.lhf = 2.5e-5 * Ref.rho0[grid.gw -1] * latent_heat(self.Sur.Tsurface)
-        self.Sur.shf = 6.0e-2 * cpm_c(self.Sur.qsurface) * Ref.rho0[grid.gw-1]
+        self.Sur.lhf = 2.5e-5 * tmp.surface(grid, 'ρ_0') * latent_heat(self.Sur.Tsurface)
+        self.Sur.shf = 6.0e-2 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.Sur.ustar_fixed = False
         self.Sur.grid = grid
         self.Sur.Ref = Ref
@@ -145,11 +145,11 @@ class Soares(CasesBase):
         CasesBase.io(self, Stats)
         return
 
-    def update_surface(self, GMV, TS):
-        self.Sur.update(GMV)
+    def update_surface(self, GMV, TS, tmp):
+        self.Sur.update(GMV, tmp)
         return
-    def update_forcing(self, GMV, TS):
-        self.Fo.update(GMV)
+    def update_forcing(self, GMV, TS, tmp):
+        self.Fo.update(GMV, tmp)
         return
 
 class Bomex(CasesBase):
@@ -217,15 +217,15 @@ class Bomex(CasesBase):
         GMV.QT.set_bcs(grid)
         GMV.H.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust()
+        GMV.satadjust(tmp)
 
         return
     def initialize_surface(self, grid, Ref, tmp):
         self.Sur.zrough = 1.0e-4 # not actually used, but initialized to reasonable value
         self.Sur.Tsurface = 299.1 * exner_c(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
-        self.Sur.lhf = 5.2e-5 * Ref.rho0[grid.gw -1] * latent_heat(self.Sur.Tsurface)
-        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * Ref.rho0[grid.gw-1]
+        self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat(self.Sur.Tsurface)
+        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # m/s
         self.Sur.grid = grid
@@ -265,11 +265,11 @@ class Bomex(CasesBase):
     def io(self, Stats):
         CasesBase.io(self,Stats)
         return
-    def update_surface(self, GMV, TS):
-        self.Sur.update(GMV)
+    def update_surface(self, GMV, TS, tmp):
+        self.Sur.update(GMV, tmp)
         return
-    def update_forcing(self, GMV, TS):
-        self.Fo.update(GMV)
+    def update_forcing(self, GMV, TS, tmp):
+        self.Fo.update(GMV, tmp)
         return
 
 class life_cycle_Tan2018(CasesBase):
@@ -328,29 +328,29 @@ class life_cycle_Tan2018(CasesBase):
         if GMV.H.name == 'thetal':
             for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
-                GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
+                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0', k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
             for k in grid.over_elems_real(Center()):
-                GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
-                GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0', k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
         GMV.U.set_bcs(grid)
         GMV.QT.set_bcs(grid)
         GMV.H.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust()
+        GMV.satadjust(tmp)
 
         return
     def initialize_surface(self, grid, Ref, tmp):
         self.Sur.zrough = 1.0e-4 # not actually used, but initialized to reasonable value
         self.Sur.Tsurface = 299.1 * exner_c(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
-        self.Sur.lhf = 5.2e-5 * Ref.rho0[grid.gw -1] * latent_heat(self.Sur.Tsurface)
-        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * Ref.rho0[grid.gw-1]
+        self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat(self.Sur.Tsurface)
+        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.lhf0 = self.Sur.lhf
         self.shf0 = self.Sur.shf
         self.Sur.ustar_fixed = True
@@ -369,10 +369,10 @@ class life_cycle_Tan2018(CasesBase):
             self.Fo.ug[k] = -10.0 + (1.8e-3)*grid.z_half[k]
             # Set large-scale cooling
             if grid.z_half[k] <= 1500.0:
-                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(Ref.p0_half[k])
+                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(tmp['p_0', k])
             else:
                 self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (grid.z_half[k] - 1500.0)
-                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(Ref.p0_half[k])
+                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(tmp['p_0', k])
             # Set large-scale drying
             if grid.z_half[k] <= 300.0:
                 self.Fo.dqtdt[k] = -1.2e-8   #kg/(kg * s)
@@ -392,17 +392,17 @@ class life_cycle_Tan2018(CasesBase):
     def io(self, Stats):
         CasesBase.io(self,Stats)
         return
-    def update_surface(self, GMV, TS):
+    def update_surface(self, GMV, TS, tmp):
         weight = 1.0
         weight_factor = 0.01 + 0.99 *(np.cos(2.0*pi * TS.t /3600.0) + 1.0)/2.0
         weight = weight * weight_factor
         self.Sur.lhf = self.lhf0*weight
         self.Sur.shf = self.shf0*weight
         self.Sur.bflux = (g * ((8.0e-3*weight + (eps_vi-1.0)*(299.1 * 5.2e-5*weight  + 22.45e-3 * 8.0e-3*weight)) /(299.1 * (1.0 + (eps_vi-1) * 22.45e-3))))
-        self.Sur.update(GMV)
+        self.Sur.update(GMV, tmp)
         return
-    def update_forcing(self, GMV,  TS):
-        self.Fo.update(GMV)
+    def update_forcing(self, GMV, TS, tmp):
+        self.Fo.update(GMV, tmp)
         return
 
 class Rico(CasesBase):
@@ -429,41 +429,42 @@ class Rico(CasesBase):
         ql=0.0
         qi =0.0 # IC of Rico is cloud-free
 
+        z = grid.z_half
         for k in grid.over_elems_real(Center()):
-            GMV.U.values[k] =  -9.9 + 2.0e-3 * grid.z_half[k]
+            GMV.U.values[k] =  -9.9 + 2.0e-3 * z[k]
             GMV.V.values[k] = -3.8
             #Set Thetal profile
-            if grid.z_half[k] <= 740.0:
+            if z[k] <= 740.0:
                 thetal[k] = 297.9
             else:
-                thetal[k] = 297.9 + (317.0-297.9)/(4000.0-740.0)*(grid.z_half[k] - 740.0)
+                thetal[k] = 297.9 + (317.0-297.9)/(4000.0-740.0)*(z[k] - 740.0)
 
             #Set qt profile
-            if grid.z_half[k] <= 740.0:
-                GMV.QT.values[k] =  (16.0 + (13.8 - 16.0)/740.0 * grid.z_half[k])/1000.0
-            elif grid.z_half[k] > 740.0 and grid.z_half[k] <= 3260.0:
-                GMV.QT.values[k] = (13.8 + (2.4 - 13.8)/(3260.0-740.0) * (grid.z_half[k] - 740.0))/1000.0
+            if z[k] <= 740.0:
+                GMV.QT.values[k] =  (16.0 + (13.8 - 16.0)/740.0 * z[k])/1000.0
+            elif z[k] > 740.0 and z[k] <= 3260.0:
+                GMV.QT.values[k] = (13.8 + (2.4 - 13.8)/(3260.0-740.0) * (z[k] - 740.0))/1000.0
             else:
-                GMV.QT.values[k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(grid.z_half[k] - 3260.0))/1000.0
+                GMV.QT.values[k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(z[k] - 3260.0))/1000.0
 
         if GMV.H.name == 'thetal':
             for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
-                GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
+                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0', k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
             for k in grid.over_elems_real(Center()):
-                GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
-                GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0', k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
         GMV.U.set_bcs(grid)
         GMV.QT.set_bcs(grid)
         GMV.H.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust()
+        GMV.satadjust(tmp)
 
 
         return
@@ -487,22 +488,23 @@ class Rico(CasesBase):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
+        z = grid.z_half
         for k in grid.over_elems(Center()):
             # Geostrophic velocity profiles
-            self.Fo.ug[k] = -9.9 + 2.0e-3 * grid.z_half[k]
+            self.Fo.ug[k] = -9.9 + 2.0e-3 * z[k]
             self.Fo.vg[k] = -3.8
             # Set large-scale cooling
-            self.Fo.dTdt[k] =  (-2.5/(3600.0 * 24.0))  * exner_c(Ref.p0_half[k])
+            self.Fo.dTdt[k] =  (-2.5/(3600.0 * 24.0))  * exner_c(tmp['p_0', k])
 
             # Set large-scale moistening
-            if grid.z_half[k] <= 2980.0:
-                self.Fo.dqtdt[k] =  (-1.0 + 1.3456/2980.0 * grid.z_half[k])/86400.0/1000.0   #kg/(kg * s)
+            if z[k] <= 2980.0:
+                self.Fo.dqtdt[k] =  (-1.0 + 1.3456/2980.0 * z[k])/86400.0/1000.0   #kg/(kg * s)
             else:
                 self.Fo.dqtdt[k] = 0.3456/86400.0/1000.0
 
             #Set large scale subsidence
-            if grid.z_half[k] <= 2260.0:
-                self.Fo.subsidence[k] = -(0.005/2260.0) * grid.z_half[k]
+            if z[k] <= 2260.0:
+                self.Fo.subsidence[k] = -(0.005/2260.0) * z[k]
             else:
                 self.Fo.subsidence[k] = -0.005
         return
@@ -514,12 +516,12 @@ class Rico(CasesBase):
     def io(self, Stats):
         CasesBase.io(self,Stats)
         return
-    def update_surface(self, GMV, TS):
-        self.Sur.update(GMV)
+    def update_surface(self, GMV, TS, tmp):
+        self.Sur.update(GMV, tmp)
         return
 
-    def update_forcing(self, GMV, TS):
-        self.Fo.update(GMV)
+    def update_forcing(self, GMV, TS, tmp):
+        self.Fo.update(GMV, tmp)
         return
 
 class TRMM_LBA(CasesBase):
@@ -620,27 +622,27 @@ class TRMM_LBA(CasesBase):
             qv = GMV.QT.values[k] - GMV.QL.values[k]
             GMV.QT.values[k] = qv_star*RH[k]/100.0
             if GMV.H.name == 's':
-                GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0)
             elif GMV.H.name == 'thetal':
-                 GMV.H.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
+                 GMV.H.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
 
-            GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
+            GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
-            theta_rho[k] = theta_rho_c(Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
+            theta_rho[k] = theta_rho_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], qv)
 
         GMV.QT.set_bcs(grid)
         GMV.H.set_bcs(grid)
-        GMV.satadjust()
+        GMV.satadjust(tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
         #self.Sur.zrough = 1.0e-4 # not actually used, but initialized to reasonable value
         self.Sur.Tsurface = (273.15+23) * exner_c(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
-        self.Sur.lhf = 5.2e-5 * Ref.rho0[grid.gw -1] * latent_heat(self.Sur.Tsurface)
-        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * Ref.rho0[grid.gw-1]
+        self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat(self.Sur.Tsurface)
+        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # this is taken from Bomex -- better option is to approximate from LES tke above the surface
         self.Sur.grid = grid
@@ -792,15 +794,15 @@ class TRMM_LBA(CasesBase):
         CasesBase.io(self,Stats)
         return
 
-    def update_surface(self, GMV, TS):
+    def update_surface(self, GMV, TS, tmp):
         self.Sur.lhf = 554.0 * mt.pow(np.maximum(0, np.cos(np.pi/2*((5.25*3600.0 - TS.t)/5.25/3600.0))),1.3)
         self.Sur.shf = 270.0 * mt.pow(np.maximum(0, np.cos(np.pi/2*((5.25*3600.0 - TS.t)/5.25/3600.0))),1.5)
-        self.Sur.update(GMV)
+        self.Sur.update(GMV, tmp)
         # fix momentum fluxes to zero as they are not used in the paper
         self.Sur.rho_uflux = 0.0
         self.Sur.rho_vflux = 0.0
         return
-    def update_forcing(self, GMV,  TS):
+    def update_forcing(self, GMV, TS, tmp):
 
         ind2 = int(mt.ceil(TS.t/600.0))
         ind1 = int(mt.trunc(TS.t/600.0))
@@ -824,7 +826,7 @@ class TRMM_LBA(CasesBase):
                                                  *(TS.t/60.0-self.rad_time[ind1])+self.rad[ind1,k]
                     else:
                         self.Fo.dTdt[k] = 0.0
-        self.Fo.update(GMV)
+        self.Fo.update(GMV, tmp)
 
         return
 
@@ -865,15 +867,15 @@ class ARM_SGP(CasesBase):
         for k in grid.over_elems_real(Center()):
             GMV.U.values[k] = 10.0
             GMV.QT.values[k] = qt[k]
-            GMV.T.values[k] = Theta[k]*exner_c(Ref.p0_half[k])
+            GMV.T.values[k] = Theta[k]*exner_c(tmp['p_0', k])
             if GMV.H.name == 's':
-                GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0)
             elif GMV.H.name == 'thetal':
-                 GMV.H.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
+                 GMV.H.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
 
-            GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
+            GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
 
 
@@ -881,7 +883,7 @@ class ARM_SGP(CasesBase):
         GMV.QT.set_bcs(grid)
         GMV.H.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust()
+        GMV.satadjust(tmp)
 
         return
 
@@ -915,7 +917,7 @@ class ARM_SGP(CasesBase):
         CasesBase.io(self,Stats)
         return
 
-    def update_surface(self, GMV, TS):
+    def update_surface(self, GMV, TS, tmp):
         t_Sur_in = np.array([0.0, 4.0, 6.5, 7.5, 10.0, 12.5, 14.5]) * 3600 #LES time is in sec
         SH = np.array([-30.0, 90.0, 140.0, 140.0, 100.0, -10, -10]) # W/m^2
         LH = np.array([5.0, 250.0, 450.0, 500.0, 420.0, 180.0, 0.0]) # W/m^2
@@ -928,13 +930,13 @@ class ARM_SGP(CasesBase):
         # if self.Sur.lhf < 1.0:
         #     self.Sur.lhf = 1.0
         #+++++++++
-        self.Sur.update(GMV)
+        self.Sur.update(GMV, tmp)
         # fix momentum fluxes to zero as they are not used in the paper
         self.Sur.rho_uflux = 0.0
         self.Sur.rho_vflux = 0.0
         return
 
-    def update_forcing(self, GMV,  TS):
+    def update_forcing(self, GMV, TS, tmp):
         t_in = np.array([0.0, 3.0, 6.0, 9.0, 12.0, 14.5]) * 3600.0 #LES time is in sec
         AT_in = np.array([0.0, 0.0, 0.0, -0.08, -0.016, -0.016])/3600.0 # Advective forcing for theta [K/h] converted to [K/sec]
         RT_in = np.array([-0.125, 0.0, 0.0, 0.0, 0.0, -0.1])/3600.0  # Radiative forcing for theta [K/h] converted to [K/sec]
@@ -944,12 +946,12 @@ class ARM_SGP(CasesBase):
         for k in self.Fo.grid.over_elems(Center()):
                 if self.Fo.grid.z_half[k] <=1000.0:
                     self.Fo.dTdt[k] = dTdt
-                    self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.Ref.p0_half[k])
+                    self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.tmp['p_0', k])
                 elif self.Fo.grid.z_half[k] > 1000.0  and self.Fo.grid.z_half[k] <= 2000.0:
                     self.Fo.dTdt[k] = dTdt*(1-(self.Fo.grid.z_half[k]-1000.0)/1000.0)
-                    self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.Ref.p0_half[k])\
+                    self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.tmp['p_0', k])\
                                         *(1-(self.Fo.grid.z_half[k]-1000.0)/1000.0)
-        self.Fo.update(GMV)
+        self.Fo.update(GMV, tmp)
 
         return
 
@@ -974,7 +976,7 @@ class GATE_III(CasesBase):
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
         qt = np.zeros((grid.nzg,),dtype=np.double,order='c')
-        T = np.zeros((grid.nzg,),dtype=np.double,order='c') # grid.nzg = grid.nz + 2*grid.gw
+        T = np.zeros((grid.nzg,),dtype=np.double,order='c')
         U = np.zeros((grid.nzg,),dtype=np.double,order='c')
         theta_rho = np.zeros((grid.nzg,),dtype=np.double,order='c')
 
@@ -1006,19 +1008,19 @@ class GATE_III(CasesBase):
             GMV.U.values[k] = U[k]
 
             if GMV.H.name == 's':
-                GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0)
             elif GMV.H.name == 'thetal':
-                 GMV.H.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
+                 GMV.H.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
 
-            GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
+            GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
         GMV.U.set_bcs(grid)
         GMV.QT.set_bcs(grid)
         GMV.T.set_bcs(grid)
         GMV.H.set_bcs(grid)
-        GMV.satadjust()
+        GMV.satadjust(tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1072,12 +1074,12 @@ class GATE_III(CasesBase):
         CasesBase.io(self,Stats)
         return
 
-    def update_surface(self, GMV, TS):
-        self.Sur.update(GMV) # here lhf and shf are needed for calcualtion of bflux in surface and thus u_star
+    def update_surface(self, GMV, TS, tmp):
+        self.Sur.update(GMV, tmp) # here lhf and shf are needed for calcualtion of bflux in surface and thus u_star
         return
 
-    def update_forcing(self, GMV,  TS):
-        self.Fo.update(GMV)
+    def update_forcing(self, GMV, TS, tmp):
+        self.Fo.update(GMV, tmp)
         return
 
 
@@ -1176,21 +1178,21 @@ class DYCOMS_RF01(CasesBase):
             # ql and T profile
             # (calculated by saturation adjustment using thetal and qt values provided in DYCOMS
             # and using Rd, cp and L constants as defined in DYCOMS)
-            GMV.T.values[k], GMV.QL.values[k] = self.dycoms_sat_adjst(Ref.p0_half[k], thetal[k], GMV.QT.values[k])
+            GMV.T.values[k], GMV.QL.values[k] = self.dycoms_sat_adjst(tmp['p_0', k], thetal[k], GMV.QT.values[k])
 
             # thermodynamic variable profile (either entropy or thetal)
             # (calculated based on T and ql profiles.
             # Here we use Rd, cp and L constants as defined in scampy)
-            GMV.THL.values[k] = t_to_thetali_c(Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
+            GMV.THL.values[k] = t_to_thetali_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
             if GMV.H.name == 'thetal':
-                GMV.H.values[k] = t_to_thetali_c(Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
+                GMV.H.values[k] = t_to_thetali_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
             elif GMV.H.name == 's':
-                GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
 
             # buoyancy profile
             qv = GMV.QT.values[k] - qi - GMV.QL.values[k]
-            alpha = alpha_c(Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
-            GMV.B.values[k] = buoyancy_c(Ref.alpha0_half[k], alpha)
+            alpha = alpha_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], qv)
+            GMV.B.values[k] = buoyancy_c(tmp['α_0', k], alpha)
 
             # velocity profile (geostrophic)
             GMV.U.values[k] = 7.0
@@ -1223,8 +1225,8 @@ class DYCOMS_RF01(CasesBase):
         #density_surface  = 1.22     # kg/m^3
 
         # buoyancy flux
-        theta_flux       = self.Sur.shf / cpm_c(self.Sur.qsurface)        / Ref.rho0[grid.gw-1]
-        qt_flux          = self.Sur.lhf / latent_heat(self.Sur.Tsurface)  / Ref.rho0[grid.gw-1]
+        theta_flux       = self.Sur.shf / cpm_c(self.Sur.qsurface)        / tmp.surface(grid, 'ρ_0')
+        qt_flux          = self.Sur.lhf / latent_heat(self.Sur.Tsurface)  / tmp.surface(grid, 'ρ_0')
         theta_surface    = self.Sur.Tsurface / exner_c(Ref.Pg)
         self.Sur.bflux   =  g * ((theta_flux + (eps_vi - 1.0) * (theta_surface * qt_flux + self.Sur.qsurface * theta_flux))
                                  / (theta_surface * (1.0 + (eps_vi-1) * self.Sur.qsurface)))
@@ -1267,12 +1269,12 @@ class DYCOMS_RF01(CasesBase):
         self.Fo.io(Stats)
         return
 
-    def update_surface(self, GMV, TS):
-        self.Sur.update(GMV)
+    def update_surface(self, GMV, TS, tmp):
+        self.Sur.update(GMV, tmp)
         return
 
-    def update_forcing(self, GMV, TS):
-        self.Fo.update(GMV)
+    def update_forcing(self, GMV, TS, tmp):
+        self.Fo.update(GMV, tmp)
         return
 
 class GABLS(CasesBase):
@@ -1317,14 +1319,14 @@ class GABLS(CasesBase):
         if GMV.H.name == 'thetal':
             for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
-                GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k]) # No water content
+                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0', k]) # No water content
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
             for k in grid.over_elems_real(Center()):
-                GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
-                GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0', k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
         GMV.U.set_bcs(grid)
@@ -1332,7 +1334,7 @@ class GABLS(CasesBase):
         GMV.QT.set_bcs(grid)
         GMV.H.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust()
+        GMV.satadjust(tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1361,13 +1363,13 @@ class GABLS(CasesBase):
         CasesBase.io(self,Stats)
         return
 
-    def update_surface(self, GMV, TS):
+    def update_surface(self, GMV, TS, tmp):
         self.Sur.Tsurface = 265.0 - (0.25/3600.0)*TS.t
-        self.Sur.update(GMV)
+        self.Sur.update(GMV, tmp)
         return
 
-    def update_forcing(self, GMV, TS):
-        self.Fo.update(GMV)
+    def update_forcing(self, GMV, TS, tmp):
+        self.Fo.update(GMV, tmp)
         return
 
 # Not fully implemented yet - Ignacio
@@ -1412,14 +1414,14 @@ class SP(CasesBase):
         if GMV.H.name == 'thetal':
             for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
-                GMV.T.values[k] =  thetal[k] * exner_c(Ref.p0_half[k])
+                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0', k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
             for k in grid.over_elems_real(Center()):
-                GMV.T.values[k] = thetal[k] * exner_c(Ref.p0_half[k])
-                GMV.H.values[k] = t_to_entropy_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0', k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(Ref.p0_half[k],GMV.T.values[k],
+                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
         GMV.U.set_bcs(grid)
@@ -1427,7 +1429,7 @@ class SP(CasesBase):
         GMV.QT.set_bcs(grid)
         GMV.H.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust()
+        GMV.satadjust(tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1438,7 +1440,7 @@ class SP(CasesBase):
         theta_surface    = self.Sur.Tsurface / exner_c(Ref.Pg)
         theta_flux = 0.24
         self.Sur.bflux   =  g * theta_flux / theta_surface
-        # self.Sur.bflux = 0.24 * exner_c(Ref.p0_half[grid.gw]) * g / (Ref.p0_half[grid.gw]*Ref.alpha0_half[grid.gw]/Rd)
+        # self.Sur.bflux = 0.24 * exner_c(tmp['p_0', grid.gw]) * g / (tmp['p_0', grid.gw]*tmp['α_0', grid.gw]/Rd)
         self.Sur.initialize()
         return
 
@@ -1461,10 +1463,10 @@ class SP(CasesBase):
         CasesBase.io(self,Stats)
         return
 
-    def update_surface(self, GMV, TS):
-        self.Sur.update(GMV)
+    def update_surface(self, GMV, TS, tmp):
+        self.Sur.update(GMV, tmp)
         return
 
-    def update_forcing(self, GMV, TS):
-        self.Fo.update(GMV)
+    def update_forcing(self, GMV, TS, tmp):
+        self.Fo.update(GMV, tmp)
         return

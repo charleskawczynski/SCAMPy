@@ -95,6 +95,10 @@ class StateVec:
         else:
             raise TypeError("Bad index in over_sub_domains in StateVec.py")
 
+    def surface(self, grid, var_name, i_sd=0):
+        k = grid.first_interior(Zmin())
+        return self[var_name, Dual(k), i_sd][0]
+
     def var_names_except(self, names=()):
         return [name for name in self.var_names if not name in names]
 

@@ -19,13 +19,13 @@ class SurfaceBase:
 
     def update(self, GMV):
         return
-    def free_convection_windspeed(self, GMV):
+    def free_convection_windspeed(self, GMV, tmp):
         theta_rho = Field.half(self.grid)
 
         # Need to get theta_rho
         for k in self.grid.over_elems(Center()):
             qv = GMV.QT.values[k] - GMV.QL.values[k]
-            theta_rho[k] = theta_rho_c(self.Ref.p0_half[k], GMV.T.values[k], GMV.QT.values[k], qv)
+            theta_rho[k] = theta_rho_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], qv)
         zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.grid, self.Ri_bulk_crit)
         wstar = get_wstar(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
@@ -39,7 +39,7 @@ class SurfaceFixedFlux(SurfaceBase):
     def initialize(self):
         return
 
-    def update(self, GMV):
+    def update(self, GMV, tmp):
         gw = self.grid.gw
         rho_tflux =  self.shf /(cpm_c(self.qsurface))
 
@@ -50,7 +50,7 @@ class SurfaceFixedFlux(SurfaceBase):
             self.rho_hflux = rho_tflux / exner_c(self.Ref.Pg)
         elif GMV.H.name == 's':
             self.rho_hflux = entropy_flux(rho_tflux/self.Ref.rho0[gw-1],self.rho_qtflux/self.Ref.rho0[gw-1],
-                                          self.Ref.p0_half[gw], GMV.T.values[gw], GMV.QT.values[gw])
+                                          tmp['p_0', gw], GMV.T.values[gw], GMV.QT.values[gw])
         self.bflux = buoyancy_flux(self.shf, self.lhf, GMV.T.values[gw], GMV.QT.values[gw],self.Ref.alpha0[gw-1]  )
 
         if not self.ustar_fixed:
@@ -58,7 +58,7 @@ class SurfaceFixedFlux(SurfaceBase):
             # Value 1.2 is empirical, but should be O(1)
             if self.windspeed < 0.1:  # Limit here is heuristic
                 if self.bflux > 0.0:
-                   self.free_convection_windspeed(GMV)
+                   self.free_convection_windspeed(GMV, tmp)
                 else:
                     print('WARNING: Low windspeed + stable conditions, need to check ustar computation')
                     print('self.bflux ==>',self.bflux )
@@ -75,8 +75,8 @@ class SurfaceFixedFlux(SurfaceBase):
         self.rho_uflux = - self.Ref.rho0[gw-1] *  self.ustar * self.ustar / self.windspeed * GMV.U.values[gw]
         self.rho_vflux = - self.Ref.rho0[gw-1] *  self.ustar * self.ustar / self.windspeed * GMV.V.values[gw]
         return
-    def free_convection_windspeed(self, GMV):
-        SurfaceBase.free_convection_windspeed(self, GMV)
+    def free_convection_windspeed(self, GMV, tmp):
+        SurfaceBase.free_convection_windspeed(self, GMV, tmp)
         return
 
 
@@ -92,7 +92,7 @@ class SurfaceFixedCoeffs(SurfaceBase):
         self.s_surface = (1.0-self.qsurface) * sd_c(pdg, self.Tsurface) + self.qsurface * sv_c(pvg,self.Tsurface)
         return
 
-    def update(self, GMV):
+    def update(self, GMV, tmp):
         gw = self.grid.gw
         windspeed = np.maximum(np.sqrt(GMV.U.values[gw]*GMV.U.values[gw] + GMV.V.values[gw] * GMV.V.values[gw]), 0.01)
         cp_ = cpm_c(GMV.QT.values[gw])
@@ -107,7 +107,7 @@ class SurfaceFixedCoeffs(SurfaceBase):
         elif GMV.H.name == 's':
             self.rho_hflux =  -self.ch * windspeed * (GMV.H.values[gw] - self.s_surface) * self.Ref.rho0[gw-1]
             pv = pv_star(GMV.T.values[gw])
-            pd = self.Ref.p0_half[gw] - pv
+            pd = tmp['p_0', gw] - pv
             sv = sv_c(pv,GMV.T.values[gw])
             sd = sd_c(pd, GMV.T.values[gw])
             self.shf = (self.rho_hflux - self.lhf/lv * (sv-sd)) * GMV.T.values[gw]
@@ -136,12 +136,12 @@ class SurfaceMoninObukhov(SurfaceBase):
         return
     def initialize(self):
         return
-    def update(self, GMV):
+    def update(self, GMV, tmp):
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
         gw = self.grid.gw
         zb = self.grid.z_half[gw]
         theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
-        theta_rho_b = theta_rho_c(self.Ref.p0_half[gw], GMV.T.values[gw], self.qsurface, self.qsurface)
+        theta_rho_b = theta_rho_c(tmp['p_0', gw], GMV.T.values[gw], self.qsurface, self.qsurface)
         lv = latent_heat(GMV.T.values[gw])
 
         if GMV.H.name == 'thetal':
@@ -167,7 +167,7 @@ class SurfaceMoninObukhov(SurfaceBase):
 
         elif GMV.H.name == 's':
             pv = pv_star(GMV.T.values[gw])
-            pd = self.Ref.p0_half[gw] - pv
+            pd = tmp['p_0', gw] - pv
             sv = sv_c(pv,GMV.T.values[gw])
             sd = sd_c(pd, GMV.T.values[gw])
             self.shf = (self.rho_hflux - self.lhf/lv * (sv-sd)) * GMV.T.values[gw]
@@ -193,17 +193,17 @@ class SurfaceSullivanPatton(SurfaceBase):
         return
     def initialize(self):
         return
-    def update(self, GMV):
+    def update(self, GMV, tmp):
         gw = self.grid.gw
         zb = self.grid.z_half[gw]
         theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
-        theta_rho_b = theta_rho_c(self.Ref.p0_half[gw], GMV.T.values[gw], self.qsurface, self.qsurface)
+        theta_rho_b = theta_rho_c(tmp['p_0', gw], GMV.T.values[gw], self.qsurface, self.qsurface)
         lv = latent_heat(GMV.T.values[gw])
         g=9.81
-        T0 = self.Ref.p0_half[gw] * self.Ref.alpha0_half[gw]/Rd
+        T0 = tmp['p_0', gw] * tmp['α_0', gw]/Rd
 
         theta_flux = 0.24
-        self.bflux = g * theta_flux * exner_c(self.Ref.p0_half[gw]) / T0
+        self.bflux = g * theta_flux * exner_c(tmp['p_0', gw]) / T0
 
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
         if GMV.H.name == 'thetal':
@@ -229,7 +229,7 @@ class SurfaceSullivanPatton(SurfaceBase):
 
         elif GMV.H.name == 's':
             pv = pv_star(GMV.T.values[gw])
-            pd = self.Ref.p0_half[gw] - pv
+            pd = tmp['p_0', gw] - pv
             sv = sv_c(pv,GMV.T.values[gw])
             sd = sd_c(pd, GMV.T.values[gw])
             self.shf = (self.rho_hflux - self.lhf/lv * (sv-sd)) * GMV.T.values[gw]

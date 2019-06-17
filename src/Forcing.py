@@ -19,7 +19,7 @@ class ForcingBase:
         elif GMV.H.name == 'thetal':
             self.convert_forcing_prog_fp = convert_forcing_thetal
         return
-    def update(self, GMV):
+    def update(self, GMV, tmp):
         return
     def coriolis_force(self, U, V):
         gw = self.grid.gw
@@ -40,7 +40,7 @@ class ForcingNone(ForcingBase):
     def initialize(self, GMV):
         ForcingBase.initialize(self, GMV)
         return
-    def update(self, GMV):
+    def update(self, GMV, tmp):
         return
     def coriolis_force(self, U, V):
         return
@@ -56,12 +56,12 @@ class ForcingStandard(ForcingBase):
     def initialize(self, GMV):
         ForcingBase.initialize(self, GMV)
         return
-    def update(self, GMV):
+    def update(self, GMV, tmp):
 
         for k in range(self.grid.gw, self.grid.nzg-self.grid.gw):
             # Apply large-scale horizontal advection tendencies
             qv = GMV.QT.values[k] - GMV.QL.values[k]
-            GMV.H.tendencies[k] += self.convert_forcing_prog_fp(self.Ref.p0_half[k],GMV.QT.values[k],
+            GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0', k],GMV.QT.values[k],
                                                                 qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
             GMV.QT.tendencies[k] += self.dqtdt[k]
         if self.apply_subsidence:
@@ -91,7 +91,7 @@ class ForcingStandard(ForcingBase):
 #         for k in range(self.grid.gw, self.grid.nzg-self.grid.gw):
 #             # Apply large-scale horizontal advection tendencies
 #             qv = GMV.QT.values[k] - GMV.QL.values[k]
-#             GMV.H.tendencies[k] += self.convert_forcing_prog_fp(self.Ref.p0_half[k],GMV.QT.values[k], qv,
+#             GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0', k],GMV.QT.values[k], qv,
 #                                                                 GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
 #             GMV.QT.tendencies[k] += self.dqtdt[k]
 #
@@ -126,7 +126,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         self.f_rad = np.zeros((self.grid.nzg + 1), dtype=np.double, order='c') # radiative flux at cell edges
         return
 
-    def calculate_radiation(self, GMV):
+    def calculate_radiation(self, GMV, tmp):
         """
         see eq. 3 in Stevens et. al. 2005 DYCOMS paper
         """
@@ -137,7 +137,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
                 idx_zi = k
                 # will be used at cell edges
                 zi     = self.grid.z[idx_zi]
-                rhoi   = self.Ref.rho0[idx_zi]
+                rhoi   = tmp['ρ_0', idx_zi]
                 break
 
         # cloud-top cooling
@@ -146,14 +146,14 @@ class ForcingDYCOMS_RF01(ForcingBase):
         self.f_rad = np.zeros((self.grid.nzg + 1), dtype=np.double, order='c')
         self.f_rad[self.grid.nzg] = self.F0 * np.exp(-q_0)
         for k in range(self.grid.nzg - 1, -1, -1):
-            q_0           += self.kappa * self.Ref.rho0_half[k] * GMV.QL.values[k] * self.grid.dz
+            q_0           += self.kappa * tmp['ρ_0', k] * GMV.QL.values[k] * self.grid.dz
             self.f_rad[k]  = self.F0 * np.exp(-q_0)
 
         # cloud-base warming
         q_1 = 0.0
         self.f_rad[0] += self.F1 * np.exp(-q_1)
         for k in range(1, self.grid.nzg + 1):
-            q_1           += self.kappa * self.Ref.rho0_half[k - 1] * GMV.QL.values[k - 1] * self.grid.dz
+            q_1           += self.kappa * tmp['ρ_0', k - 1] * GMV.QL.values[k - 1] * self.grid.dz
             self.f_rad[k] += self.F1 * np.exp(-q_1)
 
         # cooling in free troposphere
@@ -166,7 +166,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         self.f_rad[self.grid.nzg] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + zi * cbrt_z)
 
         for k in range(self.grid.gw, self.grid.nzg - self.grid.gw):
-            self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / self.grid.dz / self.Ref.rho0_half[k] / dycoms_cp
+            self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / self.grid.dz / tmp['ρ_0', k] / dycoms_cp
 
         return
 
@@ -174,13 +174,13 @@ class ForcingDYCOMS_RF01(ForcingBase):
         ForcingBase.coriolis_force(self, U, V)
         return
 
-    def update(self, GMV):
+    def update(self, GMV, tmp):
         self.calculate_radiation(GMV)
 
         for k in range(self.grid.gw, self.grid.nzg-self.grid.gw):
             # Apply large-scale horizontal advection tendencies
             qv = GMV.QT.values[k] - GMV.QL.values[k]
-            GMV.H.tendencies[k]  += self.convert_forcing_prog_fp(self.Ref.p0_half[k],GMV.QT.values[k], qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
+            GMV.H.tendencies[k]  += self.convert_forcing_prog_fp(tmp['p_0', k],GMV.QT.values[k], qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
             GMV.QT.tendencies[k] += self.dqtdt[k]
             # Apply large-scale subsidence tendencies
             GMV.H.tendencies[k]  -= (GMV.H.values[k+1]-GMV.H.values[k]) * self.grid.dzi * self.subsidence[k]

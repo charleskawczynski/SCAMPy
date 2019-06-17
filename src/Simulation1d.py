@@ -62,14 +62,14 @@ class Simulation1d:
 
         while self.TS.t <= self.TS.t_max:
             self.GMV.zero_tendencies()
-            self.Case.update_surface(self.GMV, self.TS)
-            self.Case.update_forcing(self.GMV, self.TS)
-            self.Turb.update(self.GMV, self.Case, self.TS)
+            self.Case.update_surface(self.GMV, self.TS, self.tmp)
+            self.Case.update_forcing(self.GMV, self.TS, self.tmp)
+            self.Turb.update(self.GMV, self.Case, self.TS, self.tmp)
 
             self.TS.update()
             # Apply the tendencies, also update the BCs and diagnostic thermodynamics
             self.GMV.update(self.TS)
-            self.Turb.update_GMV_diagnostics(self.GMV)
+            self.Turb.update_GMV_diagnostics(self.GMV, self.tmp)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
 
@@ -151,9 +151,9 @@ class Simulation1d:
     def io(self):
         self.Stats.open_files()
         self.Stats.write_simulation_time(self.TS.t)
-        self.GMV.io(self.Stats)
+        self.GMV.io(self.Stats, self.tmp)
         self.Case.io(self.Stats)
-        self.Turb.io(self.Stats)
+        self.Turb.io(self.Stats, self.tmp)
         self.Stats.close_files()
         return
 
