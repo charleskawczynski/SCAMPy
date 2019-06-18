@@ -1165,7 +1165,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         self.massflux_h[gw-1] = 0.0
         self.massflux_qt[gw-1] = 0.0
-        for k in range(gw, self.grid.nzg-gw-1):
+        for k in self.grid.over_elems_real(Center()):
             self.massflux_h[k] = 0.0
             self.massflux_qt[k] = 0.0
             env_h_interp = interp2pt(self.EnvVar.H.values[k], self.EnvVar.H.values[k+1])

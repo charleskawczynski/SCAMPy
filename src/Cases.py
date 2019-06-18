@@ -1349,7 +1349,7 @@ class GABLS(CasesBase):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in range(grid.gw, grid.nzg - grid.gw):
+        for k in grid.over_elems_real(Center()):
             # Geostrophic velocity profiles.
             self.Fo.ug[k] = 8.0
             self.Fo.vg[k] = 0.0
@@ -1448,7 +1448,7 @@ class SP(CasesBase):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        for k in range(grid.gw, grid.nzg - grid.gw):
+        for k in grid.over_elems_real(Center()):
             # Geostrophic velocity profiles. vg = 0
             self.Fo.ug[k] = 1.0
             self.Fo.vg[k] = 0.0
