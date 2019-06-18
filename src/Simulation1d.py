@@ -4,7 +4,7 @@ from Variables import GridMeanVariables
 from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
 from Grid import Grid, Zmin, Zmax, Center, Node
-from StateVec import StateVec
+from StateVec import StateVec, Cut, Dual
 from ReferenceState import ReferenceState
 import matplotlib.pyplot as plt
 import Cases
@@ -47,6 +47,8 @@ class Simulation1d:
         temp_vars = (('ρ_0', 1),
                      ('α_0', 1),
                      ('p_0', 1),
+                     ('K_m', N_sd),
+                     ('K_h', N_sd),
                      )
 
         self.grid = Grid(z_min, z_max, n_elems_real, n_ghost)
@@ -78,7 +80,7 @@ class Simulation1d:
             self.GMV.zero_tendencies()
             self.Case.update_surface(self.GMV, self.TS, self.tmp)
             self.Case.update_forcing(self.GMV, self.TS, self.tmp)
-            self.Turb.update(self.GMV, self.Case, self.TS, self.tmp)
+            self.Turb.update(self.GMV, self.Case, self.TS, self.tmp, self.q)
 
             self.TS.update()
             # Apply the tendencies, also update the BCs and diagnostic thermodynamics

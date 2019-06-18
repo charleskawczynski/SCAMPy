@@ -59,10 +59,10 @@ class StateVec:
             return self.fields[self.var_mapper[name][i], k]
         else:
             if isinstance(k, Cut):
-                return [self.fields[self.var_mapper[name][i], j] for j in range(k.k-1,k.k+2)]
+                return np.array([self.fields[self.var_mapper[name][i], j] for j in range(k.k-1,k.k+2)])
             elif isinstance(k, Dual):
-                return [(self.fields[self.var_mapper[name][i], j]+
-                    self.fields[self.var_mapper[name][i], j+1])/2 for j in range(k.k-1,k.k+1)]
+                return np.array([(self.fields[self.var_mapper[name][i], j]+
+                    self.fields[self.var_mapper[name][i], j+1])/2 for j in range(k.k-1,k.k+1)])
 
     def __setitem__(self, tup, value):
         if len(tup)==2:
@@ -145,16 +145,12 @@ class StateVec:
         data_all = []
         data_all.append(z)
         data_all.append(data)
-        # print('data_all = ', data_all)
-        # data_all = hcat(z, data)
         file_name = str(directory+filename+'_vs_z.dat')
         with open(file_name, 'w') as f:
             f.write(', '.join(headers)+'\n')
             for k in domain:
                 row = data_all[k]
-                # print('row = ', row)
                 f.write('\t'.join(row))
-            # f.writedlm(data_all)
         return
 
 

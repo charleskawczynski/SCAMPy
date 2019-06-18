@@ -7,7 +7,7 @@ from Grid import Grid, Zmin, Zmax, Center, Node
 from Field import Field
 from Field import Cut
 from Field import Dual
-from TriDiagSolver import tridiag_solve, construct_tridiag_diffusion
+from TriDiagSolver import tridiag_solve, construct_tridiag_diffusion, construct_tridiag_diffusion_new
 from Variables import VariablePrognostic, VariableDiagnostic, GridMeanVariables
 from Surface import SurfaceBase
 from Cases import  CasesBase
@@ -144,7 +144,7 @@ class SimilarityED(ParameterizationBase):
         Stats.write_profile_new('eddy_diffusivity', self.grid, self.KH.values)
         return
 
-    def update(self,GMV, Case, TS, tmp):
+    def update(self,GMV, Case, TS, tmp, q):
 
         GMV.H.set_bcs(self.grid)
         GMV.QT.set_bcs(self.grid)
@@ -167,8 +167,7 @@ class SimilarityED(ParameterizationBase):
             rho_K_m[k] = 0.5 * (self.KH.values[k]+ self.KH.values[k+1]) * self.Ref.rho0[k]
 
         # Matrix is the same for all variables that use the same eddy diffusivity
-        construct_tridiag_diffusion(nzg, gw, self.grid.dzi, TS.dt, rho_K_m,
-                                    self.Ref.rho0_half, dummy_ae ,a, b, c)
+        construct_tridiag_diffusion(nzg, gw, self.grid.dzi, TS.dt, rho_K_m, self.Ref.rho0_half, dummy_ae ,a, b, c)
 
         # Solve QT
         for k in range(nz):
@@ -526,7 +525,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     # Perform the update of the scheme
 
-    def update(self, GMV, Case, TS, tmp):
+    def update(self, GMV, Case, TS, tmp, q):
 
         self.update_inversion(GMV, Case.inversion_option, tmp)
 
@@ -566,7 +565,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         self.compute_eddy_diffusivities_tke(GMV, Case)
 
-        self.update_GMV_ED(GMV, Case, TS, tmp)
+        self.update_GMV_ED(GMV, Case, TS, tmp, q)
         self.compute_covariance(GMV, Case, TS, tmp)
 
         # Back out the tendencies of the grid mean variables for the whole timestep by differencing GMV.new and
@@ -1204,7 +1203,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     # Km and Kh have already been updated
     # 2nd order finite differences plus implicit time step allows solution with tridiagonal matrix solver
     # Update from GMV.SomeVar.mf_update to GMV.SomeVar.new
-    def update_GMV_ED(self, GMV, Case, TS, tmp):
+    def update_GMV_ED(self, GMV, Case, TS, tmp, q):
         gw = self.grid.gw
         nzg = self.grid.nzg
         nz = self.grid.nz
@@ -1221,6 +1220,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         for k in self.grid.over_elems_real(Node()):
             rho_ae_K_m[k] = 0.5 * (ae[k]*self.KH.values[k]+ ae[k+1]*self.KH.values[k+1]) * self.Ref.rho0[k]
+            # rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1])* 0.5 *(self.KH.values[k]+self.KH.values[k+1]) * self.Ref.rho0[k]
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
         construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half, ae, a, b, c)
@@ -1264,8 +1264,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             rho_ae_K_m[k] = 0.5 * (ae[k]*self.KM.values[k]+ ae[k+1]*self.KM.values[k+1]) * self.Ref.rho0[k]
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
-        construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half,
-                                    ae, a, b, c)
+        construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half, ae, a, b, c)
+
         for k in self.grid.over_elems(Center()):
             x[k] = GMV.U.values[k]
         x[ki] = x[ki] + TS.dt * Case.Sur.rho_uflux * dzi * self.Ref.alpha0_half[ki]/ae[ki]

@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 from Grid import Grid, Zmin, Zmax, Center, Node
+from StateVec import StateVec, Cut, Dual
 
 def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
     nz = nzg - 2* gw
@@ -17,7 +18,8 @@ def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
         c[k-gw] = -Y/X
     return
 
-def construct_tridiag_diffusion_new(grid, Δzi, Δt, tmp, q, i_env, a, b, c):
+def construct_tridiag_diffusion_new(grid, Δzi, Δt, tmp, q, a, b, c):
+    i_env = q.i_env
     for k in grid.over_elems_real(Center()):
         ρ_0_dual = tmp['ρ_0', Dual(k)]
         a_env_dual = q['a', Dual(k), i_env]
