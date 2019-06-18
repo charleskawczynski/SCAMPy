@@ -152,59 +152,62 @@ class SimilarityED(ParameterizationBase):
         ParameterizationBase.compute_eddy_diffusivities_similarity(self, GMV, Case)
 
         gw = self.grid.gw
+        k_i = self.grid.first_interior(Zmin())
         nzg = self.grid.nzg
         nz = self.grid.nz
-        a = np.zeros((nz,),dtype=np.double, order='c')
-        b = np.zeros((nz,),dtype=np.double, order='c')
-        c = np.zeros((nz,),dtype=np.double, order='c')
-        x = np.zeros((nz,),dtype=np.double, order='c')
+        a = Field.half(self.grid)
+        b = Field.half(self.grid)
+        c = Field.half(self.grid)
+        x = Field.half(self.grid)
         dummy_ae = Field.half(self.grid)
+        rho_K_m = Field.full(self.grid)
+
+        slice_real = self.grid.slice_real(Center())
+
         for k in self.grid.over_elems(Center()):
             dummy_ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
-        rho_K_m = np.zeros((nzg,),dtype=np.double, order='c')
 
-        for k in range(nzg-1):
+        for k in self.grid.over_elems_real(Node()):
             rho_K_m[k] = 0.5 * (self.KH.values[k]+ self.KH.values[k+1]) * self.Ref.rho0[k]
 
         # Matrix is the same for all variables that use the same eddy diffusivity
-        construct_tridiag_diffusion(nzg, gw, self.grid.dzi, TS.dt, rho_K_m, self.Ref.rho0_half, dummy_ae ,a, b, c)
+        construct_tridiag_diffusion(nzg, gw, self.grid.dzi, TS.dt, rho_K_m, self.Ref.rho0_half, dummy_ae, a[slice_real], b[slice_real], c[slice_real])
 
         # Solve QT
-        for k in range(nz):
-            x[k] = GMV.QT.values[k+gw]
-        x = x + TS.dt * Case.Sur.rho_qtflux * self.grid.dzi * tmp['α_0', gw]
+        for k in self.grid.over_elems(Center()):
+            x[k] = GMV.QT.values[k]
+        x[k_i] = x[k_i] + TS.dt * Case.Sur.rho_qtflux * self.grid.dzi * tmp['α_0', k_i]
 
-        tridiag_solve(self.grid.nz, x,a, b, c)
-        for k in range(nz):
-            GMV.QT.new[k+gw] = x[k]
+        tridiag_solve(self.grid.nz, x, a[slice_real], b[slice_real], c[slice_real])
+        for k in self.grid.over_elems(Center()):
+            GMV.QT.new[k] = x[k]
 
         # Solve H
-        for k in range(nz):
-            x[k] = GMV.H.values[k+gw]
-        x = x + TS.dt * Case.Sur.rho_hflux * self.grid.dzi * tmp['α_0', gw]
+        for k in self.grid.over_elems(Center()):
+            x[k] = GMV.H.values[k]
+        x[k_i] = x[k_i] + TS.dt * Case.Sur.rho_hflux * self.grid.dzi * tmp['α_0', k_i]
 
-        tridiag_solve(self.grid.nz, x,a, b, c)
-        for k in range(nz):
-            GMV.H.new[k+gw] = x[k]
+        tridiag_solve(self.grid.nz, x, a[slice_real], b[slice_real], c[slice_real])
+        for k in self.grid.over_elems(Center()):
+            GMV.H.new[k] = x[k]
 
         # Solve U
-        for k in range(nz):
-            x[k] = GMV.U.values[k+gw]
-        x = x + TS.dt * Case.Sur.rho_uflux * self.grid.dzi * tmp['α_0', gw]
+        for k in self.grid.over_elems(Center()):
+            x[k] = GMV.U.values[k]
+        x[k_i] = x[k_i] + TS.dt * Case.Sur.rho_uflux * self.grid.dzi * tmp['α_0', k_i]
 
-        tridiag_solve(self.grid.nz, x,a, b, c)
-        for k in range(nz):
-            GMV.U.new[k+gw] = x[k]
+        tridiag_solve(self.grid.nz, x, a[slice_real], b[slice_real], c[slice_real])
+        for k in self.grid.over_elems(Center()):
+            GMV.U.new[k] = x[k]
 
         # Solve V
-        for k in range(nz):
-            x[k] = GMV.V.values[k+gw]
-        x = x + TS.dt * Case.Sur.rho_vflux * self.grid.dzi * tmp['α_0', gw]
+        for k in self.grid.over_elems(Center()):
+            x[k] = GMV.V.values[k]
+        x[k_i] = x[k_i] + TS.dt * Case.Sur.rho_vflux * self.grid.dzi * tmp['α_0', k_i]
 
-        tridiag_solve(self.grid.nz, x,a, b, c)
-        with nogil:
-            for k in range(nz):
-                GMV.V.new[k+gw] = x[k]
+        tridiag_solve(self.grid.nz, x, a[slice_real], b[slice_real], c[slice_real])
+        for k in self.grid.over_elems(Center()):
+            GMV.V.new[k] = x[k]
 
         self.update_GMV_diagnostics(GMV)
         ParameterizationBase.update(self, GMV,Case, TS)
