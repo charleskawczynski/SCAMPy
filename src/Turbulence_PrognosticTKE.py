@@ -1219,8 +1219,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
         for k in self.grid.over_elems_real(Node()):
-            rho_ae_K_m[k] = 0.5 * (ae[k]*self.KH.values[k]+ ae[k+1]*self.KH.values[k+1]) * self.Ref.rho0[k]
-            # rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1])* 0.5 *(self.KH.values[k]+self.KH.values[k+1]) * self.Ref.rho0[k]
+            rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1]) * 0.5 * (self.KH.values[k]+self.KH.values[k+1]) * self.Ref.rho0[k]
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
         construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half, ae, a, b, c)
@@ -1261,7 +1260,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         # Solve U
         for k in self.grid.over_elems_real(Node()):
-            rho_ae_K_m[k] = 0.5 * (ae[k]*self.KM.values[k]+ ae[k+1]*self.KM.values[k+1]) * self.Ref.rho0[k]
+            rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1]) * 0.5 * (self.KH.values[k]+self.KH.values[k+1]) * self.Ref.rho0[k]
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
         construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half, ae, a, b, c)
@@ -1577,7 +1576,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         D_env = 0.0
 
         for k in range(1,nzg-1):
-            rho_ae_K_m[k] = 0.5 * (ae[k]*self.KH.values[k]+ ae[k+1]*self.KH.values[k+1])* self.Ref.rho0[k]
+            rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1]) * 0.5 * (self.KH.values[k]+self.KH.values[k+1]) * self.Ref.rho0[k]
             whalf[k] = interp2pt(self.EnvVar.W.values[k-1], self.EnvVar.W.values[k])
         wu_half = interp2pt(self.UpdVar.W.bulkvalues[gw-1], self.UpdVar.W.bulkvalues[gw])
 
