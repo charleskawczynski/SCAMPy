@@ -7,6 +7,7 @@ from Grid import Grid, Zmin, Zmax, Center, Node
 from Field import Field
 from Field import Cut
 from Field import Dual
+from TriDiagSolver import tridiag_solve, construct_tridiag_diffusion
 from Variables import VariablePrognostic, VariableDiagnostic, GridMeanVariables
 from Surface import SurfaceBase
 from Cases import  CasesBase
@@ -532,7 +533,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
 
         if TS.nstep == 0:
-            self.initialize_covariance(GMV, Case)
+            self.initialize_covariance(GMV, Case, tmp)
             for k in self.grid.over_elems(Center()):
                 if self.calc_tke:
                     self.EnvVar.TKE.values[k] = GMV.TKE.values[k]
@@ -760,22 +761,23 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.qt_surface_bc[i] = (GMV.QT.values[gw] + self.surface_scalar_coeff[i] * np.sqrt(qt_var))
         return
 
-    def reset_surface_covariance(self, GMV, Case):
+    def reset_surface_covariance(self, GMV, Case, tmp):
         flux1 = Case.Sur.rho_hflux
         flux2 = Case.Sur.rho_qtflux
-        zLL = self.grid.z_half[self.grid.gw]
+        k_1 = self.grid.first_interior(Zmin())
+        zLL = self.grid.z_half[k_1]
         ustar = Case.Sur.ustar
         oblength = Case.Sur.obukhov_length
-        alpha0LL  = self.Ref.alpha0_half[self.grid.gw]
+        alpha0LL  = self.Ref.alpha0_half[k_1]
         if self.calc_tke:
-            GMV.TKE.values[self.grid.gw] = get_surface_tke(Case.Sur.ustar,
+            GMV.TKE.values[k_1] = get_surface_tke(Case.Sur.ustar,
                                                      self.wstar,
-                                                     self.grid.z_half[self.grid.gw],
+                                                     self.grid.z_half[k_1],
                                                      Case.Sur.obukhov_length)
         if self.calc_scalar_var:
-            GMV.Hvar.values[self.grid.gw]   = get_surface_variance(flux1*alpha0LL,flux1*alpha0LL, ustar, zLL, oblength)
-            GMV.QTvar.values[self.grid.gw]  = get_surface_variance(flux2*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
-            GMV.HQTcov.values[self.grid.gw] = get_surface_variance(flux1*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
+            GMV.Hvar.values[k_1]   = get_surface_variance(flux1*alpha0LL,flux1*alpha0LL, ustar, zLL, oblength)
+            GMV.QTvar.values[k_1]  = get_surface_variance(flux2*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
+            GMV.HQTcov.values[k_1] = get_surface_variance(flux1*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
         return
 
 
@@ -1389,7 +1391,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.compute_covariance_interdomain_src(self.UpdVar.Area,self.UpdVar.H,self.UpdVar.QT,self.EnvVar.H, self.EnvVar.QT, self.EnvVar.HQTcov)
             self.compute_covariance_rain(TS, GMV, tmp) # need to update this one
 
-        self.reset_surface_covariance(GMV, Case)
+        self.reset_surface_covariance(GMV, Case, tmp)
         if self.calc_tke:
             self.update_covariance_ED(GMV, Case,TS, GMV.W, GMV.W, GMV.TKE, self.EnvVar.TKE, self.EnvVar.W, self.EnvVar.W, self.UpdVar.W, self.UpdVar.W, tmp)
         if self.calc_scalar_var:
@@ -1400,13 +1402,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
 
-    def initialize_covariance(self, GMV, Case):
+    def initialize_covariance(self, GMV, Case, tmp):
 
         ws= self.wstar
         us = Case.Sur.ustar
         zs = self.zi
 
-        self.reset_surface_covariance(GMV, Case)
+        self.reset_surface_covariance(GMV, Case, tmp)
 
         if self.calc_tke:
             if ws > 0.0:
@@ -1423,7 +1425,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     GMV.Hvar.values[k]   = GMV.Hvar.values[self.grid.gw] * temp
                     GMV.QTvar.values[k]  = GMV.QTvar.values[self.grid.gw] * temp
                     GMV.HQTcov.values[k] = GMV.HQTcov.values[self.grid.gw] * temp
-            self.reset_surface_covariance(GMV, Case)
+            self.reset_surface_covariance(GMV, Case, tmp)
             self.compute_mixing_length(Case.Sur.obukhov_length)
 
         return

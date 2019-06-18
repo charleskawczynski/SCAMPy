@@ -121,47 +121,6 @@ def entr_detr_none(entr_in):
     _ret.detr_sc = 0.0
     return  _ret
 
-def evap_sat_adjust(p0, thetal_, qt_mix):
-    qv_mix = qt_mix
-    ql = 0.0
-    pv_1 = pv_c(p0,qt_mix,qt_mix)
-    pd_1 = p0 - pv_1
-    # evaporate and cool
-    T_1 = eos_first_guess_thetal(thetal_, pd_1, pv_1, qt_mix)
-    pv_star_1 = pv_star(T_1)
-    qv_star_1 = qv_star_c(p0,qt_mix,pv_star_1)
-
-    if (qt_mix <= qv_star_1):
-        evap.T = T_1
-        evap.ql = 0.0
-
-    else:
-        ql_1 = qt_mix - qv_star_1
-        prog_1 = t_to_thetali_c(p0, T_1, qt_mix, ql_1, 0.0)
-        f_1 = thetal_ - prog_1
-        T_2 = T_1 + ql_1 * latent_heat(T_1) /((1.0 - qt_mix)*cpd + qv_star_1 * cpv)
-        delta_T  = np.fabs(T_2 - T_1)
-
-        while delta_T > 1.0e-3 or ql_2 < 0.0:
-            pv_star_2 = pv_star(T_2)
-            qv_star_2 = qv_star_c(p0,qt_mix,pv_star_2)
-            pv_2 = pv_c(p0, qt_mix, qv_star_2)
-            pd_2 = p0 - pv_2
-            ql_2 = qt_mix - qv_star_2
-            prog_2 =  t_to_thetali_c(p0,T_2,qt_mix, ql_2, 0.0)
-            f_2 = thetal_ - prog_2
-            T_n = T_2 - f_2*(T_2 - T_1)/(f_2 - f_1)
-            T_1 = T_2
-            T_2 = T_n
-            f_1 = f_2
-            delta_T  = np.fabs(T_2 - T_1)
-
-        evap.T  = T_2
-        qv = qv_star_2
-        evap.ql = ql_2
-
-    return evap
-
 # convective velocity scale
 def get_wstar(bflux, zi):
     return np.cbrt(np.fmax(bflux * zi, 0.0))
@@ -211,38 +170,6 @@ def get_surface_variance(flux1, flux2, ustar, zLL, oblength):
         return 4.0 * c_star1 * c_star2 * pow(1.0 - 8.3 * zLL/oblength, -2.0/3.0)
     else:
         return 4.0 * c_star1 * c_star2
-
-def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
-    nz = nzg - 2* gw
-    for k in range(gw,nzg-gw):
-        X = rho[k] * ae[k]/dt
-        Y = rho_ae_K_m[k] * dzi * dzi
-        Z = rho_ae_K_m[k-1] * dzi * dzi
-        if k == gw:
-            Z = 0.0
-        elif k == nzg-gw-1:
-            Y = 0.0
-        a[k-gw] = - Z/X
-        b[k-gw] = 1.0 + Y/X + Z/X
-        c[k-gw] = -Y/X
-
-    return
-
-def tridiag_solve(nz, x, a, b, c):
-    scratch = copy.deepcopy(x)
-    scratch[0] = c[0]/b[0]
-    x[0] = x[0]/b[0]
-
-    for i in range(1,nz):
-        m = 1.0/(b[i] - a[i] * scratch[i-1])
-        scratch[i] = c[i] * m
-        x[i] = (x[i] - a[i] * x[i-1])*m
-
-
-    for i in range(nz-2,-1,-1):
-        x[i] = x[i] - scratch[i] * x[i+1]
-
-    return
 
 def set_cloudbase_flag(ql, current_flag):
     if ql > 1.0e-8:

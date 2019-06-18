@@ -22,14 +22,28 @@ class Simulation1d:
         n_ghost      = namelist['grid']['gw']
         N_subdomains = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']+2
 
-        unkowns = (('a', N_subdomains),
-                   ('w', N_subdomains),
-                   ('q_tot', N_subdomains),
-                   ('θ_liq', N_subdomains),
-                   ('tke', N_subdomains),
-                   ('cv_q_tot', N_subdomains),
-                   ('cv_θ_liq', N_subdomains),
-                   ('cv_θ_liq_q_tot', N_subdomains),)
+        # unkowns = (('a', N_subdomains),
+        #            ('w', N_subdomains),
+        #            ('q_tot', N_subdomains),
+        #            ('θ_liq', N_subdomains),
+        #            ('tke', N_subdomains),
+        #            ('cv_q_tot', N_subdomains),
+        #            ('cv_θ_liq', N_subdomains),
+        #            ('cv_θ_liq_q_tot', N_subdomains),)
+        N_sd = N_subdomains
+
+        unkowns = (
+         ('a'              , N_sd),  ('new_a'              , N_sd), ('old_a'              , N_sd), ('tend_a'              , N_sd), ('mf_a'              , N_sd),
+         ('w'              , N_sd),  ('new_w'              , N_sd), ('old_w'              , N_sd), ('tend_w'              , N_sd), ('mf_w'              , N_sd),
+         ('q_tot'          , N_sd),  ('new_q_tot'          , N_sd), ('old_q_tot'          , N_sd), ('tend_q_tot'          , N_sd), ('mf_q_tot'          , N_sd),
+         ('θ_liq'          , N_sd),  ('new_θ_liq'          , N_sd), ('old_θ_liq'          , N_sd), ('tend_θ_liq'          , N_sd), ('mf_θ_liq'          , N_sd),
+         ('tke'            , N_sd),  ('new_tke'            , N_sd), ('old_tke'            , N_sd), ('tend_tke'            , N_sd), ('mf_tke'            , N_sd),
+         ('cv_q_tot'       , N_sd),  ('new_cv_q_tot'       , N_sd), ('old_cv_q_tot'       , N_sd), ('tend_cv_q_tot'       , N_sd), ('mf_cv_q_tot'       , N_sd),
+         ('cv_θ_liq'       , N_sd),  ('new_cv_θ_liq'       , N_sd), ('old_cv_θ_liq'       , N_sd), ('tend_cv_θ_liq'       , N_sd), ('mf_cv_θ_liq'       , N_sd),
+         ('cv_θ_liq_q_tot' , N_sd),  ('new_cv_θ_liq_q_tot' , N_sd), ('old_cv_θ_liq_q_tot' , N_sd), ('tend_cv_θ_liq_q_tot' , N_sd), ('mf_cv_θ_liq_q_tot' , N_sd),
+        )
+
+
         temp_vars = (('ρ_0', 1),
                      ('α_0', 1),
                      ('p_0', 1),
