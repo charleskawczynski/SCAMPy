@@ -1,3 +1,4 @@
 [
-  "test_results.py::test_all_cases"
+  "test_results.py::test_all_cases",
+  "test_tridiag_solver_funcs.py::test_tridiag_solver"
 ]
