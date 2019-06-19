@@ -5,7 +5,7 @@ from EDMF_Updrafts import *
 from EDMF_Environment import *
 from Grid import Grid, Zmin, Zmax, Center, Node
 from Field import Field, Dual, Cut, Dirichlet, Neumann
-from TriDiagSolver import tridiag_solve, construct_tridiag_diffusion, construct_tridiag_diffusion_new
+from TriDiagSolver import tridiag_solve, tridiag_solve_wrapper, construct_tridiag_diffusion, construct_tridiag_diffusion_new, construct_tridiag_diffusion_new_new
 from Variables import VariablePrognostic, VariableDiagnostic, GridMeanVariables
 from Surface import SurfaceBase
 from Cases import  CasesBase
@@ -367,15 +367,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.massflux_tendency_h = Field.half(Gr)
         self.massflux_tendency_qt = Field.half(Gr)
 
-        # (Eddy) diffusive tendencies of mean scalars (for output)
-        self.diffusive_tendency_h = Field.half(Gr)
-        self.diffusive_tendency_qt = Field.half(Gr)
-
         # Vertical fluxes for output
         self.massflux_h = Field.half(Gr)
         self.massflux_qt = Field.half(Gr)
-        self.diffusive_flux_h = Field.half(Gr)
-        self.diffusive_flux_qt = Field.half(Gr)
         if self.calc_tke:
             self.massflux_tke = Field.half(Gr)
 
@@ -403,12 +397,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         Stats.add_profile('massflux_qt')
         Stats.add_profile('massflux_tendency_h')
         Stats.add_profile('massflux_tendency_qt')
-        Stats.add_profile('diffusive_flux_h')
-        Stats.add_profile('diffusive_flux_qt')
-        Stats.add_profile('diffusive_tendency_h')
-        Stats.add_profile('diffusive_tendency_qt')
-        Stats.add_profile('total_flux_h')
-        Stats.add_profile('total_flux_qt')
         Stats.add_profile('mixing_length')
         Stats.add_profile('updraft_qt_precip')
         Stats.add_profile('updraft_thetal_precip')
@@ -473,14 +461,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         Stats.write_profile_new('massflux_qt'   , self.grid, mf_qt)
         Stats.write_profile_new('massflux_tendency_h'  , self.grid, self.massflux_tendency_h)
         Stats.write_profile_new('massflux_tendency_qt' , self.grid, self.massflux_tendency_qt)
-        Stats.write_profile_new('diffusive_flux_h'     , self.grid, self.diffusive_flux_h)
-        Stats.write_profile_new('diffusive_flux_qt'    , self.grid, self.diffusive_flux_qt)
-        Stats.write_profile_new('diffusive_tendency_h' , self.grid, self.diffusive_tendency_h)
-        Stats.write_profile_new('diffusive_tendency_qt', self.grid, self.diffusive_tendency_qt)
-        total_flux_h = mf_h[:] + self.diffusive_flux_h[:]
-        total_flux_qt = mf_qt[:] + self.diffusive_flux_qt[:]
-        Stats.write_profile_new('total_flux_h', self.grid, total_flux_h)
-        Stats.write_profile_new('total_flux_qt',self.grid, total_flux_qt)
         Stats.write_profile_new('mixing_length'        , self.grid, self.mixing_length)
         Stats.write_profile_new('updraft_qt_precip'    , self.grid, self.UpdMicro.prec_source_qt_tot)
         Stats.write_profile_new('updraft_thetal_precip', self.grid, self.UpdMicro.prec_source_h_tot)
@@ -1215,79 +1195,81 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         b = Field.half(self.grid)
         c = Field.half(self.grid)
         x = Field.half(self.grid)
+        f = Field.half(self.grid)
         ae = Field.half(self.grid)
         rho_ae_K_m = Field.full(self.grid)
         slice_real = self.grid.slice_real(Center())
         ki = self.grid.first_interior(Zmin())
         bo = self.grid.boundary(Zmin())
-        k_last = self.grid.over_elems(Center())[-1]
 
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
         for k in self.grid.over_elems_real(Node()):
-            rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1]) * 0.5 * (self.KH.values[k]+self.KH.values[k+1]) * self.Ref.rho0[k]
+            rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1]) * 0.5 * (self.KH.values[k]+self.KH.values[k+1]) * 0.5 * (self.Ref.rho0[k]+self.Ref.rho0_half[k])
+
+        # i_env = q.i_env
+        # for k in self.grid.over_elems(Center()):
+        #     q['a', k, i_env] = ae[k]
+        #     tmp['K_h', k, i_env] = self.KH.values[k]
+        #     tmp['K_m', k, i_env] = self.KM.values[k]
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
-        construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half, ae, a[slice_real], b[slice_real], c[slice_real])
+        construct_tridiag_diffusion_new_new(self.grid, TS.dt, rho_ae_K_m, self.Ref.rho0_half, ae, a, b, c)
 
         # Solve QT
         for k in self.grid.over_elems(Center()):
-            x[k] =  self.EnvVar.QT.values[k]
-        x[ki] = x[ki] + TS.dt * Case.Sur.rho_qtflux * dzi * tmp['α_0', ki]/ae[ki]
+            f[k] =  self.EnvVar.QT.values[k]
+        f[ki] = f[ki] + TS.dt * Case.Sur.rho_qtflux * dzi * tmp['α_0', ki]/ae[ki]
 
-        tridiag_solve(self.grid.nz, x[slice_real], a[slice_real], b[slice_real], c[slice_real])
-
-        for k in self.grid.over_elems(Center()):
-            GMV.QT.new[k] = GMV.QT.mf_update[k] + ae[k] *(x[k] - self.EnvVar.QT.values[k])
-
-        # get the diffusive flux
-        self.diffusive_tendency_qt[k_last] = (GMV.QT.new[k_last] - GMV.QT.mf_update[k_last]) * TS.dti
+        tridiag_solve(self.grid.nz, f[slice_real], a[slice_real], b[slice_real], c[slice_real])
+        # tridiag_solve_wrapper(self.grid, x, f, a, b, c)
+        # f[:] = x[:]
 
         for k in self.grid.over_elems(Center()):
-            self.diffusive_flux_qt[k] = -0.5 * tmp['ρ_0', k]*ae[k] * self.KH.values[k] * dzi * (self.EnvVar.QT.values[k+1]-self.EnvVar.QT.values[k-1])
-        self.diffusive_flux_qt[ki] = interp2pt(Case.Sur.rho_qtflux, -rho_ae_K_m[bo+1] * dzi *(self.EnvVar.QT.values[ki+1]-self.EnvVar.QT.values[ki]) )
+            GMV.QT.new[k] = GMV.QT.mf_update[k] + ae[k] *(f[k] - self.EnvVar.QT.values[k])
 
         # Solve H
         for k in self.grid.over_elems(Center()):
-            x[k] = self.EnvVar.H.values[k]
+            f[k] = self.EnvVar.H.values[k]
+        f[ki] = f[ki] + TS.dt * Case.Sur.rho_hflux * dzi * tmp['α_0', ki]/ae[ki]
 
-        x[ki] = x[ki] + TS.dt * Case.Sur.rho_hflux * dzi * tmp['α_0', ki]/ae[ki]
-        tridiag_solve(self.grid.nz, x[slice_real], a[slice_real], b[slice_real], c[slice_real])
+        tridiag_solve(self.grid.nz, f[slice_real], a[slice_real], b[slice_real], c[slice_real])
+        # tridiag_solve_wrapper(self.grid, x, f, a, b, c)
+        # f[:] = x[:]
 
         for k in self.grid.over_elems(Center()):
-            GMV.H.new[k] = GMV.H.mf_update[k] + ae[k] *(x[k] - self.EnvVar.H.values[k])
-            self.diffusive_flux_qt[k] = (GMV.H.new[k] - GMV.H.mf_update[k]) * TS.dti
-        # get the diffusive flux
-        for k in self.grid.over_elems(Center()):
-            self.diffusive_flux_h[k] = -0.5 * tmp['ρ_0', k]*ae[k] * self.KH.values[k] * dzi * (self.EnvVar.H.values[k+1]-self.EnvVar.H.values[k-1])
-
-        bo = self.grid.boundary(Zmin())
-        self.diffusive_flux_h[ki] = interp2pt(Case.Sur.rho_hflux, -rho_ae_K_m[bo+1] * dzi *(self.EnvVar.H.values[ki+1]-self.EnvVar.H.values[ki]) )
+            GMV.H.new[k] = GMV.H.mf_update[k] + ae[k] *(f[k] - self.EnvVar.H.values[k])
 
         # Solve U
         for k in self.grid.over_elems_real(Node()):
-            rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1]) * 0.5 * (self.KH.values[k]+self.KH.values[k+1]) * self.Ref.rho0[k]
+            rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1]) * 0.5 * (self.KM.values[k]+self.KM.values[k+1]) * 0.5*(self.Ref.rho0_half[k]+self.Ref.rho0_half[k+1])
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
-        construct_tridiag_diffusion(nzg, gw, dzi, TS.dt, rho_ae_K_m, self.Ref.rho0_half, ae, a[slice_real], b[slice_real], c[slice_real])
+        construct_tridiag_diffusion_new_new(self.grid, TS.dt, rho_ae_K_m, self.Ref.rho0_half, ae, a, b, c)
 
         for k in self.grid.over_elems(Center()):
-            x[k] = GMV.U.values[k]
-        x[ki] = x[ki] + TS.dt * Case.Sur.rho_uflux * dzi * tmp['α_0', ki]/ae[ki]
-        tridiag_solve(self.grid.nz, x[slice_real], a[slice_real], b[slice_real], c[slice_real])
+            f[k] = GMV.U.values[k]
+        f[ki] = f[ki] + TS.dt * Case.Sur.rho_uflux * dzi * tmp['α_0', ki]/ae[ki]
+
+        tridiag_solve(self.grid.nz, f[slice_real], a[slice_real], b[slice_real], c[slice_real])
+        # tridiag_solve_wrapper(self.grid, x, f, a, b, c)
+        # f[:] = x[:]
 
         for k in self.grid.over_elems(Center()):
-            GMV.U.new[k] = x[k]
+            GMV.U.new[k] = f[k]
 
         # Solve V
         for k in self.grid.over_elems(Center()):
-            x[k] = GMV.V.values[k]
-        x[ki] = x[ki] + TS.dt * Case.Sur.rho_vflux * dzi * tmp['α_0', ki]/ae[ki]
-        tridiag_solve(self.grid.nz, x[slice_real], a[slice_real], b[slice_real], c[slice_real])
+            f[k] = GMV.V.values[k]
+        f[ki] = f[ki] + TS.dt * Case.Sur.rho_vflux * dzi * tmp['α_0', ki]/ae[ki]
+
+        tridiag_solve(self.grid.nz, f[slice_real], a[slice_real], b[slice_real], c[slice_real])
+        # tridiag_solve_wrapper(self.grid, x, f, a, b, c)
+        # f[:] = x[:]
 
         for k in self.grid.over_elems(Center()):
-            GMV.V.new[k] = x[k]
+            GMV.V.new[k] = f[k]
 
         GMV.QT.set_bcs(self.grid)
         GMV.QR.set_bcs(self.grid)
