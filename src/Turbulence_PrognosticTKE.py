@@ -669,7 +669,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             au_lim = self.max_area_factor * self.area_surface_bc[i]
             self.UpdVar.Area.values[i][gw] = self.area_surface_bc[i]
             w_mid = 0.5* (self.UpdVar.W.values[i][gw])
-            for k in range(gw+1, self.grid.nzg):
+            # for k in range(gw+1, self.grid.nzg):
+            for k in self.grid.over_elems_real(Center())[1:]:
                 w_low = w_mid
                 w_mid = interp2pt(self.UpdVar.W.values[i][k],self.UpdVar.W.values[i][k-1])
                 if w_mid > 0.0:
@@ -692,7 +693,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     #TODO wouldnt it be more consistent to have here?
                     #self.UpdVar.QL.values[i][k] = GMV.QL.values[k]
                     #self.UpdVar.T.values[i][k] = GMV.T.values[k]
-                    T, ql = eos(self.UpdThermo.t_to_prog_fp,self.UpdThermo.prog_to_t_fp, tmp['p_0', k], self.UpdVar.QT.values[i][k], self.UpdVar.H.values[i][k])
+                    T, ql = eos(self.UpdThermo.t_to_prog_fp, self.UpdThermo.prog_to_t_fp, tmp['p_0', k], self.UpdVar.QT.values[i][k], self.UpdVar.H.values[i][k])
                     self.UpdVar.QL.values[i][k] = ql
                     self.UpdVar.T.values[i][k] = T
 
@@ -1084,7 +1085,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                                                                    i, gw)
 
             # starting from the bottom do entrainment at each level
-            for k in range(gw+1, self.grid.nzg-gw):
+            # for k in range(gw+1, self.grid.nzg-gw):
+            for k in self.grid.over_elems_real(Center())[1:]:
                 H_entr = self.EnvVar.H.values[k]
                 QT_entr = self.EnvVar.QT.values[k]
 
