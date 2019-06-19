@@ -2,6 +2,7 @@ import numpy as np
 from numba import jit, f8
 import copy
 from Grid import Grid, Zmin, Zmax, Center, Node
+from Field import Field, Dual, Cut, Dirichlet, Neumann
 from StateVec import StateVec, Cut, Dual
 
 def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
@@ -17,6 +18,16 @@ def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
         a[k-gw] = - Z/X
         b[k-gw] = 1.0 + Y/X + Z/X
         c[k-gw] = -Y/X
+    return
+
+def construct_tridiag_diffusion_new_new(grid, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
+    for k in grid.over_elems_real(Center()):
+        X = rho[k] * ae[k]/dt
+        Y = rho_ae_K_m[k] * dzi * dzi
+        Z = rho_ae_K_m[k-1] * dzi * dzi
+        a[k] = - Z/X
+        b[k] = 1.0 + Y/X + Z/X
+        c[k] = -Y/X
     return
 
 def construct_tridiag_diffusion_new(grid, Δzi, Δt, tmp, q, a, b, c):
@@ -50,22 +61,38 @@ def tridiag_solve(nz, x, a, b, c):
 
     return
 
-## Tri Diagonal Matrix Algorithm(a.k.a Thomas algorithm) solver
-@jit(f8[:] (f8[:],f8[:],f8[:],f8[:] ))
-def TDMAsolver(a, b, c, d):
-    '''
-    TDMA solver, a b c d can be NumPy array type or Python list type.
-    refer to http://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm
-    and to http://www.cfd-online.com/Wiki/Tridiagonal_matrix_algorithm_-_TDMA_(Thomas_algorithm)
-    '''
-    nf = len(d) # number of equations
-    ac, bc, cc, dc = map(np.array, (a, b, c, d)) # copy arrays
-    for it in range(1, nf):
-        mc = ac[it-1]/bc[it-1]
-        bc[it] = bc[it] - mc*cc[it-1]
-        dc[it] = dc[it] - mc*dc[it-1]
-    xc = bc
-    xc[-1] = dc[-1]/bc[-1]
-    for il in range(nf-2, -1, -1):
-        xc[il] = (dc[il]-cc[il]*xc[il+1])/bc[il]
-    return xc
+def tridiag_solve_wrapper(grid, x, f, a, b, c):
+    xtemp = Field.half(grid)
+    β = Field.half(grid)
+    γ = Field.half(grid)
+    slice_real = grid.slice_real(Center())
+    tridiag_solve_new(x[slice_real],
+                      f[slice_real],
+                      a[slice_real],
+                      b[slice_real],
+                      c[slice_real],
+                      grid.nz,
+                      xtemp[slice_real],
+                      γ[slice_real],
+                      β[slice_real])
+    return
+
+def tridiag_solve_new(x, f, a, b, c, n, xtemp, γ, β):
+  # Define coefficients:
+  β[0] = b[0]
+  γ[0] = c[0]/β[0]
+  for i in range(1, n-1):
+    β[i] = b[i]-a[i-1]*γ[i-1]
+    γ[i] = c[i]/β[i]
+  β[n-1] = b[n-1]-a[n-2]*γ[n-2]
+
+  # Forward substitution:
+  xtemp[0] = f[0]/β[0]
+  for i in range(1, n):
+    m = f[i] - a[i-1]*xtemp[i-1]
+    xtemp[i] = m/β[i]
+
+  # Backward substitution:
+  x[n-1] = xtemp[n-1]
+  for i in range(n-2,-1,-1):
+    x[i] = xtemp[i]-γ[i]*x[i+1]

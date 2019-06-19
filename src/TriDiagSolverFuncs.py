@@ -19,7 +19,7 @@ where `A` is a tridiagonal matrix:
                                  A
 ```
 and given arguments:
---------------------------------------------
+-------------------------------------------
 | x[1:n]      | the result                |
 | f[1:n]      | right hand side           |
 | a[1:n-1]    | sub-diagonal              |
@@ -29,7 +29,7 @@ and given arguments:
 | xtemp[1:n]  | temporary                 |
 | γ[1:n-1]    | temporary                 |
 | β[1:n]      | temporary                 |
---------------------------------------------
+-------------------------------------------
 """
 def solve_tridiag(x, f, a, b, c, n, xtemp, γ, β):
   # Define coefficients:
