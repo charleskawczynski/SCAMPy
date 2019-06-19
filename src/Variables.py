@@ -169,7 +169,7 @@ class GridMeanVariables:
         return
 
     def update(self, TS):
-        for k in range(self.grid.gw, self.grid.nzg-self.grid.gw):
+        for k in self.grid.over_elems_real(Center()):
             self.U.values[k]  +=  self.U.tendencies[k] * TS.dt
             self.V.values[k]  +=  self.V.tendencies[k] * TS.dt
             self.H.values[k]  +=  self.H.tendencies[k] * TS.dt
@@ -241,7 +241,7 @@ class GridMeanVariables:
             Stats.write_profile_new('QTvar_mean' , self.grid, self.QTvar.values)
             Stats.write_profile_new('HQTcov_mean', self.grid, self.HQTcov.values)
 
-        for k in range(self.grid.gw, self.grid.nzg-self.grid.gw):
+        for k in self.grid.over_elems_real(Center()):
             lwp += tmp['ρ_0', k]*self.QL.values[k]*self.grid.dz
         Stats.write_ts('lwp', lwp)
 
