@@ -12,23 +12,20 @@ import pylab as plt
 
 
 class UpdraftVariable:
-    def __init__(self, Gr, nu, nz, loc, name, units):
+    def __init__(self, Gr, nu, loc, bc, name, units):
         self.values     = [Field.field(Gr, loc) for i in range(nu)]
         self.old        = [Field.field(Gr, loc) for i in range(nu)]
         self.new        = [Field.field(Gr, loc) for i in range(nu)]
         self.tendencies = [Field.field(Gr, loc) for i in range(nu)]
         self.bulkvalues = Field.field(Gr, loc)
+        self.bc = bc
         self.name = name
         self.units = units
 
     def set_bcs(self, Gr):
         n_updrafts = np.shape(self.values)[0]
-        if self.name == 'w':
-            for i in range(n_updrafts):
-                self.values[i].apply_Dirichlet(Gr, 0.0)
-        else:
-            for i in range(n_updrafts):
-                self.values[i].apply_Neumann(Gr, 0.0)
+        for i in range(n_updrafts):
+            self.values[i].apply_bc(Gr, self.bc, 0.0)
         return
 
 
@@ -36,20 +33,19 @@ class UpdraftVariables:
     def __init__(self, nu, namelist, paramlist, Gr):
         self.grid = Gr
         self.n_updrafts = nu
-        nzg = Gr.nzg
 
-        self.W    = UpdraftVariable(Gr, nu, nzg, Node(), 'w','m/s' )
-        self.Area = UpdraftVariable(Gr, nu, nzg, Node(), 'area_fraction','[-]' )
-        self.QT   = UpdraftVariable(Gr, nu, nzg, Center(), 'qt','kg/kg' )
-        self.QL   = UpdraftVariable(Gr, nu, nzg, Center(), 'ql','kg/kg' )
-        self.QR   = UpdraftVariable(Gr, nu, nzg, Center(), 'qr','kg/kg' )
-        self.THL  = UpdraftVariable(Gr, nu, nzg, Center(), 'thetal', 'K')
-        self.T    = UpdraftVariable(Gr, nu, nzg, Center(), 'temperature','K' )
-        self.B    = UpdraftVariable(Gr, nu, nzg, Center(), 'buoyancy','m^2/s^3' )
+        self.W    = UpdraftVariable(Gr, nu, Node(), Dirichlet(), 'w','m/s' )
+        self.Area = UpdraftVariable(Gr, nu, Node(), Neumann(), 'area_fraction','[-]' )
+        self.QT   = UpdraftVariable(Gr, nu, Center(), Neumann(), 'qt','kg/kg' )
+        self.QL   = UpdraftVariable(Gr, nu, Center(), Neumann(), 'ql','kg/kg' )
+        self.QR   = UpdraftVariable(Gr, nu, Center(), Neumann(), 'qr','kg/kg' )
+        self.THL  = UpdraftVariable(Gr, nu, Center(), Neumann(), 'thetal', 'K')
+        self.T    = UpdraftVariable(Gr, nu, Center(), Neumann(), 'temperature','K' )
+        self.B    = UpdraftVariable(Gr, nu, Center(), Neumann(), 'buoyancy','m^2/s^3' )
         if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-            self.H = UpdraftVariable(Gr, nu, nzg, Center(), 's','J/kg/K' )
+            self.H = UpdraftVariable(Gr, nu, Center(), Neumann(), 's','J/kg/K' )
         elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-            self.H = UpdraftVariable(Gr, nu, nzg, Center(), 'thetal','K' )
+            self.H = UpdraftVariable(Gr, nu, Center(), Neumann(), 'thetal','K' )
 
 
         if namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':

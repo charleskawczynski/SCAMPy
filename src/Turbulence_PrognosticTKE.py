@@ -35,8 +35,8 @@ class ParameterizationBase:
         self.turbulence_tendency = Field.half(Gr)
         self.grid = Gr # grid class
         self.Ref = Ref # reference state class
-        self.KM = VariableDiagnostic(Gr, Center(), 'sym', 'diffusivity', 'm^2/s') # eddy viscosity
-        self.KH = VariableDiagnostic(Gr, Center(), 'sym', 'viscosity', 'm^2/s') # eddy diffusivity
+        self.KM = VariableDiagnostic(Gr, Center(), Neumann(), 'diffusivity', 'm^2/s') # eddy viscosity
+        self.KH = VariableDiagnostic(Gr, Center(), Neumann(), 'viscosity', 'm^2/s') # eddy diffusivity
         # get values from paramlist
         self.prandtl_number = paramlist['turbulence']['prandtl_number']
         self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']

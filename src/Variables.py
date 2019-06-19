@@ -22,19 +22,14 @@ class VariablePrognostic:
         return
 
     def zero_tendencies(self, Gr):
-        for k in range(Gr.nzg):
+        for k in Gr.over_elems(Center()):
             self.tendencies[k] = 0.0
         return
 
-    def set_bcs(self,Gr):
-        if self.bc == 'sym':
-            self.values.apply_Neumann(Gr, 0.0)
-            self.mf_update.apply_Neumann(Gr, 0.0)
-            self.new.apply_Neumann(Gr, 0.0)
-        else:
-            self.values.apply_Dirichlet(Gr, 0.0)
-            self.mf_update.apply_Dirichlet(Gr, 0.0)
-            self.new.apply_Dirichlet(Gr, 0.0)
+    def set_bcs(self, Gr):
+        self.values.apply_bc(Gr, self.bc, 0.0)
+        self.mf_update.apply_bc(Gr, self.bc, 0.0)
+        self.new.apply_bc(Gr, self.bc, 0.0)
         return
 
 class VariableDiagnostic:
@@ -45,11 +40,8 @@ class VariableDiagnostic:
         self.name = name
         self.units = units
         return
-    def set_bcs(self,Gr):
-        if self.bc == 'sym':
-            self.values.apply_Neumann(Gr, 0.0)
-        else:
-            self.values.apply_Dirichlet(Gr, 0.0)
+    def set_bcs(self, Gr):
+        self.values.apply_bc(Gr, self.bc, 0.0)
         return
 
 class GridMeanVariables:
@@ -57,20 +49,18 @@ class GridMeanVariables:
         self.grid = Gr
         self.Ref = Ref
 
-        self.U = VariablePrognostic(Gr, Center(), 'sym','u', 'm/s' )
-        self.V = VariablePrognostic(Gr, Center(), 'sym', 'v', 'm/s' )
-        # Just leave this zero for now!
-        self.W = VariablePrognostic(Gr, Node(), 'sym', 'v', 'm/s' )
-        # Create thermodynamic variables
-        self.QT = VariablePrognostic(Gr, Center(), 'sym', 'qt', 'kg/kg')
-        self.QR = VariablePrognostic(Gr, Center(), 'sym', 'qr', 'kg/kg')
+        self.U = VariablePrognostic(Gr, Center(), Neumann(),'u', 'm/s' )
+        self.V = VariablePrognostic(Gr, Center(), Neumann(), 'v', 'm/s' )
+        self.W = VariablePrognostic(Gr, Node(), Neumann(), 'v', 'm/s' )
+        self.QT = VariablePrognostic(Gr, Center(), Neumann(), 'qt', 'kg/kg')
+        self.QR = VariablePrognostic(Gr, Center(), Neumann(), 'qr', 'kg/kg')
 
         if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-            self.H = VariablePrognostic(Gr, Center(), 'sym','s', 'J/kg/K' )
+            self.H = VariablePrognostic(Gr, Center(), Neumann(),'s', 'J/kg/K' )
             self.t_to_prog_fp = t_to_entropy_c
             self.prog_to_t_fp = eos_first_guess_entropy
         elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-            self.H = VariablePrognostic(Gr, Center(), 'sym','thetal', 'K')
+            self.H = VariablePrognostic(Gr, Center(), Neumann(),'thetal', 'K')
             self.t_to_prog_fp = t_to_thetali_c
             self.prog_to_t_fp = eos_first_guess_thetal
         else:
@@ -78,12 +68,11 @@ class GridMeanVariables:
 
         # Diagnostic Variables--same class as the prognostic variables, but we append to diagnostics list
         # self.diagnostics_list  = []
-        self.QL  = VariableDiagnostic(Gr, Center(), 'sym', 'ql', 'kg/kg')
-        self.T   = VariableDiagnostic(Gr, Center(), 'sym', 'temperature', 'K')
-        self.B   = VariableDiagnostic(Gr, Center(), 'sym', 'buoyancy', 'm^2/s^3')
-        self.THL = VariableDiagnostic(Gr, Center(), 'sym', 'thetal','K')
+        self.QL  = VariableDiagnostic(Gr, Center(), Neumann(), 'ql', 'kg/kg')
+        self.T   = VariableDiagnostic(Gr, Center(), Neumann(), 'temperature', 'K')
+        self.B   = VariableDiagnostic(Gr, Center(), Neumann(), 'buoyancy', 'm^2/s^3')
+        self.THL = VariableDiagnostic(Gr, Center(), Neumann(), 'thetal','K')
 
-        # TKE   TODO   repeated from EDMF_Environment.pyx logic
         if  namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':
             self.calc_tke = True
         else:
@@ -105,19 +94,19 @@ class GridMeanVariables:
 
         #Now add the 2nd moment variables
         if self.calc_tke:
-            self.TKE = VariableDiagnostic(Gr, Center(), 'sym', 'tke','m^2/s^2' )
+            self.TKE = VariableDiagnostic(Gr, Center(), Neumann(), 'tke','m^2/s^2' )
 
         if self.calc_scalar_var:
-            self.QTvar = VariableDiagnostic(Gr, Center(), 'sym', 'qt_var','kg^2/kg^2' )
+            self.QTvar = VariableDiagnostic(Gr, Center(), Neumann(), 'qt_var','kg^2/kg^2' )
             if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-                self.Hvar = VariableDiagnostic(Gr, Center(), 'sym', 's_var', '(J/kg/K)^2')
-                self.HQTcov = VariableDiagnostic(Gr, Center(), 'sym' ,'s_qt_covar', '(J/kg/K)(kg/kg)' )
+                self.Hvar = VariableDiagnostic(Gr, Center(), Neumann(), 's_var', '(J/kg/K)^2')
+                self.HQTcov = VariableDiagnostic(Gr, Center(), Neumann() ,'s_qt_covar', '(J/kg/K)(kg/kg)' )
             elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-                self.Hvar = VariableDiagnostic(Gr, Center(), 'sym' ,'thetal_var', 'K^2')
-                self.HQTcov = VariableDiagnostic(Gr, Center(), 'sym' ,'thetal_qt_covar', 'K(kg/kg)' )
+                self.Hvar = VariableDiagnostic(Gr, Center(), Neumann() ,'thetal_var', 'K^2')
+                self.HQTcov = VariableDiagnostic(Gr, Center(), Neumann() ,'thetal_qt_covar', 'K(kg/kg)' )
 
         if self.EnvThermo_scheme == 'sommeria_deardorff':
-            self.THVvar = VariableDiagnostic(Gr, Center(), 'sym', 'thatav_var','K^2' )
+            self.THVvar = VariableDiagnostic(Gr, Center(), Neumann(), 'thatav_var','K^2' )
 
         return
 
