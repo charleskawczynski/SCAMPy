@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import pylab as plt
 from Grid import Grid, Zmin, Zmax, Center, Node
-from Field import Field
+from Field import Field, Dual, Cut, Dirichlet, Neumann
 from TimeStepping import TimeStepping
 from NetCDFIO import NetCDFIO_Stats
 from ReferenceState import ReferenceState
@@ -12,12 +12,10 @@ from thermodynamic_functions import eos, t_to_entropy_c, t_to_thetali_c, \
 
 class VariablePrognostic:
     def __init__(self, Gr, loc, bc, name, units):
-        # Value at the current and next timestep, used for calculating turbulence tendencies
         self.values     = Field.field(Gr, loc)
         self.new        = Field.field(Gr, loc)
         self.mf_update  = Field.field(Gr, loc)
         self.tendencies = Field.field(Gr, loc)
-        # Placement on staggered grid
         self.bc = bc
         self.name = name
         self.units = units
@@ -29,67 +27,30 @@ class VariablePrognostic:
         return
 
     def set_bcs(self,Gr):
-        start_low = Gr.gw - 1
-        start_high = Gr.nzg - Gr.gw - 1
-
         if self.bc == 'sym':
-            for k in range(Gr.gw):
-                self.values[start_high + k +1] = self.values[start_high  - k]
-                self.values[start_low - k] = self.values[start_low + 1 + k]
-
-                self.mf_update[start_high + k +1] = self.mf_update[start_high  - k]
-                self.mf_update[start_low - k] = self.mf_update[start_low + 1 + k]
-
-                self.new[start_high + k +1] = self.new[start_high  - k]
-                self.new[start_low - k] = self.new[start_low + 1 + k]
+            self.values.apply_Neumann(Gr, 0.0)
+            self.mf_update.apply_Neumann(Gr, 0.0)
+            self.new.apply_Neumann(Gr, 0.0)
         else:
-            self.values[start_high] = 0.0
-            self.values[start_low] = 0.0
-
-            self.mf_update[start_high] = 0.0
-            self.mf_update[start_low] = 0.0
-
-            self.new[start_high] = 0.0
-            self.new[start_low] = 0.0
-
-            for k in range(1,Gr.gw):
-                self.values[start_high+ k] = -self.values[start_high - k ]
-                self.values[start_low- k] = -self.values[start_low + k  ]
-
-                self.mf_update[start_high+ k] = -self.mf_update[start_high - k ]
-                self.mf_update[start_low- k] = -self.mf_update[start_low + k  ]
-
-                self.new[start_high+ k] = -self.new[start_high - k ]
-                self.new[start_low- k] = -self.new[start_low + k  ]
-
+            self.values.apply_Dirichlet(Gr, 0.0)
+            self.mf_update.apply_Dirichlet(Gr, 0.0)
+            self.new.apply_Dirichlet(Gr, 0.0)
         return
 
 class VariableDiagnostic:
 
     def __init__(self, Gr, loc, bc, name, units):
-        # Value at the current timestep
-        # Placement on staggered grid
         self.values = Field.field(Gr, loc)
         self.bc = bc
         self.name = name
         self.units = units
         return
     def set_bcs(self,Gr):
-        start_low = Gr.gw - 1
-        start_high = Gr.nzg - Gr.gw
         if self.bc == 'sym':
-            for k in range(Gr.gw):
-                self.values[start_high + k] = self.values[start_high  - 1]
-                self.values[start_low - k] = self.values[start_low + 1]
+            self.values.apply_Neumann(Gr, 0.0)
         else:
-            self.values[start_high] = 0.0
-            self.values[start_low] = 0.0
-            for k in range(1,Gr.gw):
-                self.values[start_high+ k] = 0.0  #-self.values[start_high - k ]
-                self.values[start_low- k] = 0.0 #-self.values[start_low + k ]
+            self.values.apply_Dirichlet(Gr, 0.0)
         return
-
-
 
 class GridMeanVariables:
     def __init__(self, namelist, Gr, Ref):

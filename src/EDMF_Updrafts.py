@@ -3,7 +3,7 @@ from parameters import *
 from thermodynamic_functions import  *
 from microphysics_functions import  *
 from Grid import Grid, Zmin, Zmax, Center, Node
-from Field import Field
+from Field import Field, Dual, Cut, Dirichlet, Neumann
 import ReferenceState
 from Variables import GridMeanVariables
 from NetCDFIO import NetCDFIO_Stats
@@ -21,24 +21,14 @@ class UpdraftVariable:
         self.name = name
         self.units = units
 
-    def set_bcs(self,Gr):
-        start_low = Gr.gw - 1
-        start_high = Gr.nzg - Gr.gw - 1
-
+    def set_bcs(self, Gr):
         n_updrafts = np.shape(self.values)[0]
-
         if self.name == 'w':
             for i in range(n_updrafts):
-                self.values[i][start_high] = 0.0
-                self.values[i][start_low] = 0.0
-                for k in range(1,Gr.gw):
-                    self.values[i][start_high+ k] = -self.values[i][start_high - k ]
-                    self.values[i][start_low- k] = -self.values[i][start_low + k  ]
+                self.values[i].apply_Dirichlet(Gr, 0.0)
         else:
-            for k in range(Gr.gw):
-                for i in range(n_updrafts):
-                    self.values[i][start_high + k +1] = self.values[i][start_high  - k]
-                    self.values[i][start_low - k] = self.values[i][start_low + 1 + k]
+            for i in range(n_updrafts):
+                self.values[i].apply_Neumann(Gr, 0.0)
         return
 
 

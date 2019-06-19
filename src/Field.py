@@ -2,6 +2,14 @@ import os
 from Grid import Grid, Zmin, Zmax, Center, Node
 import numpy as np
 
+class Neumann:
+    def __init__(self):
+        return
+
+class Dirichlet:
+    def __init__(self):
+        return
+
 class Cut:
     def __init__(self, k):
         self.k = k
@@ -103,7 +111,6 @@ class Field:
             for k in grid.over_elems_ghost(Center(), Zmax()):
                 self.values[k] = 2.0*self.values[k-1] - self.values[k-2]
 
-
     def apply_Neumann(self, grid, value):
         n_hat_zmin = grid.n_hat(Zmin())
         n_hat_zmax = grid.n_hat(Zmax())
@@ -121,3 +128,14 @@ class Field:
         else:
             self.values[0:grid.first_interior(Zmin())] = 2*value - self.values[grid.first_interior(Zmin())]
             self.values[grid.first_interior(Zmax())+1:]  = 2*value - self.values[grid.first_interior(Zmax())]
+
+
+    def apply_bc(self, grid, bc, value):
+        if isinstance(bc, Dirichlet):
+            self.apply_Dirichlet(grid, value)
+        elif isinstance(bc, Neumann):
+            self.apply_Neumann(grid, value)
+        else:
+            raise TypeError('Bad bc in apply_bc in Field.py')
+
+

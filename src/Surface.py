@@ -5,7 +5,7 @@ from thermodynamic_functions import *
 from surface_functions import entropy_flux, compute_ustar, buoyancy_flux, exchange_coefficients_byun
 from turbulence_functions import get_wstar, get_inversion
 from Variables import GridMeanVariables
-from Field import Field
+from Field import Field, Dual, Cut, Dirichlet, Neumann
 
 class SurfaceBase:
     def __init__(self, paramlist):

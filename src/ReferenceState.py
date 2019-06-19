@@ -1,5 +1,5 @@
 from Grid import Grid, Zmin, Zmax, Center, Node
-from Field import Field
+from Field import Field, Dual, Cut, Dirichlet, Neumann
 from NetCDFIO import NetCDFIO_Stats
 import numpy as np
 import matplotlib.pyplot as plt

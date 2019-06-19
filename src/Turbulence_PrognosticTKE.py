@@ -4,9 +4,7 @@ import sys
 from EDMF_Updrafts import *
 from EDMF_Environment import *
 from Grid import Grid, Zmin, Zmax, Center, Node
-from Field import Field
-from Field import Cut
-from Field import Dual
+from Field import Field, Dual, Cut, Dirichlet, Neumann
 from TriDiagSolver import tridiag_solve, construct_tridiag_diffusion, construct_tridiag_diffusion_new
 from Variables import VariablePrognostic, VariableDiagnostic, GridMeanVariables
 from Surface import SurfaceBase

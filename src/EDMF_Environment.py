@@ -2,7 +2,7 @@ import numpy as np
 import sys
 from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node
-from Field import Field
+from Field import Field, Dual, Cut, Dirichlet, Neumann
 from TimeStepping import TimeStepping
 from ReferenceState import ReferenceState
 from Variables import VariableDiagnostic, GridMeanVariables
