@@ -18,7 +18,7 @@ def find_zero(f, x0, x1, method=SecantMethod(), xatol=1e-3, maxiters=10)
         x1 -= y1 * Δx / Δy
         y1 = f(x1)
         if abs(x0-x1) < xatol:
-            return x1, true
+            return x1, True
   return x1, False
 
 def eos(t_to_prog, prog_to_t, p0, qt, prog):
