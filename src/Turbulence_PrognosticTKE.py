@@ -951,10 +951,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             for k in self.grid.over_elems_real(Center()):
 
                 # First solve for updated area fraction at k+1
-                whalf_kp = interp2pt(self.UpdVar.W.values[i][k], self.UpdVar.W.values[i][k+1])
-                ρaw_cut = self.Ref.rho0_half.Cut(k)*self.UpdVar.Area.values[i].Cut(k)*self.UpdVar.W.values[i].DualCut(k)
+                whalf_kp = self.UpdVar.W.values[i].Mid(k+1)
+                w_cut = self.UpdVar.W.values[i].DualCut(k+1)
+                ρaw_cut = self.Ref.rho0_half.Cut(k+1)*self.UpdVar.Area.values[i].Cut(k+1)*w_cut
                 alpha0_kp = self.Ref.alpha0_half[k+1]
-                adv = - alpha0_kp * advect(ρaw_cut, self.grid)
+                adv = - alpha0_kp * advect(ρaw_cut, w_cut, self.grid)
 
                 entr_term = self.UpdVar.Area.values[i][k+1] * whalf_kp * (+ self.entr_sc[i][k+1])
                 detr_term = self.UpdVar.Area.values[i][k+1] * whalf_kp * (- self.detr_sc[i][k+1])

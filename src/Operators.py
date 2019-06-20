@@ -1,12 +1,13 @@
 import numpy as np
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 
-def advect(f, grid):
+def advect(f, w, grid):
     assert len(f)==3
-    if f[1]>2:
-      return (f[1]-f[0])*grid.dzi
-    else:
+    assert len(w)==3
+    if w[1]<0.0:
       return (f[2]-f[1])*grid.dzi
+    else:
+      return (f[1]-f[0])*grid.dzi
 
 def grad(f, grid):
     if len(f)==2:
