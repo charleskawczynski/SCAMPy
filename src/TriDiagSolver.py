@@ -25,7 +25,7 @@ def construct_tridiag_diffusion_new_new(grid, dt, rho_ae_K, rho, ae, a, b, c):
     k2 = grid.first_interior(Zmax())
     dzi = grid.dzi
     for k in grid.over_elems_real(Center()):
-        ρaK_dual = rho_ae_K[Dual(k)]
+        ρaK_dual = rho_ae_K.Dual(k)
         X = rho[k] * ae[k]/dt
         Z = ρaK_dual[0] * dzi * dzi
         Y = ρaK_dual[1] * dzi * dzi

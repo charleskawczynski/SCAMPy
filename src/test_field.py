@@ -10,7 +10,7 @@ def test():
     f = Half(grid)
     for i in range(1,1000):
         for k in grid.over_elems_real(Center()):
-            temp = f[Mid(k)]
+            temp = f.Mid(k)
             f[k]+=1.0
 
 

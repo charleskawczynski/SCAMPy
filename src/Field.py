@@ -63,17 +63,16 @@ class Full(Field):
         return
 
     def __getitem__(self, key):
-        if isinstance(key, int) or isinstance(key, slice):
-            return self.values[key]
-        elif isinstance(key, Cut):
-            return [self.values[k] for k in [key.k-1, key.k, key.k+1]]
-        elif isinstance(key, Dual):
-            return [self.values[k] for k in [key.k-1, key.k]]
-        elif isinstance(key, Mid):
-            return 0.5*(self.values[key.k]+self.values[key.k-1])
-        else:
-            print('key = '+str(key))
-            raise ValueError('Bad key in full Field.py')
+        return self.values[key]
+
+    def Mid(self, k):
+        return 0.5*(self.values[k]+self.values[k-1])
+
+    def Dual(self, key):
+        return [self.values[k] for k in [key-1, key]]
+
+    def Cut(self, key):
+        return [self.values[k] for k in [key-1, key, key+1]]
 
     def surface(self, grid):
         return self.values[grid.surface()]
@@ -106,17 +105,16 @@ class Half(Field):
         return
 
     def __getitem__(self, key):
-        if isinstance(key, int) or isinstance(key, slice):
-            return self.values[key]
-        elif isinstance(key, Cut):
-            return [self.values[k] for k in [key.k-1, key.k, key.k+1]]
-        elif isinstance(key, Dual):
-            return [self.values[k] for k in [key.k-1, key.k]]
-        elif isinstance(key, Mid):
-            return 0.5*(self.values[key.k]+self.values[key.k+1])
-        else:
-            print('key = '+str(key))
-            raise ValueError('Bad key in half Field.py')
+        return self.values[key]
+
+    def Mid(self, k):
+        return 0.5*(self.values[k]+self.values[k+1])
+
+    def Dual(self, key):
+        return [self.values[k] for k in [key-1, key]]
+
+    def Cut(self, key):
+        return [self.values[k] for k in [key-1, key, key+1]]
 
     def surface(self, grid):
         k_i = grid.first_interior(Zmin())

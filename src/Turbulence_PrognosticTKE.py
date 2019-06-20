@@ -167,7 +167,7 @@ class SimilarityED(ParameterizationBase):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
         for k in self.grid.over_elems_real(Node()):
-            rho_K[k] = self.KH.values[Mid(k)] * self.Ref.rho0_half[Mid(k)]
+            rho_K[k] = self.KH.values.Mid(k) * self.Ref.rho0_half.Mid(k)
 
         # Matrix is the same for all variables that use the same eddy diffusivity
         construct_tridiag_diffusion(nzg, gw, self.grid.dzi, TS.dt, rho_K, self.Ref.rho0_half, ae, a[slice_real], b[slice_real], c[slice_real])
@@ -1189,17 +1189,17 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
         for k in self.grid.over_elems_real(Node()):
-            rho_ae_K_m[k] = ae[Mid(k)]*self.KH.values[Mid(k)]*self.Ref.rho0_half[Mid(k)]
-            # temp = ae[Mid(k)]*self.KH.values[Mid(k)]*self.Ref.rho0_half[Mid(k)]
+            rho_ae_K_m[k] = ae.Mid(k)*self.KH.values.Mid(k)*self.Ref.rho0_half.Mid(k)
+            # temp = ae.Mid(k)*self.KH.values.Mid(k)*self.Ref.rho0_half.Mid(k)
             # err = abs(temp - rho_ae_K_m[k])
             # if not err<0.000000000001:
             #     print('temp = ', temp)
             #     print('rho_ae_K_m[k] = ', rho_ae_K_m[k])
-            #     print('ae[Mid(k)] = ', ae[Mid(k)])
+            #     print('ae.Mid(k) = ', ae.Mid(k))
             #     print('0.5 * (ae[k]+ae[k+1]) = ', 0.5 * (ae[k]+ae[k+1]))
-            #     print('ae_err = ', 0.5 * (ae[k]+ae[k+1]) - ae[Mid(k)])
-            #     print('rho_err = ', 0.5 * (self.Ref.rho0_half[k]+self.Ref.rho0_half[k+1]) - self.Ref.rho0_half[Mid(k)])
-            #     print('K_err = ', 0.5 * (self.KH.values[k]+self.KH.values[k+1]) - self.KH.values[Mid(k)])
+            #     print('ae_err = ', 0.5 * (ae[k]+ae[k+1]) - ae.Mid(k))
+            #     print('rho_err = ', 0.5 * (self.Ref.rho0_half[k]+self.Ref.rho0_half[k+1]) - self.Ref.rho0_half.Mid(k))
+            #     print('K_err = ', 0.5 * (self.KH.values[k]+self.KH.values[k+1]) - self.KH.values.Mid(k))
             #     print('err = ', err)
             #     raise ValueError('Bad interp')
 
@@ -1246,7 +1246,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         # Solve U
         for k in self.grid.over_elems_real(Node()):
-            rho_ae_K_m[k] = ae[Mid(k)]*self.KM.values[Mid(k)]*self.Ref.rho0_half[Mid(k)]
+            rho_ae_K_m[k] = ae.Mid(k)*self.KM.values.Mid(k)*self.Ref.rho0_half.Mid(k)
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
         construct_tridiag_diffusion_new_new(self.grid, TS.dt, rho_ae_K_m, self.Ref.rho0_half, ae, a, b, c)
@@ -1493,7 +1493,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     envvar1 = EnvVar1.values[k]
                     envvar2 = EnvVar2.values[k]
                     tke_factor = 1.0
-                w_u = self.UpdVar.W.values[i][Mid(k)]
+                w_u = self.UpdVar.W.values[i].Mid(k)
                 Covar.entr_gain[k] +=  tke_factor*self.UpdVar.Area.values[i][k] * np.fabs(w_u) * self.detr_sc[i][k] * \
                                              (updvar1 - envvar1) * (updvar2 - envvar2)
             Covar.entr_gain[k] *= tmp['ρ_0', k]
@@ -1562,7 +1562,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         D_env = 0.0
 
         for k in self.grid.over_elems_real(Node()):
-            rho_ae_K_m[k] = ae[Mid(k)] * self.KH.values[Mid(k)] * self.Ref.rho0_half[Mid(k)]
+            rho_ae_K_m[k] = ae.Mid(k) * self.KH.values.Mid(k) * self.Ref.rho0_half.Mid(k)
 
         if GmvCovar.name=='tke':
             GmvCovar.values[k_1] =get_surface_tke(Case.Sur.ustar, self.wstar, self.grid.z_half[k_1], Case.Sur.obukhov_length)
@@ -1580,7 +1580,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for k in self.grid.over_elems_real(Center()):
             D_env = 0.0
             for i in range(self.n_updrafts):
-                wu_half = self.UpdVar.W.values[i][Mid(k)]
+                wu_half = self.UpdVar.W.values[i].Mid(k)
+                wu_half = self.UpdVar.W.values[i].Mid(k)
                 D_env += tmp['ρ_0', k] * self.UpdVar.Area.values[i][k] * wu_half * self.entr_sc[i][k]
 
             l_mix = np.fmax(self.mixing_length[k], 1.0)
