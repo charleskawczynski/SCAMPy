@@ -1533,82 +1533,81 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                                 *pow(np.fmax(self.EnvVar.TKE.values[k],0), 0.5)/np.fmax(self.mixing_length[k],1.0) * self.tke_diss_coeff)
         return
 
-
-
     def update_covariance_ED(self, GMV, Case,TS, GmvVar1, GmvVar2, GmvCovar, Covar,  EnvVar1,  EnvVar2, UpdVar1,  UpdVar2, tmp):
         gw = self.grid.gw
         nzg = self.grid.nzg
         nz = self.grid.nz
         dzi = self.grid.dzi
         dti = TS.dti
-        alpha0LL  = self.Ref.alpha0_half[self.grid.gw]
-        zLL = self.grid.z_half[self.grid.gw]
-        a = np.zeros((nz,),dtype=np.double, order='c')
-        b = np.zeros((nz,),dtype=np.double, order='c')
-        c = np.zeros((nz,),dtype=np.double, order='c')
-        x = np.zeros((nz,),dtype=np.double, order='c')
+        k_1 = self.grid.first_interior(Zmin())
+        k_2 = self.grid.first_interior(Zmax())
+        slice_real = self.grid.slice_real(Center())
+
+        alpha0LL  = self.Ref.alpha0_half[k_1]
+        zLL = self.grid.z_half[k_1]
+        a = Field.half(self.grid)
+        b = Field.half(self.grid)
+        c = Field.half(self.grid)
+        x = Field.half(self.grid)
         ae = Field.half(self.grid)
+        ae_old = Field.half(self.grid)
+        rho_ae_K_m = Field.full(self.grid)
+        whalf = Field.half(self.grid)
+
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
-        ae_old = np.subtract(np.ones((nzg,),dtype=np.double, order='c'), np.sum(self.UpdVar.Area.old,axis=0))
-        rho_ae_K_m = np.zeros((nzg,),dtype=np.double, order='c')
-        whalf = np.zeros((nzg,),dtype=np.double, order='c')
+            ae_old[k] = 1.0 - np.sum([self.UpdVar.Area.old[i][k] for i in range(self.n_updrafts)])
         D_env = 0.0
 
-        for k in range(1,nzg-1):
+        for k in self.grid.over_elems_real(Node()):
             rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1]) * 0.5 * (self.KH.values[k]+self.KH.values[k+1]) * self.Ref.rho0[k]
+        for k in self.grid.over_elems_real(Center()):
             whalf[k] = interp2pt(self.EnvVar.W.values[k-1], self.EnvVar.W.values[k])
-        wu_half = interp2pt(self.UpdVar.W.bulkvalues[gw-1], self.UpdVar.W.bulkvalues[gw])
 
         if GmvCovar.name=='tke':
-            GmvCovar.values[gw] =get_surface_tke(Case.Sur.ustar, self.wstar, self.grid.z_half[gw], Case.Sur.obukhov_length)
-
+            GmvCovar.values[k_1] =get_surface_tke(Case.Sur.ustar, self.wstar, self.grid.z_half[k_1], Case.Sur.obukhov_length)
         elif GmvCovar.name=='thetal_var':
-            GmvCovar.values[gw] = get_surface_variance(Case.Sur.rho_hflux * alpha0LL, Case.Sur.rho_hflux * alpha0LL, Case.Sur.ustar, zLL, Case.Sur.obukhov_length)
+            GmvCovar.values[k_1] = get_surface_variance(Case.Sur.rho_hflux * alpha0LL, Case.Sur.rho_hflux * alpha0LL, Case.Sur.ustar, zLL, Case.Sur.obukhov_length)
         elif GmvCovar.name=='qt_var':
-            GmvCovar.values[gw] = get_surface_variance(Case.Sur.rho_qtflux * alpha0LL, Case.Sur.rho_qtflux * alpha0LL, Case.Sur.ustar, zLL, Case.Sur.obukhov_length)
+            GmvCovar.values[k_1] = get_surface_variance(Case.Sur.rho_qtflux * alpha0LL, Case.Sur.rho_qtflux * alpha0LL, Case.Sur.ustar, zLL, Case.Sur.obukhov_length)
         elif GmvCovar.name=='thetal_qt_covar':
-            GmvCovar.values[gw] = get_surface_variance(Case.Sur.rho_hflux * alpha0LL, Case.Sur.rho_qtflux * alpha0LL, Case.Sur.ustar, zLL, Case.Sur.obukhov_length)
+            GmvCovar.values[k_1] = get_surface_variance(Case.Sur.rho_hflux * alpha0LL, Case.Sur.rho_qtflux * alpha0LL, Case.Sur.ustar, zLL, Case.Sur.obukhov_length)
 
         self.get_env_covar_from_GMV(self.UpdVar.Area, UpdVar1, UpdVar2, EnvVar1, EnvVar2, Covar, GmvVar1.values, GmvVar2.values, GmvCovar.values)
 
-        Covar_surf = Covar.values[gw]
+        Covar_surf = Covar.values[k_1]
 
-        for kk in range(nz):
-            k = kk+gw
+        for k in self.grid.over_elems_real(Center()):
             D_env = 0.0
-
             for i in range(self.n_updrafts):
                 wu_half = interp2pt(self.UpdVar.W.values[i][k-1], self.UpdVar.W.values[i][k])
                 D_env += tmp['ρ_0', k] * self.UpdVar.Area.values[i][k] * wu_half * self.entr_sc[i][k]
 
-
-            a[kk] = (- rho_ae_K_m[k-1] * dzi * dzi )
-            b[kk] = (tmp['ρ_0', k] * ae[k] * dti - tmp['ρ_0', k] * ae[k] * whalf[k] * dzi
+            a[k] = (- rho_ae_K_m[k-1] * dzi * dzi )
+            b[k] = (tmp['ρ_0', k] * ae[k] * dti - tmp['ρ_0', k] * ae[k] * whalf[k] * dzi
                      + rho_ae_K_m[k] * dzi * dzi + rho_ae_K_m[k-1] * dzi * dzi
                      + D_env
                      + tmp['ρ_0', k] * ae[k] * self.tke_diss_coeff
                                 *np.sqrt(np.fmax(self.EnvVar.TKE.values[k],0))/np.fmax(self.mixing_length[k],1.0) )
-            c[kk] = (tmp['ρ_0', k+1] * ae[k+1] * whalf[k+1] * dzi - rho_ae_K_m[k] * dzi * dzi)
-            x[kk] = (tmp['ρ_0', k] * ae_old[k] * Covar.values[k] * dti
+            c[k] = (tmp['ρ_0', k+1] * ae[k+1] * whalf[k+1] * dzi - rho_ae_K_m[k] * dzi * dzi)
+            x[k] = (tmp['ρ_0', k] * ae_old[k] * Covar.values[k] * dti
                      + Covar.press[k] + Covar.buoy[k] + Covar.shear[k] + Covar.entr_gain[k] +  Covar.rain_src[k]) #
 
-            a[0] = 0.0
-            b[0] = 1.0
-            c[0] = 0.0
-            x[0] = Covar_surf
+            a[k_1] = 0.0
+            b[k_1] = 1.0
+            c[k_1] = 0.0
+            x[k_1] = Covar_surf
 
-            b[nz-1] += c[nz-1]
-            c[nz-1] = 0.0
-        tridiag_solve(self.grid.nz, x, a, b, c)
+            b[k_2] += c[k_2]
+            c[k_2] = 0.0
+        tridiag_solve(self.grid.nz, x[slice_real], a[slice_real], b[slice_real], c[slice_real])
 
-        for kk in range(nz):
-            k = kk + gw
+        for k in self.grid.over_elems_real(Center()):
             if Covar.name == 'thetal_qt_covar':
-                Covar.values[k] = np.fmax(x[kk], - np.sqrt(self.EnvVar.Hvar.values[k]*self.EnvVar.QTvar.values[k]))
-                Covar.values[k] = np.fmin(x[kk],   np.sqrt(self.EnvVar.Hvar.values[k]*self.EnvVar.QTvar.values[k]))
+                Covar.values[k] = np.fmax(x[k], - np.sqrt(self.EnvVar.Hvar.values[k]*self.EnvVar.QTvar.values[k]))
+                Covar.values[k] = np.fmin(x[k],   np.sqrt(self.EnvVar.Hvar.values[k]*self.EnvVar.QTvar.values[k]))
             else:
-                Covar.values[k] = np.fmax(x[kk],0.0)
+                Covar.values[k] = np.fmax(x[k], 0.0)
 
         self.get_GMV_CoVar(self.UpdVar.Area, UpdVar1, UpdVar2, EnvVar1, EnvVar2, Covar, GmvVar1.values, GmvVar2.values, GmvCovar.values)
 
