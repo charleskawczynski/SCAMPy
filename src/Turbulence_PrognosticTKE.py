@@ -1493,7 +1493,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     envvar1 = EnvVar1.values[k]
                     envvar2 = EnvVar2.values[k]
                     tke_factor = 1.0
-                w_u = interp2pt(self.UpdVar.W.values[i][k-1], self.UpdVar.W.values[i][k])
+                w_u = self.UpdVar.W.values[i][Mid(k)]
                 Covar.entr_gain[k] +=  tke_factor*self.UpdVar.Area.values[i][k] * np.fabs(w_u) * self.detr_sc[i][k] * \
                                              (updvar1 - envvar1) * (updvar2 - envvar2)
             Covar.entr_gain[k] *= tmp['ρ_0', k]
@@ -1529,15 +1529,15 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
         for k in self.grid.over_elems_real(Center()):
-            Covar.dissipation[k] = (tmp['ρ_0', k] * ae[k] * Covar.values[k]
-                                *pow(np.fmax(self.EnvVar.TKE.values[k],0), 0.5)/np.fmax(self.mixing_length[k],1.0) * self.tke_diss_coeff)
+            l_mix = np.fmax(self.mixing_length[k], 1.0)
+            tke_env = np.fmax(self.EnvVar.TKE.values[k], 0.0)
+
+            Covar.dissipation[k] = (tmp['ρ_0', k] * ae[k] * Covar.values[k] * pow(tke_env, 0.5)/l_mix * self.tke_diss_coeff)
         return
 
     def update_covariance_ED(self, GMV, Case,TS, GmvVar1, GmvVar2, GmvCovar, Covar,  EnvVar1,  EnvVar2, UpdVar1,  UpdVar2, tmp):
-        gw = self.grid.gw
-        nzg = self.grid.nzg
-        nz = self.grid.nz
         dzi = self.grid.dzi
+        dzi2 = self.grid.dzi**2.0
         dti = TS.dti
         k_1 = self.grid.first_interior(Zmin())
         k_2 = self.grid.first_interior(Zmax())
@@ -1545,6 +1545,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         alpha0LL  = self.Ref.alpha0_half[k_1]
         zLL = self.grid.z_half[k_1]
+
         a = Half(self.grid)
         b = Half(self.grid)
         c = Half(self.grid)
@@ -1557,12 +1558,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
             ae_old[k] = 1.0 - np.sum([self.UpdVar.Area.old[i][k] for i in range(self.n_updrafts)])
+            whalf[k] = interp2pt(self.EnvVar.W.values[k-1], self.EnvVar.W.values[k])
         D_env = 0.0
 
         for k in self.grid.over_elems_real(Node()):
-            rho_ae_K_m[k] = 0.5 * (ae[k]+ae[k+1]) * 0.5 * (self.KH.values[k]+self.KH.values[k+1]) * self.Ref.rho0[k]
-        for k in self.grid.over_elems_real(Center()):
-            whalf[k] = interp2pt(self.EnvVar.W.values[k-1], self.EnvVar.W.values[k])
+            rho_ae_K_m[k] = ae[Mid(k)] * self.KH.values[Mid(k)] * self.Ref.rho0_half[Mid(k)]
 
         if GmvCovar.name=='tke':
             GmvCovar.values[k_1] =get_surface_tke(Case.Sur.ustar, self.wstar, self.grid.z_half[k_1], Case.Sur.obukhov_length)
@@ -1580,18 +1580,26 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for k in self.grid.over_elems_real(Center()):
             D_env = 0.0
             for i in range(self.n_updrafts):
-                wu_half = interp2pt(self.UpdVar.W.values[i][k-1], self.UpdVar.W.values[i][k])
+                wu_half = self.UpdVar.W.values[i][Mid(k)]
                 D_env += tmp['ρ_0', k] * self.UpdVar.Area.values[i][k] * wu_half * self.entr_sc[i][k]
 
-            a[k] = (- rho_ae_K_m[k-1] * dzi * dzi )
-            b[k] = (tmp['ρ_0', k] * ae[k] * dti - tmp['ρ_0', k] * ae[k] * whalf[k] * dzi
-                     + rho_ae_K_m[k] * dzi * dzi + rho_ae_K_m[k-1] * dzi * dzi
+            l_mix = np.fmax(self.mixing_length[k], 1.0)
+            tke_env = np.fmax(self.EnvVar.TKE.values[k], 0.0)
+
+            a[k] = (- rho_ae_K_m[k-1] * dzi2 )
+            b[k] = (tmp['ρ_0', k] * ae[k] * dti
+                     - tmp['ρ_0', k] * ae[k] * whalf[k] * dzi
+                     + rho_ae_K_m[k] * dzi2 + rho_ae_K_m[k-1] * dzi2
                      + D_env
-                     + tmp['ρ_0', k] * ae[k] * self.tke_diss_coeff
-                                *np.sqrt(np.fmax(self.EnvVar.TKE.values[k],0))/np.fmax(self.mixing_length[k],1.0) )
-            c[k] = (tmp['ρ_0', k+1] * ae[k+1] * whalf[k+1] * dzi - rho_ae_K_m[k] * dzi * dzi)
+                     + tmp['ρ_0', k] * ae[k] * self.tke_diss_coeff * np.sqrt(tke_env)/l_mix)
+            c[k] = (tmp['ρ_0', k+1] * ae[k+1] * whalf[k+1] * dzi - rho_ae_K_m[k] * dzi2)
+
             x[k] = (tmp['ρ_0', k] * ae_old[k] * Covar.values[k] * dti
-                     + Covar.press[k] + Covar.buoy[k] + Covar.shear[k] + Covar.entr_gain[k] +  Covar.rain_src[k]) #
+                     + Covar.press[k]
+                     + Covar.buoy[k]
+                     + Covar.shear[k]
+                     + Covar.entr_gain[k]
+                     + Covar.rain_src[k])
 
             a[k_1] = 0.0
             b[k_1] = 1.0

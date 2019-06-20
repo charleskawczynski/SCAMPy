@@ -70,7 +70,7 @@ class Full(Field):
         elif isinstance(key, Dual):
             return [self.values[k] for k in [key.k-1, key.k]]
         elif isinstance(key, Mid):
-            return 0.5*(self.values[key.k]+self.values[key.k+1])
+            return 0.5*(self.values[key.k]+self.values[key.k-1])
         else:
             print('key = '+str(key))
             raise ValueError('Bad key in full Field.py')
