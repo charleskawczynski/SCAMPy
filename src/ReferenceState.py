@@ -1,5 +1,5 @@
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann
 from NetCDFIO import NetCDFIO_Stats
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,12 +9,12 @@ from parameters import *
 
 class ReferenceState:
     def __init__(self, Gr):
-        self.p0          = Field.full(Gr)
-        self.p0_half     = Field.half(Gr)
-        self.alpha0      = Field.full(Gr)
-        self.alpha0_half = Field.half(Gr)
-        self.rho0        = Field.full(Gr)
-        self.rho0_half   = Field.half(Gr)
+        self.p0          = Full(Gr)
+        self.p0_half     = Half(Gr)
+        self.alpha0      = Full(Gr)
+        self.alpha0_half = Half(Gr)
+        self.rho0        = Full(Gr)
+        self.rho0_half   = Half(Gr)
         return
 
     def initialize(self, Gr, Stats, tmp):
@@ -36,8 +36,8 @@ class ReferenceState:
         # surface pressure
         p0 = np.log(self.Pg)
 
-        p = Field.full(Gr)
-        p_half = Field.half(Gr)
+        p = Full(Gr)
+        p_half = Half(Gr)
 
         # Perform the integration
         p[Gr.slice_real(Node())] = odeint(rhs, p0, z, hmax=1.0)[:, 0]
@@ -52,18 +52,18 @@ class ReferenceState:
 
         p_ = p
         p_half_ = p_half
-        temperature = Field.full(Gr)
-        temperature_half = Field.half(Gr)
-        alpha = Field.full(Gr)
-        alpha_half = Field.half(Gr)
+        temperature = Full(Gr)
+        temperature_half = Half(Gr)
+        alpha = Full(Gr)
+        alpha_half = Half(Gr)
 
-        ql = Field.full(Gr)
-        qi = Field.full(Gr)
-        qv = Field.full(Gr)
+        ql = Full(Gr)
+        qi = Full(Gr)
+        qv = Full(Gr)
 
-        ql_half = Field.half(Gr)
-        qi_half = Field.half(Gr)
-        qv_half = Field.half(Gr)
+        ql_half = Half(Gr)
+        qi_half = Half(Gr)
+        qv_half = Half(Gr)
 
         # Compute reference state thermodynamic profiles
         # for k in Gr.over_elems(Node()):

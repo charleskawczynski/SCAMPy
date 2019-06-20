@@ -2,7 +2,7 @@ import numpy as np
 import sys
 from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann
 from TimeStepping import TimeStepping
 from ReferenceState import ReferenceState
 from Variables import VariableDiagnostic, GridMeanVariables
@@ -161,17 +161,17 @@ class EnvironmentThermodynamics:
             self.t_to_prog_fp = t_to_thetali_c
             self.prog_to_t_fp = eos_first_guess_thetal
 
-        self.qt_dry         = Field.half(Gr)
-        self.th_dry         = Field.half(Gr)
+        self.qt_dry         = Half(Gr)
+        self.th_dry         = Half(Gr)
 
-        self.t_cloudy       = Field.half(Gr)
-        self.qv_cloudy      = Field.half(Gr)
-        self.qt_cloudy      = Field.half(Gr)
-        self.th_cloudy      = Field.half(Gr)
+        self.t_cloudy       = Half(Gr)
+        self.qv_cloudy      = Half(Gr)
+        self.qt_cloudy      = Half(Gr)
+        self.th_cloudy      = Half(Gr)
 
-        self.Hvar_rain_dt   = Field.half(Gr)
-        self.QTvar_rain_dt  = Field.half(Gr)
-        self.HQTcov_rain_dt = Field.half(Gr)
+        self.Hvar_rain_dt   = Half(Gr)
+        self.QTvar_rain_dt  = Half(Gr)
+        self.HQTcov_rain_dt = Half(Gr)
 
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
 

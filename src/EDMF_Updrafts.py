@@ -3,7 +3,7 @@ from parameters import *
 from thermodynamic_functions import  *
 from microphysics_functions import  *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann
 import ReferenceState
 from Variables import GridMeanVariables
 from NetCDFIO import NetCDFIO_Stats
@@ -302,8 +302,8 @@ class UpdraftMicrophysics:
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
         self.prec_source_h = np.zeros((n_updraft, Gr.nzg), dtype=np.double, order='c')
         self.prec_source_qt = np.zeros((n_updraft, Gr.nzg), dtype=np.double, order='c')
-        self.prec_source_h_tot  = Field.half(Gr)
-        self.prec_source_qt_tot = Field.half(Gr)
+        self.prec_source_h_tot  = Half(Gr)
+        self.prec_source_qt_tot = Half(Gr)
         return
 
     def compute_sources(self, UpdVar, tmp):

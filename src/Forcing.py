@@ -1,7 +1,7 @@
 import numpy as np
 from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann
 from Variables import GridMeanVariables, VariablePrognostic
 from forcing_functions import  convert_forcing_entropy, convert_forcing_thetal
 
@@ -9,11 +9,11 @@ class ForcingBase:
     def __init__(self):
         return
     def initialize(self, GMV):
-        self.subsidence = Field.half(self.grid)
-        self.dTdt       = Field.half(self.grid)
-        self.dqtdt      = Field.half(self.grid)
-        self.ug         = Field.half(self.grid)
-        self.vg         = Field.half(self.grid)
+        self.subsidence = Half(self.grid)
+        self.dTdt       = Half(self.grid)
+        self.dqtdt      = Half(self.grid)
+        self.ug         = Half(self.grid)
+        self.vg         = Half(self.grid)
 
         if GMV.H.name == 's':
             self.convert_forcing_prog_fp = convert_forcing_entropy
@@ -123,7 +123,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         self.divergence = 3.75e-6  # divergence is defined twice: here and in initialize_forcing method of DYCOMS_RF01 case class
                                    # where it is used to initialize large scale subsidence
 
-        self.f_rad = Field.full(self.grid)
+        self.f_rad = Full(self.grid)
         return
 
     def calculate_radiation(self, GMV, tmp):
@@ -143,7 +143,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         # cloud-top cooling
         q_0 = 0.0
 
-        self.f_rad = Field.full(self.grid)
+        self.f_rad = Full(self.grid)
         k_2 = self.grid.boundary(Zmax())
         self.f_rad[k_2] = self.F0 * np.exp(-q_0)
 

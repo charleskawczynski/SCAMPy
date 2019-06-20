@@ -4,7 +4,7 @@ import sys
 from EDMF_Updrafts import *
 from EDMF_Environment import *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann
 
 from TriDiagSolver import tridiag_solve, tridiag_solve_wrapper, construct_tridiag_diffusion, construct_tridiag_diffusion_new, construct_tridiag_diffusion_new_new
 from Variables import VariablePrognostic, VariableDiagnostic, GridMeanVariables
@@ -33,7 +33,7 @@ def advect(f, grid):
 # A base class common to all turbulence parameterizations
 class ParameterizationBase:
     def __init__(self, paramlist, Gr, Ref):
-        self.turbulence_tendency = Field.half(Gr)
+        self.turbulence_tendency = Half(Gr)
         self.grid = Gr # grid class
         self.Ref = Ref # reference state class
         self.KM = VariableDiagnostic(Gr, Center(), Neumann(), 'diffusivity', 'm^2/s') # eddy viscosity
@@ -64,7 +64,7 @@ class ParameterizationBase:
 
     # Update the diagnosis of the inversion height, using the maximum temperature gradient method
     def update_inversion(self, GMV, option, tmp):
-        theta_rho = Field.half(self.grid)
+        theta_rho = Half(self.grid)
         maxgrad = 0.0
         theta_rho_bl = theta_rho.surface_bl(self.grid)
 
@@ -154,12 +154,12 @@ class SimilarityED(ParameterizationBase):
         k_i = self.grid.first_interior(Zmin())
         nzg = self.grid.nzg
         nz = self.grid.nz
-        a = Field.half(self.grid)
-        b = Field.half(self.grid)
-        c = Field.half(self.grid)
-        x = Field.half(self.grid)
-        ae = Field.half(self.grid)
-        rho_K = Field.full(self.grid)
+        a = Half(self.grid)
+        b = Half(self.grid)
+        c = Half(self.grid)
+        x = Half(self.grid)
+        ae = Half(self.grid)
+        rho_K = Full(self.grid)
 
         slice_real = self.grid.slice_real(Center())
 
@@ -353,7 +353,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.m = [Field.field(Gr, Center()) for i in range(self.n_updrafts)]
 
         # mixing length
-        self.mixing_length = Field.half(Gr)
+        self.mixing_length = Half(Gr)
 
         # Near-surface BC of updraft area fraction
         self.area_surface_bc = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
@@ -362,18 +362,18 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.qt_surface_bc = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
 
         # Mass flux tendencies of mean scalars (for output)
-        self.massflux_tendency_h = Field.half(Gr)
-        self.massflux_tendency_qt = Field.half(Gr)
+        self.massflux_tendency_h = Half(Gr)
+        self.massflux_tendency_qt = Half(Gr)
 
         # Vertical fluxes for output
-        self.massflux_h = Field.half(Gr)
-        self.massflux_qt = Field.half(Gr)
+        self.massflux_h = Half(Gr)
+        self.massflux_qt = Half(Gr)
         if self.calc_tke:
-            self.massflux_tke = Field.half(Gr)
+            self.massflux_tke = Half(Gr)
 
         # Added by Ignacio : Length scheme in use (mls), and smooth min effect (ml_ratio)
-        self.mls = Field.half(Gr)
-        self.ml_ratio = Field.half(Gr)
+        self.mls = Half(Gr)
+        self.ml_ratio = Half(Gr)
         return
 
     def initialize(self, GMV, tmp):
@@ -430,11 +430,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def io(self, Stats, tmp):
-        mean_entr_sc = Field.half(self.grid)
-        mean_detr_sc = Field.half(self.grid)
-        massflux     = Field.half(self.grid)
-        mf_h         = Field.half(self.grid)
-        mf_qt        = Field.half(self.grid)
+        mean_entr_sc = Half(self.grid)
+        mean_detr_sc = Half(self.grid)
+        massflux     = Half(self.grid)
+        mf_h         = Half(self.grid)
+        mf_qt        = Half(self.grid)
 
         self.UpdVar.io(Stats)
         self.EnvVar.io(Stats)
@@ -794,7 +794,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     # Note: this assumes all variables are defined on half levels not full levels (i.e. phi, psi are not w)
     def get_GMV_CoVar(self, au, phi_u, psi_u, phi_e,  psi_e, covar_e, gmv_phi, gmv_psi, gmv_covar):
-        ae = Field.half(self.grid)
+        ae = Half(self.grid)
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
         tke_factor = 1.0
@@ -825,7 +825,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
 
     def get_env_covar_from_GMV(self, au, phi_u, psi_u, phi_e, psi_e, covar_e, gmv_phi, gmv_psi, gmv_covar):
-        ae = Field.half(self.grid)
+        ae = Half(self.grid)
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
         tke_factor = 1.0
@@ -1169,18 +1169,18 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         nzg = self.grid.nzg
         nz = self.grid.nz
         dzi = self.grid.dzi
-        a = Field.half(self.grid)
-        b = Field.half(self.grid)
-        c = Field.half(self.grid)
-        a2 = Field.half(self.grid)
-        b2 = Field.half(self.grid)
-        c2 = Field.half(self.grid)
-        x = Field.half(self.grid)
-        x2 = Field.half(self.grid)
-        f = Field.half(self.grid)
-        f2 = Field.half(self.grid)
-        ae = Field.half(self.grid)
-        rho_ae_K_m = Field.full(self.grid)
+        a = Half(self.grid)
+        b = Half(self.grid)
+        c = Half(self.grid)
+        a2 = Half(self.grid)
+        b2 = Half(self.grid)
+        c2 = Half(self.grid)
+        x = Half(self.grid)
+        x2 = Half(self.grid)
+        f = Half(self.grid)
+        f2 = Half(self.grid)
+        ae = Half(self.grid)
+        rho_ae_K_m = Full(self.grid)
         slice_real = self.grid.slice_real(Center())
         ki = self.grid.first_interior(Zmin())
         bo = self.grid.boundary(Zmin())
@@ -1287,7 +1287,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         grad_qt_minus=0.0
         grad_thl_plus=0
         grad_qt_plus=0
-        ae = Field.half(self.grid)
+        ae = Half(self.grid)
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
@@ -1429,7 +1429,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
 
     def compute_covariance_shear(self, GMV, Covar, UpdVar1, UpdVar2, EnvVar1, EnvVar2, tmp):
-        ae = Field.half(self.grid)
+        ae = Half(self.grid)
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
         diff_var1 = 0.0
@@ -1511,7 +1511,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def compute_covariance_rain(self, TS, GMV, tmp):
         # TODO defined again in compute_covariance_shear and compute_covaraince
-        ae = Field.half(self.grid)
+        ae = Half(self.grid)
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
@@ -1524,7 +1524,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
 
     def compute_covariance_dissipation(self, Covar, tmp):
-        ae = Field.half(self.grid)
+        ae = Half(self.grid)
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
@@ -1545,14 +1545,14 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         alpha0LL  = self.Ref.alpha0_half[k_1]
         zLL = self.grid.z_half[k_1]
-        a = Field.half(self.grid)
-        b = Field.half(self.grid)
-        c = Field.half(self.grid)
-        x = Field.half(self.grid)
-        ae = Field.half(self.grid)
-        ae_old = Field.half(self.grid)
-        rho_ae_K_m = Field.full(self.grid)
-        whalf = Field.half(self.grid)
+        a = Half(self.grid)
+        b = Half(self.grid)
+        c = Half(self.grid)
+        x = Half(self.grid)
+        ae = Half(self.grid)
+        ae_old = Half(self.grid)
+        rho_ae_K_m = Full(self.grid)
+        whalf = Half(self.grid)
 
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]

@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import pylab as plt
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann
 from TimeStepping import TimeStepping
 from NetCDFIO import NetCDFIO_Stats
 from ReferenceState import ReferenceState

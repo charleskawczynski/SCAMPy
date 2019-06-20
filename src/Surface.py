@@ -5,7 +5,7 @@ from thermodynamic_functions import *
 from surface_functions import entropy_flux, compute_ustar, buoyancy_flux, exchange_coefficients_byun
 from turbulence_functions import get_wstar, get_inversion
 from Variables import GridMeanVariables
-from Field import Field, Dual, Cut, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann
 
 class SurfaceBase:
     def __init__(self, paramlist):
@@ -20,7 +20,7 @@ class SurfaceBase:
     def update(self, GMV):
         return
     def free_convection_windspeed(self, GMV, tmp):
-        theta_rho = Field.half(self.grid)
+        theta_rho = Half(self.grid)
 
         # Need to get theta_rho
         for k in self.grid.over_elems(Center()):

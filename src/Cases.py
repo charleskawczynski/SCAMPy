@@ -2,7 +2,7 @@ import numpy as np
 from parameters import *
 
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann
 from Variables import GridMeanVariables
 from ReferenceState import ReferenceState
 from TimeStepping import  TimeStepping
@@ -84,7 +84,7 @@ class Soares(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        theta = Field.half(grid)
+        theta = Half(grid)
         ql = 0.0
         qi = 0.0
 
@@ -169,7 +169,7 @@ class Bomex(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        thetal = Field.half(grid)
+        thetal = Half(grid)
         ql=0.0
         qi =0.0 # IC of Bomex is cloud-free
         z = grid.z_half

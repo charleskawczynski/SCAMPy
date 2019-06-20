@@ -2,7 +2,7 @@ import numpy as np
 from numba import jit, f8
 import copy
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann
 from StateVec import StateVec
 
 def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K, rho, ae, a, b, c):
@@ -83,9 +83,9 @@ def tridiag_solve(nz, x, a, b, c):
     return
 
 def tridiag_solve_wrapper(grid, x, f, a, b, c):
-    xtemp = Field.half(grid)
-    β = Field.half(grid)
-    γ = Field.half(grid)
+    xtemp = Half(grid)
+    β = Half(grid)
+    γ = Half(grid)
     slice_real = grid.slice_real(Center())
     tridiag_solve_new(x[slice_real],
                       f[slice_real],
