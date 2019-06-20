@@ -74,6 +74,9 @@ class Full(Field):
     def Cut(self, key):
         return [self.values[k] for k in [key-1, key, key+1]]
 
+    def DualCut(self, key):
+        return [0.5*(self.values[k]+self.values[k+1]) for k in [key-2, key, key+1]]
+
     def surface(self, grid):
         return self.values[grid.surface()]
 
@@ -115,6 +118,9 @@ class Half(Field):
 
     def Cut(self, key):
         return [self.values[k] for k in [key-1, key, key+1]]
+
+    def DualCut(self, key):
+        return [0.5*(self.values[k]+self.values[k+1]) for k in [key-2, key, key+1]]
 
     def surface(self, grid):
         k_i = grid.first_interior(Zmin())
