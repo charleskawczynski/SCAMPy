@@ -329,13 +329,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                                                                        1.0-self.surface_area + (i+1)*a_ , 1000)
 
         # Entrainment/Detrainment rates
-        self.entr_sc = [Field.field(Gr, Center()) for i in range(self.n_updrafts)]
-        self.detr_sc = [Field.field(Gr, Center()) for i in range(self.n_updrafts)]
+        self.entr_sc = [Half(Gr) for i in range(self.n_updrafts)]
+        self.detr_sc = [Half(Gr) for i in range(self.n_updrafts)]
 
         # Pressure term in updraft vertical momentum equation
-        self.updraft_pressure_sink = [Field.field(Gr, Center()) for i in range(self.n_updrafts)]
+        self.updraft_pressure_sink = [Half(Gr) for i in range(self.n_updrafts)]
         # Mass flux
-        self.m = [Field.field(Gr, Node()) for i in range(self.n_updrafts)]
+        self.m = [Full(Gr) for i in range(self.n_updrafts)]
 
         # mixing length
         self.mixing_length = Half(Gr)
@@ -970,15 +970,23 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                         self.detr_sc[i][k+1] = (((au_lim-self.UpdVar.Area.values[i][k+1])* dti_ - adv -entr_term)/(-au_lim  * whalf_kp))
 
                 # Now solve for updraft velocity at k
-                anew_k = interp2pt(self.UpdVar.Area.new[i][k], self.UpdVar.Area.new[i][k+1])
+                anew_k = self.UpdVar.Area.new[i].Mid(k)
                 if anew_k >= self.minimum_area:
-                    a_k = interp2pt(self.UpdVar.Area.values[i][k], self.UpdVar.Area.values[i][k+1])
-                    a_km = interp2pt(self.UpdVar.Area.values[i][k-1], self.UpdVar.Area.values[i][k])
-                    entr_w = interp2pt(self.entr_sc[i][k], self.entr_sc[i][k+1])
-                    detr_w = interp2pt(self.detr_sc[i][k], self.detr_sc[i][k+1])
-                    B_k = interp2pt(self.UpdVar.B.values[i][k], self.UpdVar.B.values[i][k+1])
+                    a_k = self.UpdVar.Area.values[i].Mid(k)
+                    a_km = self.UpdVar.Area.values[i].Mid(k-1)
+                    entr_w = self.entr_sc[i].Mid(k)
+                    detr_w = self.detr_sc[i].Mid(k)
+                    B_k = self.UpdVar.B.values[i].Mid(k)
                     adv = (self.Ref.rho0[k] * a_k * self.UpdVar.W.values[i][k] * self.UpdVar.W.values[i][k] * dzi
                            - self.Ref.rho0[k-1] * a_km * self.UpdVar.W.values[i][k-1] * self.UpdVar.W.values[i][k-1] * dzi)
+
+                    # w_cut = self.UpdVar.W.values[i].Cut(k)
+                    # ρaww_cut = self.Ref.rho0.Cut(k)*self.UpdVar.Area.values[i].DualCut(k)*w_cut*w_cut
+                    # adv2 = - advect(ρaww_cut, w_cut, self.grid)
+                    # if abs(adv2-adv)>0.000000000000:
+                    #     raise ValueError('Bad interp')
+
+
                     exch = (self.Ref.rho0[k] * a_k * self.UpdVar.W.values[i][k]
                             * (entr_w * self.EnvVar.W.values[k] - detr_w * self.UpdVar.W.values[i][k] ))
                     buoy= self.Ref.rho0[k] * a_k * B_k

@@ -35,7 +35,7 @@ class UpdraftVariables:
         self.n_updrafts = nu
 
         self.W    = UpdraftVariable(Gr, nu, Node(), Dirichlet(), 'w','m/s' )
-        self.Area = UpdraftVariable(Gr, nu, Node(), Neumann(), 'area_fraction','[-]' )
+        self.Area = UpdraftVariable(Gr, nu, Center(), Neumann(), 'area_fraction','[-]' )
         self.QT   = UpdraftVariable(Gr, nu, Center(), Neumann(), 'qt','kg/kg' )
         self.QL   = UpdraftVariable(Gr, nu, Center(), Neumann(), 'ql','kg/kg' )
         self.QR   = UpdraftVariable(Gr, nu, Center(), Neumann(), 'qr','kg/kg' )
