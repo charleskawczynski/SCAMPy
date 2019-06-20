@@ -952,15 +952,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
                 # First solve for updated area fraction at k+1
                 whalf_kp = interp2pt(self.UpdVar.W.values[i][k], self.UpdVar.W.values[i][k+1])
-                whalf_k = interp2pt(self.UpdVar.W.values[i][k-1], self.UpdVar.W.values[i][k])
-                a_kp = self.UpdVar.Area.values[i][k+1]
-                a_k = self.UpdVar.Area.values[i][k]
-                rho_kp = tmp['ρ_0', k+1]
-                rho_k = tmp['ρ_0', k]
-                alpha0_kp = tmp['α_0', k+1]
-                adv = - alpha0_kp * dzi *( rho_kp * a_kp * whalf_kp - rho_k * a_k * whalf_k)
+                ρaw_cut = self.Ref.rho0_half.Cut(k)*self.UpdVar.Area.values[i].Cut(k)*self.UpdVar.W.values[i].DualCut(k)
+                alpha0_kp = self.Ref.alpha0_half[k+1]
+                adv = - alpha0_kp * advect(ρaw_cut, self.grid)
 
-                entr_term = self.UpdVar.Area.values[i][k+1] * whalf_kp * (self.entr_sc[i][k+1] )
+                entr_term = self.UpdVar.Area.values[i][k+1] * whalf_kp * (+ self.entr_sc[i][k+1])
                 detr_term = self.UpdVar.Area.values[i][k+1] * whalf_kp * (- self.detr_sc[i][k+1])
 
 
@@ -970,11 +966,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     if self.UpdVar.Area.values[i][k+1] > 0.0:
                         self.detr_sc[i][k+1] = (((au_lim-self.UpdVar.Area.values[i][k+1])* dti_ - adv -entr_term)/(-self.UpdVar.Area.values[i][k+1]  * whalf_kp))
                     else:
-                        # this detrainment rate won't affect scalars but would affect velocity
                         self.detr_sc[i][k+1] = (((au_lim-self.UpdVar.Area.values[i][k+1])* dti_ - adv -entr_term)/(-au_lim  * whalf_kp))
 
                 # Now solve for updraft velocity at k
-                rho_ratio = self.Ref.rho0[k-1]/self.Ref.rho0[k]
                 anew_k = interp2pt(self.UpdVar.Area.new[i][k], self.UpdVar.Area.new[i][k+1])
                 if anew_k >= self.minimum_area:
                     a_k = interp2pt(self.UpdVar.Area.values[i][k], self.UpdVar.Area.values[i][k+1])
