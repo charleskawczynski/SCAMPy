@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 from parameters import *
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Dirichlet, Neumann
 from TimeStepping import TimeStepping
 from ReferenceState import ReferenceState

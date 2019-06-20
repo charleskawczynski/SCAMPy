@@ -1,4 +1,4 @@
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Dirichlet, Neumann
 from NetCDFIO import NetCDFIO_Stats
 import numpy as np

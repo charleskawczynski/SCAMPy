@@ -1,7 +1,7 @@
 import numpy as np
 from parameters import *
 
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Dirichlet, Neumann
 from Variables import GridMeanVariables
 from ReferenceState import ReferenceState

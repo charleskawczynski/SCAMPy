@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 import matplotlib.pyplot as plt
 
 import numpy as np

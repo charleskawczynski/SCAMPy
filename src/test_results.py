@@ -88,4 +88,9 @@ def run_case(case, sol_expected, tol_rel_local, tol_rel):
     return tests
 
 if __name__ == "__main__":
+    # from pycallgraph import PyCallGraph
+    # from pycallgraph.output import GraphvizOutput
+
+    # with PyCallGraph(output=GraphvizOutput()):
+    #     sol = test_all_cases()
     sol = test_all_cases()

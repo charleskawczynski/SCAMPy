@@ -1,5 +1,5 @@
 import os
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 import numpy as np
 
 class Neumann:

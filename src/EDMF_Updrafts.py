@@ -2,7 +2,7 @@ import numpy as np
 from parameters import *
 from thermodynamic_functions import  *
 from microphysics_functions import  *
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Dirichlet, Neumann
 import ReferenceState
 from Variables import GridMeanVariables

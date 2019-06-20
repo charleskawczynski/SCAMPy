@@ -3,7 +3,7 @@ import numpy as np
 from Variables import GridMeanVariables
 from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from StateVec import StateVec
 from ReferenceState import ReferenceState
 import matplotlib.pyplot as plt
@@ -77,6 +77,7 @@ class Simulation1d:
         sol = type('', (), {})()
 
         while self.TS.t <= self.TS.t_max:
+            print('Percent complete: ', self.TS.t/self.TS.t_max*100)
             self.GMV.zero_tendencies()
             self.Case.update_surface(self.GMV, self.TS, self.tmp)
             self.Case.update_forcing(self.GMV, self.TS, self.tmp)

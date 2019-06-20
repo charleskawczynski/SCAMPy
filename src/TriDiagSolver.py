@@ -1,7 +1,7 @@
 import numpy as np
 from numba import jit, f8
 import copy
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Dirichlet, Neumann
 from StateVec import StateVec
 
