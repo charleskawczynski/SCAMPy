@@ -1,5 +1,20 @@
 import numpy as np
 
+class Cut:
+    def __init__(self, k):
+        self.k = k
+        return
+
+class Dual:
+    def __init__(self, k):
+        self.k = k
+        return
+
+class Mid:
+    def __init__(self, k):
+        self.k = k
+        return
+
 class Zmin:
     def __init__(self):
         return

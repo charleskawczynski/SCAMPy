@@ -1,16 +1,16 @@
 import numpy as np
 from numba import jit, f8
 import copy
-from Grid import Grid, Zmin, Zmax, Center, Node
-from Field import Field, Dual, Cut, Dirichlet, Neumann
-from StateVec import StateVec, Cut, Dual
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Field import Field, Dirichlet, Neumann
+from StateVec import StateVec
 
-def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
+def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K, rho, ae, a, b, c):
     nz = nzg - 2* gw
     for k in range(gw,nzg-gw):
         X = rho[k] * ae[k]/dt
-        Y = rho_ae_K_m[k] * dzi * dzi
-        Z = rho_ae_K_m[k-1] * dzi * dzi
+        Y = rho_ae_K[k] * dzi * dzi
+        Z = rho_ae_K[k-1] * dzi * dzi
         if k == gw:
             Z = 0.0
         elif k == nzg-gw-1:
@@ -20,14 +20,15 @@ def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K_m, rho, ae, a, b, c):
         c[k-gw] = -Y/X
     return
 
-def construct_tridiag_diffusion_new_new(grid, dt, rho_ae_K_m, rho, ae, a, b, c):
+def construct_tridiag_diffusion_new_new(grid, dt, rho_ae_K, rho, ae, a, b, c):
     k1 = grid.first_interior(Zmin())
     k2 = grid.first_interior(Zmax())
     dzi = grid.dzi
     for k in grid.over_elems_real(Center()):
+        ρaK_dual = rho_ae_K[Dual(k)]
         X = rho[k] * ae[k]/dt
-        Y = rho_ae_K_m[k] * dzi * dzi
-        Z = rho_ae_K_m[k-1] * dzi * dzi
+        Z = ρaK_dual[0] * dzi * dzi
+        Y = ρaK_dual[1] * dzi * dzi
         if k == k1:
             Z = 0.0
         elif k == k2:
@@ -35,27 +36,34 @@ def construct_tridiag_diffusion_new_new(grid, dt, rho_ae_K_m, rho, ae, a, b, c):
         a[k] = - Z/X
         b[k] = 1.0 + Y/X + Z/X
         c[k] = -Y/X
+    # print('a_working = ', a[:])
+    # print('b_working = ', b[:])
+    # print('c_working = ', c[:])
     return
 
 def construct_tridiag_diffusion_new(grid, Δt, tmp, q, a, b, c, K_name):
     i_env = q.i_env
     k1 = grid.first_interior(Zmin())
     k2 = grid.first_interior(Zmax())
+    Δzi2 = grid.dzi**2.0
     for k in grid.over_elems_real(Center()):
         ρ_0_dual = tmp['ρ_0', Dual(k)]
         a_env_dual = q['a', Dual(k), i_env]
-        K_m_dual = tmp[K_name, Dual(k)]
-        coeff = ρ_0_dual * a_env_dual * K_m_dual
-        X = tmp['ρ_0', k] * q['a', k, i_env]/Δt
-        Y = coeff[1] * Δzi * Δzi
-        Z = coeff[0] * Δzi * Δzi
-        if k == k1:
-            Z = 0.0
-        elif k == k2:
-            Y = 0.0
-        a[k] = - Z/X
-        b[k] = 1.0 + Y/X + Z/X
-        c[k] = -Y/X
+        K_dual = tmp[K_name, Dual(k), i_env]
+        ρaK_dual = ρ_0_dual * a_env_dual * K_dual
+        denom = tmp['ρ_0', k] * q['a', k, i_env]
+        Z = ρaK_dual[0] * Δzi2 * Δt
+        Y = ρaK_dual[1] * Δzi2 * Δt
+        # if k == k1:
+        #     Z = 0.0
+        # elif k == k2:
+        #     Y = 0.0
+        a[k] = - Z/denom
+        b[k] = 1.0 + Y/denom + Z/denom
+        c[k] = -Y/denom
+    # print('a_new = ', a[:])
+    # print('b_new = ', b[:])
+    # print('c_new = ', c[:])
     return
 
 def tridiag_solve(nz, x, a, b, c):

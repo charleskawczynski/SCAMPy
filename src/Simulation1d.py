@@ -3,8 +3,8 @@ import numpy as np
 from Variables import GridMeanVariables
 from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
-from Grid import Grid, Zmin, Zmax, Center, Node
-from StateVec import StateVec, Cut, Dual
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from StateVec import StateVec
 from ReferenceState import ReferenceState
 import matplotlib.pyplot as plt
 import Cases

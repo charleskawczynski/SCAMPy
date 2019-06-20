@@ -2,8 +2,8 @@ import numpy as np
 from parameters import *
 from thermodynamic_functions import  *
 from microphysics_functions import  *
-from Grid import Grid, Zmin, Zmax, Center, Node
-from Field import Field, Dual, Cut, Dirichlet, Neumann
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Field import Field, Dirichlet, Neumann
 import ReferenceState
 from Variables import GridMeanVariables
 from NetCDFIO import NetCDFIO_Stats

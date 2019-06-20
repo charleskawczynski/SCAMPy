@@ -1,5 +1,5 @@
 import os
-from Grid import Grid, Zmin, Zmax, Center, Node
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 import numpy as np
 
 class Neumann:
@@ -8,16 +8,6 @@ class Neumann:
 
 class Dirichlet:
     def __init__(self):
-        return
-
-class Cut:
-    def __init__(self, k):
-        self.k = k
-        return
-
-class Dual:
-    def __init__(self, k):
-        self.k = k
         return
 
 class Field:
@@ -45,7 +35,7 @@ class Field:
             raise TypeError('Bad location in field in Field.py')
 
     def __getitem__(self, key):
-        if not (isinstance(key, Dual) or isinstance(key, Cut)):
+        if not (isinstance(key, Dual) or isinstance(key, Cut) or isinstance(key, Mid)):
             return self.values[key]
         elif isinstance(key, Cut):
             return [self.values[k] for k in [key.k-1, key.k, key.k+1]]
@@ -53,15 +43,21 @@ class Field:
             if isinstance(self.loc, Node):
                 if isinstance(key, Dual):
                     return [self.values[k] for k in [key.k-1, key.k]]
+                elif isinstance(key, Mid):
+                    return 0.5*(self.values[key.k]+self.values[key.k+1])
                 else:
                     print('key = '+str(key))
                     raise ValueError('Bad key in full Field.py')
-            else:
+            elif isinstance(self.loc, Center):
                 if isinstance(key, Dual):
                     return [self.values[k] for k in [key.k-1, key.k]]
+                elif isinstance(key, Mid):
+                    return 0.5*(self.values[key.k]+self.values[key.k+1])
                 else:
                     print('key = '+str(key))
                     raise ValueError('Bad key in half Field.py')
+            else:
+                raise TypeError('Bad data location in __getitem__ in Field.py')
 
 
     def __setitem__(self, key, value):

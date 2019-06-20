@@ -1,8 +1,8 @@
 import numpy as np
 from parameters import *
 
-from Grid import Grid, Zmin, Zmax, Center, Node
-from Field import Field, Dual, Cut, Dirichlet, Neumann
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
+from Field import Field, Dirichlet, Neumann
 from Variables import GridMeanVariables
 from ReferenceState import ReferenceState
 from TimeStepping import  TimeStepping

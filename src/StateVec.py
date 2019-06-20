@@ -1,22 +1,12 @@
 import numpy as np
 import copy
-from Grid import Grid, Zmin, Zmax, Center, Node
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 import matplotlib.pyplot as plt
 
 import numpy as np
 
 # markershapes = ['r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^']
 markershapes = ['b-', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^']
-
-class Cut:
-    def __init__(self, k):
-        self.k = k
-        return
-
-class Dual:
-    def __init__(self, k):
-        self.k = k
-        return
 
 class UseDat:
     def __init__(self):
@@ -59,10 +49,11 @@ class StateVec:
             return self.fields[self.var_mapper[name][i], k]
         else:
             if isinstance(k, Cut):
-                return np.array([self.fields[self.var_mapper[name][i], j] for j in range(k.k-1,k.k+2)])
+                name_key = self.var_mapper[name][i]
+                return np.array([self.fields[name_key, j] for j in range(k.k-1,k.k+2)])
             elif isinstance(k, Dual):
-                return np.array([(self.fields[self.var_mapper[name][i], j]+
-                    self.fields[self.var_mapper[name][i], j+1])/2 for j in range(k.k-1,k.k+1)])
+                name_key = self.var_mapper[name][i]
+                return np.array([(self.fields[name_key, j]+self.fields[name_key, j+1])/2.0 for j in range(k.k-1,k.k+1)])
 
     def __setitem__(self, tup, value):
         if len(tup)==2:
