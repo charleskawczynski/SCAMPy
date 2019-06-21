@@ -930,22 +930,33 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 w_cut = self.UpdVar.W.values[i].DualCut(k)
                 a_cut = self.UpdVar.Area.values[i].Cut(k)
                 ρ_cut = self.Ref.rho0_half.Cut(k)
+                tendencies = 0.0
 
                 ρaw_cut = ρ_cut*a_cut*w_cut
                 adv = - α_0_kp * advect(ρaw_cut, w_cut, self.grid)
+                tendencies+=adv
 
-                entr_term = a_k * w_k * (+ self.entr_sc[i][k])
-                detr_term = a_k * w_k * (- self.detr_sc[i][k])
+                ε_term = a_k * w_k * (+ self.entr_sc[i][k])
+                tendencies+=ε_term
+                δ_term = a_k * w_k * (- self.detr_sc[i][k])
+                tendencies+=δ_term
 
-                self.UpdVar.Area.new[i][k] = a_k + dt_ * (adv + entr_term + detr_term)
-                self.UpdVar.Area.new[i][k] = np.fmax(self.UpdVar.Area.new[i][k], 0.0)
+                a_predict = a_k + dt_ * tendencies
 
-                if self.UpdVar.Area.new[i][k] > au_lim:
-                    self.UpdVar.Area.new[i][k] = au_lim
+                needs_limiter = a_predict>au_lim
+                self.UpdVar.Area.new[i][k] = np.fmin(np.fmax(a_predict, 0.0), au_lim)
+
+                unsteady = (self.UpdVar.Area.new[i][k]-a_k)*dti_
+                # δ_limiter = unsteady - tendencies if needs_limiter else 0.0
+                # tendencies+=δ_limiter
+                # a_correct = a_k + dt_ * tendencies
+
+                if needs_limiter:
+                    δ_term_new = unsteady - adv - ε_term
                     if a_k > 0.0:
-                        self.detr_sc[i][k] = (((au_lim-a_k)* dti_ - adv - entr_term)/(-a_k  * w_k))
+                        self.detr_sc[i][k] = δ_term_new/(-a_k  * w_k)
                     else:
-                        self.detr_sc[i][k] = (((au_lim-a_k)* dti_ - adv - entr_term)/(-au_lim  * w_k))
+                        self.detr_sc[i][k] = δ_term_new/(-au_lim  * w_k)
 
             self.entr_sc[i][k_1] = 2.0 * dzi
             self.detr_sc[i][k_1] = 0.0
