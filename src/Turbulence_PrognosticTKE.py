@@ -961,21 +961,27 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     w_i = self.UpdVar.W.values[i][k]
                     w_env = self.EnvVar.W.values[k]
 
-                    ρa_k = self.Ref.rho0[k] * a_k
+                    ρ_k = self.Ref.rho0[k]
+                    ρa_k = ρ_k * a_k
+                    ρa_new_k = ρ_k * a_new_k
                     ρaw_k = ρa_k * self.UpdVar.W.values[i][k]
                     w_cut = self.UpdVar.W.values[i].Cut(k)
                     ρaww_cut = self.Ref.rho0.Cut(k)*self.UpdVar.Area.values[i].DualCut(k)*w_cut*w_cut
+
                     adv = -advect(ρaww_cut, w_cut, self.grid)
-
-
-                    exch = ρaw_k * (entr_w * self.EnvVar.W.values[k] - detr_w * self.UpdVar.W.values[i][k])
+                    exch = ρaw_k * (- detr_w * self.UpdVar.W.values[i][k] + entr_w * self.EnvVar.W.values[k])
                     buoy = ρa_k * B_k
                     press_buoy =  - ρa_k * B_k * self.pressure_buoy_coeff
                     press_drag = - ρa_k * (self.pressure_drag_coeff/self.pressure_plume_spacing * (w_i - w_env)**2.0/np.sqrt(np.fmax(a_k, self.minimum_area)))
-                    press = press_buoy + press_drag
-                    self.updraft_pressure_sink[i][k] = press
-                    ρa_new_k = self.Ref.rho0[k] * a_new_k
-                    self.UpdVar.W.new[i][k] = ρaw_k/ρa_new_k + dt_/ρa_new_k*(adv + exch + buoy + press)
+                    nh_press = press_buoy + press_drag
+
+                    self.updraft_pressure_sink[i][k] = nh_press
+                    self.UpdVar.W.new[i][k] = ρaw_k/ρa_new_k + dt_/ρa_new_k*(adv + exch + buoy + nh_press)
+
+            # Filter results
+            for k in self.grid.over_elems_real(Center()):
+                # Now solve for updraft velocity at k
+                if self.UpdVar.Area.new[i].Mid(k) >= self.minimum_area:
                     if self.UpdVar.W.new[i][k] <= 0.0:
                         self.UpdVar.W.new[i][k:] = 0.0
                         self.UpdVar.Area.new[i][k+1:] = 0.0
