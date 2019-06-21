@@ -1036,27 +1036,23 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 H_entr = self.EnvVar.H.values[k]
                 QT_entr = self.EnvVar.QT.values[k]
 
-                # write the discrete equations in form:
-                # c1 * phi_new[k] = c2 * phi[k] + c3 * phi[k-1] + c4 * phi_entr
                 if self.UpdVar.Area.new[i][k] >= self.minimum_area:
                     a_k = self.UpdVar.Area.values[i][k]
+                    a_cut = self.UpdVar.Area.values[i].Cut(k)
                     a_k_new = self.UpdVar.Area.new[i][k]
-                    a_km = self.UpdVar.Area.values[i][k-1]
                     H_cut = self.UpdVar.H.values[i].Cut(k)
                     QT_cut = self.UpdVar.QT.values[i].Cut(k)
                     ρ_k = self.Ref.rho0_half[k]
-                    ρ_km = self.Ref.rho0_half[k-1]
-                    w_k = self.UpdVar.W.values[i].Mid(k)
-                    w_km = self.UpdVar.W.values[i].Mid(k-1)
+                    ρ_cut = self.Ref.rho0_half.Cut(k)
+                    w_cut = self.UpdVar.W.values[i].DualCut(k)
                     ε_sc = self.entr_sc[i][k]
                     δ_sc = self.detr_sc[i][k]
 
-                    m_k = ρ_k * a_k * w_k
-                    m_km = ρ_km * a_km * w_km
+                    ρaw_cut = ρ_cut * a_cut * w_cut
                     c1 = ρ_k * a_k_new * dti_
-                    c2 = ρ_k * a_k * dti_ - m_k * (dzi + δ_sc)
-                    c3 = m_km * dzi
-                    c4 = m_k * ε_sc
+                    c2 = ρ_k * a_k * dti_ - ρaw_cut[1] * (dzi + δ_sc)
+                    c3 = ρaw_cut[0] * dzi
+                    c4 = ρaw_cut[1] * ε_sc
 
                     self.UpdVar.H.new[i][k] =  (c2 * H_cut[1]  + c3 * H_cut[0] + c4 * H_entr)/c1
                     self.UpdVar.QT.new[i][k] = (c2 * QT_cut[1] + c3 * QT_cut[0] + c4* QT_entr)/c1
