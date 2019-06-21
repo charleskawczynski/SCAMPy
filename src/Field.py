@@ -114,7 +114,7 @@ class Half(Field):
         return 0.5*(self.values[k]+self.values[k+1])
 
     def Dual(self, key):
-        return np.array([self.values[k] for k in [key-1, key]])
+        return np.array([self.values[k] for k in [key, key+1]])
 
     def Cut(self, key):
         return np.array([self.values[k] for k in [key-1, key, key+1]])

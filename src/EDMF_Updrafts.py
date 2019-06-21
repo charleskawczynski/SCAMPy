@@ -118,7 +118,7 @@ class UpdraftVariables:
 
     def set_means(self, GMV):
 
-        self.Area.bulkvalues = np.sum(self.Area.values,axis=0)
+        self.Area.bulkvalues[:] = np.sum(self.Area.values,axis=0)
         self.W.bulkvalues[:] = 0.0
         self.QT.bulkvalues[:] = 0.0
         self.QL.bulkvalues[:] = 0.0
@@ -256,7 +256,7 @@ class UpdraftThermodynamics:
 
     def buoyancy(self,  UpdVar, EnvVar,GMV, extrap, tmp):
         gw = self.grid.gw
-        UpdVar.Area.bulkvalues = np.sum(UpdVar.Area.values,axis=0)
+        UpdVar.Area.bulkvalues[:] = np.sum(UpdVar.Area.values,axis=0)
         if not extrap:
             for i in range(self.n_updraft):
                 for k in self.grid.over_elems(Center()):

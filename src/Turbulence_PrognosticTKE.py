@@ -76,7 +76,7 @@ class ParameterizationBase:
                     break
         elif option == 'thetal_maxgrad':
             for k in self.grid.over_elems_real(Center()):
-                grad =  (GMV.THL.values[k+1] - GMV.THL.values[k])*self.grid.dzi
+                grad =  grad(GMV.THL.values.Dual(k), self.grid)
                 if grad > maxgrad:
                     maxgrad = grad
                     self.zi = self.grid.z[k]
@@ -751,7 +751,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 self.EnvVar.H.values[k] = val1 * GMV.H.values[k] - val2 * self.UpdVar.H.bulkvalues[k]
                 # Have to account for staggering of W--interpolate area fraction to the "full" grid points
                 # Assuming GMV.W = 0!
-                au_full = 0.5 * (self.UpdVar.Area.bulkvalues[k+1] + self.UpdVar.Area.bulkvalues[k])
+                au_full = self.UpdVar.Area.bulkvalues.Mid(k)
                 self.EnvVar.W.values[k] = -au_full/(1.0-au_full) * self.UpdVar.W.bulkvalues[k]
         elif whichvals == 'mf_update':
             # same as above but replace GMV.SomeVar.values with GMV.SomeVar.mf_update
@@ -763,7 +763,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 self.EnvVar.H.values[k] = val1 * GMV.H.mf_update[k] - val2 * self.UpdVar.H.bulkvalues[k]
                 # Have to account for staggering of W
                 # Assuming GMV.W = 0!
-                au_full = 0.5 * (self.UpdVar.Area.bulkvalues[k+1] + self.UpdVar.Area.bulkvalues[k])
+                au_full = self.UpdVar.Area.bulkvalues.Mid(k)
                 self.EnvVar.W.values[k] = -au_full/(1.0-au_full) * self.UpdVar.W.bulkvalues[k]
 
         if self.calc_tke:
@@ -875,7 +875,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                         input_st.tke = self.EnvVar.TKE.values[k]
                         input_st.tke_ed_coeff  = self.tke_ed_coeff
 
-                input_st.T_mean = (self.EnvVar.T.values[k]+self.UpdVar.T.values[i][k])/2
                 input_st.L = 20000.0 # need to define the scale of the GCM grid resolution
                 ## Ignacio
                 input_st.n_up = self.n_updrafts
@@ -904,19 +903,14 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def compute_zbl_qt_grad(self, GMV):
-    # computes inversion height as z with max gradient of qt
+        # computes inversion height as z with max gradient of qt
         zbl_qt = 0.0
         qt_grad = 0.0
-
         for k in self.grid.over_elems_real(Center()):
-            z_ = self.grid.z_half[k]
-            qt_up = GMV.QT.values[k+1]
-            qt_ = GMV.QT.values[k]
-
-            if np.fabs(qt_up-qt_)*self.grid.dzi > qt_grad:
-                qt_grad = np.fabs(qt_up-qt_)*self.grid.dzi
-                zbl_qt = z_
-
+            qt_grad_new = grad(GMV.QT.values.Dual(k), self.grid)
+            if np.fabs(qt_grad) > qt_grad:
+                qt_grad = np.fabs(qt_grad_new)
+                zbl_qt = self.grid.z_half[k]
         return zbl_qt
 
     def solve_updraft_velocity_area(self, GMV, TS, tmp):
@@ -1105,8 +1099,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         # Adjust the values of the grid mean variables
 
         for k in self.grid.over_elems_real(Center()):
-            mf_tend_h = -(self.massflux_h[k] - self.massflux_h[k-1]) * (tmp['α_0', k] * self.grid.dzi)
-            mf_tend_qt = -(self.massflux_qt[k] - self.massflux_qt[k-1]) * (tmp['α_0', k] * self.grid.dzi)
+            mf_tend_h = -tmp['α_0', k]*grad(self.massflux_h.Dual(k), self.grid)
+            mf_tend_qt = -tmp['α_0', k]*grad(self.massflux_qt.Dual(k), self.grid)
 
             GMV.H.mf_update[k] = GMV.H.values[k] +  TS.dt * mf_tend_h + self.UpdMicro.prec_source_h_tot[k]
             GMV.QT.mf_update[k] = GMV.QT.values[k] + TS.dt * mf_tend_qt + self.UpdMicro.prec_source_qt_tot[k]
@@ -1259,8 +1253,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             cpm = cpm_c(qt_cloudy)
             grad_thl_minus = grad_thl_plus
             grad_qt_minus = grad_qt_plus
-            grad_thl_plus = (self.EnvVar.THL.values[k+1] - self.EnvVar.THL.values[k]) * self.grid.dzi
-            grad_qt_plus  = (self.EnvVar.QT.values[k+1]  - self.EnvVar.QT.values[k])  * self.grid.dzi
+            grad_thl_plus = grad(self.EnvVar.THL.values.Dual(k), self.grid)
+            grad_qt_plus  = grad(self.EnvVar.QT.values.Dual(k), self.grid)
 
             prefactor = Rd * exner_c(tmp['p_0', k])/tmp['p_0', k]
 
@@ -1399,21 +1393,22 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             if Covar.name == 'tke':
                 du_low = du_high
                 dv_low = dv_high
-                du_high = (GMV.U.values[k+1] - GMV.U.values[k]) * self.grid.dzi
-                dv_high = (GMV.V.values[k+1] - GMV.V.values[k]) * self.grid.dzi
-                diff_var2 = (EnvVar2[k] - EnvVar2[k-1]) * self.grid.dzi
-                diff_var1 = (EnvVar1[k] - EnvVar1[k-1]) * self.grid.dzi
+                du_high = grad(GMV.U.values.Dual(k), self.grid)
+                dv_high = grad(GMV.V.values.Dual(k), self.grid)
+                diff_var2 = grad(EnvVar2.Dual(k), self.grid)
+                diff_var1 = grad(EnvVar1.Dual(k), self.grid)
                 tke_factor = 0.5
             else:
                 du_low = 0.0
                 dv_low = 0.0
                 du_high = 0.0
                 dv_high = 0.0
-                diff_var2 = interp2pt((EnvVar2[k+1] - EnvVar2[k]),(EnvVar2[k] - EnvVar2[k-1])) * self.grid.dzi
-                diff_var1 = interp2pt((EnvVar1[k+1] - EnvVar1[k]),(EnvVar1[k] - EnvVar1[k-1])) * self.grid.dzi
-                tke_factor = 1.0
+                diff_var2 = grad(EnvVar2.Cut(k), self.grid)
+                diff_var1 = grad(EnvVar1.Cut(k), self.grid)
             Covar.shear[k] = tke_factor*2.0*(tmp['ρ_0', k] * ae[k] * self.KH.values[k] *
-                        (diff_var1*diff_var2 +  pow(interp2pt(du_low, du_high),2.0)  +  pow(interp2pt(dv_low, dv_high),2.0)))
+                        (diff_var1*diff_var2 +
+                            pow(interp2pt(du_low, du_high),2.0) +
+                            pow(interp2pt(dv_low, dv_high),2.0)))
         return
 
     def compute_covariance_interdomain_src(self, au, phi_u, psi_u, phi_e, psi_e, Covar):

@@ -2,6 +2,8 @@ import numpy as np
 from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
+from Operators import advect, grad, Laplacian
+
 from Variables import GridMeanVariables, VariablePrognostic
 from forcing_functions import  convert_forcing_entropy, convert_forcing_thetal
 
@@ -67,8 +69,8 @@ class ForcingStandard(ForcingBase):
         if self.apply_subsidence:
             for k in self.grid.over_elems_real(Center()):
                 # Apply large-scale subsidence tendencies
-                GMV.H.tendencies[k] -= (GMV.H.values[k+1]-GMV.H.values[k]) * self.grid.dzi * self.subsidence[k]
-                GMV.QT.tendencies[k] -= (GMV.QT.values[k+1]-GMV.QT.values[k]) * self.grid.dzi * self.subsidence[k]
+                GMV.H.tendencies[k] -= grad(GMV.H.values.Dual(k), self.grid) * self.subsidence[k]
+                GMV.QT.tendencies[k] -= grad(GMV.QT.values.Dual(k), self.grid) * self.subsidence[k]
 
         if self.apply_coriolis:
             self.coriolis_force(GMV.U, GMV.V)
