@@ -922,24 +922,30 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for i in range(self.n_updrafts):
             au_lim = self.area_surface_bc[i] * self.max_area_factor
             for k in self.grid.over_elems_real(Center()):
-                whalf_kp = self.UpdVar.W.values[i].Mid(k)
-                w_cut = self.UpdVar.W.values[i].DualCut(k)
-                ρaw_cut = self.Ref.rho0_half.Cut(k)*self.UpdVar.Area.values[i].Cut(k)*w_cut
+
+                a_k = self.UpdVar.Area.values[i][k]
                 α_0_kp = self.Ref.alpha0_half[k]
+                w_k = self.UpdVar.W.values[i].Mid(k)
+
+                w_cut = self.UpdVar.W.values[i].DualCut(k)
+                a_cut = self.UpdVar.Area.values[i].Cut(k)
+                ρ_cut = self.Ref.rho0_half.Cut(k)
+
+                ρaw_cut = ρ_cut*a_cut*w_cut
                 adv = - α_0_kp * advect(ρaw_cut, w_cut, self.grid)
 
-                entr_term = self.UpdVar.Area.values[i][k] * whalf_kp * (+ self.entr_sc[i][k])
-                detr_term = self.UpdVar.Area.values[i][k] * whalf_kp * (- self.detr_sc[i][k])
+                entr_term = a_k * w_k * (+ self.entr_sc[i][k])
+                detr_term = a_k * w_k * (- self.detr_sc[i][k])
 
-                self.UpdVar.Area.new[i][k] = self.UpdVar.Area.values[i][k] + dt_ * (adv + entr_term + detr_term)
+                self.UpdVar.Area.new[i][k] = a_k + dt_ * (adv + entr_term + detr_term)
                 self.UpdVar.Area.new[i][k] = np.fmax(self.UpdVar.Area.new[i][k], 0.0)
 
                 if self.UpdVar.Area.new[i][k] > au_lim:
                     self.UpdVar.Area.new[i][k] = au_lim
-                    if self.UpdVar.Area.values[i][k] > 0.0:
-                        self.detr_sc[i][k] = (((au_lim-self.UpdVar.Area.values[i][k])* dti_ - adv -entr_term)/(-self.UpdVar.Area.values[i][k]  * whalf_kp))
+                    if a_k > 0.0:
+                        self.detr_sc[i][k] = (((au_lim-a_k)* dti_ - adv - entr_term)/(-a_k  * w_k))
                     else:
-                        self.detr_sc[i][k] = (((au_lim-self.UpdVar.Area.values[i][k])* dti_ - adv -entr_term)/(-au_lim  * whalf_kp))
+                        self.detr_sc[i][k] = (((au_lim-a_k)* dti_ - adv - entr_term)/(-au_lim  * w_k))
 
             self.entr_sc[i][k_1] = 2.0 * dzi
             self.detr_sc[i][k_1] = 0.0
@@ -951,18 +957,23 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             for k in self.grid.over_elems_real(Center()):
                 a_new_k = self.UpdVar.Area.new[i].Mid(k)
                 if a_new_k >= self.minimum_area:
+
+                    ρ_k = self.Ref.rho0[k]
+                    w_i = self.UpdVar.W.values[i][k]
+                    w_env = self.EnvVar.W.values[k]
                     a_k = self.UpdVar.Area.values[i].Mid(k)
                     entr_w = self.entr_sc[i].Mid(k)
                     detr_w = self.detr_sc[i].Mid(k)
                     B_k = self.UpdVar.B.values[i].Mid(k)
-                    w_i = self.UpdVar.W.values[i][k]
-                    w_env = self.EnvVar.W.values[k]
-                    ρ_k = self.Ref.rho0[k]
+
+                    a_cut = self.UpdVar.Area.values[i].DualCut(k)
+                    ρ_cut = self.Ref.rho0.Cut(k)
+                    w_cut = self.UpdVar.W.values[i].Cut(k)
+
                     ρa_k = ρ_k * a_k
                     ρa_new_k = ρ_k * a_new_k
                     ρaw_k = ρa_k * w_i
-                    w_cut = self.UpdVar.W.values[i].Cut(k)
-                    ρaww_cut = self.Ref.rho0.Cut(k)*self.UpdVar.Area.values[i].DualCut(k)*w_cut*w_cut
+                    ρaww_cut = ρ_cut*a_cut*w_cut*w_cut
 
                     adv = -advect(ρaww_cut, w_cut, self.grid)
                     exch = ρaw_k * (- detr_w * w_i + entr_w * w_env)
