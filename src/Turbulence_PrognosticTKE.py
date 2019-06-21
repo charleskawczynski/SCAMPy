@@ -886,13 +886,21 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                      self.EnvVar.QL.values[k], self.EnvVar.QR.values[k])
                 input_st.thv_u = theta_virt_c(tmp['p_0', k], self.UpdVar.T.bulkvalues[k], self.UpdVar.QT.bulkvalues[k],
                      self.UpdVar.QL.bulkvalues[k], self.UpdVar.QR.bulkvalues[k])
-                input_st.dwdz = (self.UpdVar.Area.values[i][k+1]*
-                    interp2pt(self.UpdVar.W.values[i][k+1],self.UpdVar.W.values[i][k]) +
-                    (1.0-self.UpdVar.Area.values[i][k+1])*self.EnvVar.W.values[k+1] -
-                    (self.UpdVar.Area.values[i][k-1]*
-                    interp2pt(self.UpdVar.W.values[i][k-1],self.UpdVar.W.values[i][k-2]) +
-                    (1.0-self.UpdVar.Area.values[i][k-1])*self.EnvVar.W.values[k-1]) )/(2.0*self.grid.dz)
 
+                w_cut = self.UpdVar.W.values[i].DualCut(k)
+                w_env_cut = self.EnvVar.W.values.DualCut(k)
+                a_cut = self.UpdVar.Area.values[i].Cut(k)
+                a_env_cut = (1.0-self.UpdVar.Area.values[i].Cut(k))
+                aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
+                input_st.dwdz = grad(aw_cut, self.grid)
+                # input_st.dwdz = (self.UpdVar.Area.values[i][k+1] * self.UpdVar.W.values[i].Mid(k+1) +
+                #     (1.0-self.UpdVar.Area.values[i][k+1])*self.EnvVar.W.values[k+1] -
+                #     (self.UpdVar.Area.values[i][k-1] * self.UpdVar.W.values[i].Mid(k-1) +
+                #     (1.0-self.UpdVar.Area.values[i][k-1])*self.EnvVar.W.values[k-1]) )/(2.0*self.grid.dz)
+
+                # transport_plus = ( a_cut * a_env_cut * (w_cut - w_env_cut)* (1.0-2.0*a_cut)*
+                #     (w_cut - self.EnvVar.W.values[k+1])*
+                #     (interp2pt(self.UpdVar.W.values[i][k+1],self.UpdVar.W.values[i][k]) - self.EnvVar.W.values[k+1]) )
                 transport_plus = ( self.UpdVar.Area.values[i][k+1]*(1.0-self.UpdVar.Area.values[i][k+1])*
                     (interp2pt(self.UpdVar.W.values[i][k+1],self.UpdVar.W.values[i][k]) - self.EnvVar.W.values[k+1])*
                     (1.0-2.0*self.UpdVar.Area.values[i][k+1])*
