@@ -918,6 +918,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         dti_ = 1.0/self.dt_upd
         dt_ = 1.0/dti_
 
+        # Solve for area fraction
         for i in range(self.n_updrafts):
             self.entr_sc[i][k_1] = 2.0 * dzi
             self.detr_sc[i][k_1] = 0.0
@@ -927,7 +928,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
             for k in self.grid.over_elems_real(Center()):
 
-                # First solve for updated area fraction at k+1
                 whalf_kp = self.UpdVar.W.values[i].Mid(k+1)
                 w_cut = self.UpdVar.W.values[i].DualCut(k+1)
                 ρaw_cut = self.Ref.rho0_half.Cut(k+1)*self.UpdVar.Area.values[i].Cut(k+1)*w_cut
@@ -947,43 +947,26 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     else:
                         self.detr_sc[i][k+1] = (((au_lim-self.UpdVar.Area.values[i][k+1])* dti_ - adv -entr_term)/(-au_lim  * whalf_kp))
 
+        # Solve for updraft velocity
         for i in range(self.n_updrafts):
-            self.entr_sc[i][k_1] = 2.0 * dzi
-            self.detr_sc[i][k_1] = 0.0
-            self.UpdVar.W.new[i][kb_1] = self.w_surface_bc[i]
-            self.UpdVar.Area.new[i][k_1] = self.area_surface_bc[i]
-            au_lim = self.area_surface_bc[i] * self.max_area_factor
-
             for k in self.grid.over_elems_real(Center()):
-
-                # First solve for updated area fraction at k+1
-                whalf_kp = self.UpdVar.W.values[i].Mid(k+1)
-                w_cut = self.UpdVar.W.values[i].DualCut(k+1)
-                ρaw_cut = self.Ref.rho0_half.Cut(k+1)*self.UpdVar.Area.values[i].Cut(k+1)*w_cut
-                α_0_kp = self.Ref.alpha0_half[k+1]
-                adv = - α_0_kp * advect(ρaw_cut, w_cut, self.grid)
-
-                # Now solve for updraft velocity at k
                 a_new_k = self.UpdVar.Area.new[i].Mid(k)
                 if a_new_k >= self.minimum_area:
-
                     a_k = self.UpdVar.Area.values[i].Mid(k)
                     entr_w = self.entr_sc[i].Mid(k)
                     detr_w = self.detr_sc[i].Mid(k)
                     B_k = self.UpdVar.B.values[i].Mid(k)
-
                     w_i = self.UpdVar.W.values[i][k]
                     w_env = self.EnvVar.W.values[k]
-
                     ρ_k = self.Ref.rho0[k]
                     ρa_k = ρ_k * a_k
                     ρa_new_k = ρ_k * a_new_k
-                    ρaw_k = ρa_k * self.UpdVar.W.values[i][k]
+                    ρaw_k = ρa_k * w_i
                     w_cut = self.UpdVar.W.values[i].Cut(k)
                     ρaww_cut = self.Ref.rho0.Cut(k)*self.UpdVar.Area.values[i].DualCut(k)*w_cut*w_cut
 
                     adv = -advect(ρaww_cut, w_cut, self.grid)
-                    exch = ρaw_k * (- detr_w * self.UpdVar.W.values[i][k] + entr_w * self.EnvVar.W.values[k])
+                    exch = ρaw_k * (- detr_w * w_i + entr_w * w_env)
                     buoy = ρa_k * B_k
                     press_buoy =  - ρa_k * B_k * self.pressure_buoy_coeff
                     press_drag = - ρa_k * (self.pressure_drag_coeff/self.pressure_plume_spacing * (w_i - w_env)**2.0/np.sqrt(np.fmax(a_k, self.minimum_area)))
@@ -991,12 +974,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
                     self.UpdVar.W.new[i][k] = ρaw_k/ρa_new_k + dt_/ρa_new_k*(adv + exch + buoy + nh_press)
 
+        # Filter results
         for i in range(self.n_updrafts):
-            self.UpdVar.W.new[i][kb_1] = self.w_surface_bc[i]
-            self.UpdVar.Area.new[i][k_1] = self.area_surface_bc[i]
-            # Filter results
             for k in self.grid.over_elems_real(Center()):
-                # Now solve for updraft velocity at k
                 if self.UpdVar.Area.new[i].Mid(k) >= self.minimum_area:
                     if self.UpdVar.W.new[i][k] <= 0.0:
                         self.UpdVar.W.new[i][k:] = 0.0
