@@ -892,28 +892,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 a_cut = self.UpdVar.Area.values[i].Cut(k)
                 a_env_cut = (1.0-self.UpdVar.Area.values[i].Cut(k))
                 aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
+
                 input_st.dwdz = grad(aw_cut, self.grid)
-                # input_st.dwdz = (self.UpdVar.Area.values[i][k+1] * self.UpdVar.W.values[i].Mid(k+1) +
-                #     (1.0-self.UpdVar.Area.values[i][k+1])*self.EnvVar.W.values[k+1] -
-                #     (self.UpdVar.Area.values[i][k-1] * self.UpdVar.W.values[i].Mid(k-1) +
-                #     (1.0-self.UpdVar.Area.values[i][k-1])*self.EnvVar.W.values[k-1]) )/(2.0*self.grid.dz)
-
-                # transport_plus = ( a_cut * a_env_cut * (w_cut - w_env_cut)* (1.0-2.0*a_cut)*
-                #     (w_cut - self.EnvVar.W.values[k+1])*
-                #     (interp2pt(self.UpdVar.W.values[i][k+1],self.UpdVar.W.values[i][k]) - self.EnvVar.W.values[k+1]) )
-                transport_plus = ( self.UpdVar.Area.values[i][k+1]*(1.0-self.UpdVar.Area.values[i][k+1])*
-                    (interp2pt(self.UpdVar.W.values[i][k+1],self.UpdVar.W.values[i][k]) - self.EnvVar.W.values[k+1])*
-                    (1.0-2.0*self.UpdVar.Area.values[i][k+1])*
-                    (interp2pt(self.UpdVar.W.values[i][k+1],self.UpdVar.W.values[i][k]) - self.EnvVar.W.values[k+1])*
-                    (interp2pt(self.UpdVar.W.values[i][k+1],self.UpdVar.W.values[i][k]) - self.EnvVar.W.values[k+1]) )
-
-                transport_minus = ( self.UpdVar.Area.values[i][k-1]*(1.0-self.UpdVar.Area.values[i][k-1])*
-                    (interp2pt(self.UpdVar.W.values[i][k-1],self.UpdVar.W.values[i][k-2]) - self.EnvVar.W.values[k-1])*
-                    (1.0-2.0*self.UpdVar.Area.values[i][k+1])*
-                    (interp2pt(self.UpdVar.W.values[i][k-1],self.UpdVar.W.values[i][k-2]) - self.EnvVar.W.values[k-1])*
-                    (interp2pt(self.UpdVar.W.values[i][k-1],self.UpdVar.W.values[i][k-2]) - self.EnvVar.W.values[k-1]) )
-
-                input_st.transport_der = (transport_plus - transport_minus)/2.0/self.grid.dz
 
                 if input_st.zbl-self.UpdVar.cloud_base[i] > 0.0:
                     input_st.poisson = np.random.poisson(self.grid.dz/((input_st.zbl-self.UpdVar.cloud_base[i])/10.0))
