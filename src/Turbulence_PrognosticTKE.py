@@ -332,8 +332,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.entr_sc = [Half(Gr) for i in range(self.n_updrafts)]
         self.detr_sc = [Half(Gr) for i in range(self.n_updrafts)]
 
-        # Pressure term in updraft vertical momentum equation
-        self.updraft_pressure_sink = [Half(Gr) for i in range(self.n_updrafts)]
         # Mass flux
         self.m = [Full(Gr) for i in range(self.n_updrafts)]
 
@@ -975,9 +973,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     press_drag = - ρa_k * (self.pressure_drag_coeff/self.pressure_plume_spacing * (w_i - w_env)**2.0/np.sqrt(np.fmax(a_k, self.minimum_area)))
                     nh_press = press_buoy + press_drag
 
-                    self.updraft_pressure_sink[i][k] = nh_press
                     self.UpdVar.W.new[i][k] = ρaw_k/ρa_new_k + dt_/ρa_new_k*(adv + exch + buoy + nh_press)
 
+        for i in range(self.n_updrafts):
+            self.UpdVar.W.new[i][kb_1] = self.w_surface_bc[i]
+            self.UpdVar.Area.new[i][k_1] = self.area_surface_bc[i]
             # Filter results
             for k in self.grid.over_elems_real(Center()):
                 # Now solve for updraft velocity at k
@@ -989,8 +989,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 else:
                     self.UpdVar.W.new[i][k:] = 0.0
                     self.UpdVar.Area.new[i][k+1:] = 0.0
-                    # keep this in mind if we modify updraft top treatment!
-                    self.updraft_pressure_sink[i][k:] = 0.0
                     break
 
         return
