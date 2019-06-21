@@ -70,8 +70,7 @@ class UpdraftVariables:
         return
 
     def initialize(self, GMV, tmp):
-        gw = self.grid.gw
-        dz = self.grid.dz
+        k_1 = self.grid.first_interior(Zmin())
 
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
@@ -89,7 +88,7 @@ class UpdraftVariables:
                 self.H.values[i][k] = GMV.H.values[k]
                 self.T.values[i][k] = GMV.T.values[k]
                 self.B.values[i][k] = 0.0
-            self.Area.values[i][gw] = self.updraft_fraction/self.n_updrafts
+            self.Area.values[i][k_1] = self.updraft_fraction/self.n_updrafts
 
         self.QT.set_bcs(self.grid)
         self.QR.set_bcs(self.grid)

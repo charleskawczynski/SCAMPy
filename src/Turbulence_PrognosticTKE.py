@@ -783,14 +783,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
         tke_factor = 1.0
 
-
         for k in self.grid.over_elems(Center()):
             if covar_e.name == 'tke':
                 tke_factor = 0.5
-                phi_diff = interp2pt(phi_e.values[k-1]-gmv_phi[k-1], phi_e.values[k]-gmv_phi[k])
-                psi_diff = interp2pt(psi_e.values[k-1]-gmv_psi[k-1], psi_e.values[k]-gmv_psi[k])
+                phi_diff = phi_e.values.Mid(k) - gmv_phi.Mid(k)
+                psi_diff = psi_e.values.Mid(k) - gmv_psi.Mid(k)
             else:
-                tke_factor = 1.0
                 phi_diff = phi_e.values[k]-gmv_phi[k]
                 psi_diff = psi_e.values[k]-gmv_psi[k]
 
@@ -798,8 +796,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             gmv_covar[k] = tke_factor * ae[k] * phi_diff * psi_diff + ae[k] * covar_e.values[k]
             for i in range(self.n_updrafts):
                 if covar_e.name == 'tke':
-                    phi_diff = interp2pt(phi_u.values[i][k-1]-gmv_phi[k-1], phi_u.values[i][k]-gmv_phi[k])
-                    psi_diff = interp2pt(psi_u.values[i][k-1]-gmv_psi[k-1], psi_u.values[i][k]-gmv_psi[k])
+                    phi_diff = phi_u.values[i].Mid(k) - gmv_phi.Mid(k)
+                    psi_diff = psi_u.values[i].Mid(k) - gmv_psi.Mid(k)
                 else:
                     phi_diff = phi_u.values[i][k]-gmv_phi[k]
                     psi_diff = psi_u.values[i][k]-gmv_psi[k]
@@ -813,14 +811,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
         tke_factor = 1.0
-        if covar_e.name == 'tke':
-            tke_factor = 0.5
 
         for k in self.grid.over_elems(Center()):
             if ae[k] > 0.0:
                 if covar_e.name == 'tke':
-                    phi_diff = interp2pt(phi_e.values[k-1] - gmv_phi[k-1],phi_e.values[k] - gmv_phi[k])
-                    psi_diff = interp2pt(psi_e.values[k-1] - gmv_psi[k-1],psi_e.values[k] - gmv_psi[k])
+                    tke_factor = 0.5
+                    phi_diff = phi_e.values.Mid(k) - gmv_phi.Mid(k)
+                    psi_diff = psi_e.values.Mid(k) - gmv_psi.Mid(k)
                 else:
                     phi_diff = phi_e.values[k] - gmv_phi[k]
                     psi_diff = psi_e.values[k] - gmv_psi[k]
@@ -828,8 +825,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 covar_e.values[k] = gmv_covar[k] - tke_factor * ae[k] * phi_diff * psi_diff
                 for i in range(self.n_updrafts):
                     if covar_e.name == 'tke':
-                        phi_diff = interp2pt(phi_u.values[i][k-1] - gmv_phi[k-1],phi_u.values[i][k] - gmv_phi[k])
-                        psi_diff = interp2pt(psi_u.values[i][k-1] - gmv_psi[k-1],psi_u.values[i][k] - gmv_psi[k])
+                        phi_diff = phi_u.values[i].Mid(k) - gmv_phi.Mid(k)
+                        psi_diff = psi_u.values[i].Mid(k) - gmv_psi.Mid(k)
                     else:
                         phi_diff = phi_u.values[i][k] - gmv_phi[k]
                         psi_diff = psi_u.values[i][k] - gmv_psi[k]
@@ -1027,13 +1024,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 # write the discrete equations in form:
                 # c1 * phi_new[k] = c2 * phi[k] + c3 * phi[k-1] + c4 * phi_entr
                 if self.UpdVar.Area.new[i][k] >= self.minimum_area:
-                    m_k = (tmp['ρ_0', k] * self.UpdVar.Area.values[i][k]
-                           * interp2pt(self.UpdVar.W.values[i][k-1], self.UpdVar.W.values[i][k]))
-                    m_km = (tmp['ρ_0', k-1] * self.UpdVar.Area.values[i][k-1]
-                           * interp2pt(self.UpdVar.W.values[i][k-2], self.UpdVar.W.values[i][k-1]))
+                    m_k = (tmp['ρ_0', k] * self.UpdVar.Area.values[i][k] * self.UpdVar.W.values[i].Mid(k))
+                    m_km = (tmp['ρ_0', k-1] * self.UpdVar.Area.values[i][k-1] * self.UpdVar.W.values[i].Mid(k-1))
                     c1 = tmp['ρ_0', k] * self.UpdVar.Area.new[i][k] * dti_
-                    c2 = (tmp['ρ_0', k] * self.UpdVar.Area.values[i][k] * dti_
-                          - m_k * (dzi + self.detr_sc[i][k]))
+                    c2 = (tmp['ρ_0', k] * self.UpdVar.Area.values[i][k] * dti_ - m_k * (dzi + self.detr_sc[i][k]))
                     c3 = m_km * dzi
                     c4 = m_k * self.entr_sc[i][k]
 
@@ -1096,20 +1090,16 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.m[i][kb_1] = 0.0
             for k in self.grid.over_elems_real(Center()):
                 self.m[i][k] = ((self.UpdVar.W.values[i][k] - self.EnvVar.W.values[k] )* self.Ref.rho0[k]
-                               * interp2pt(self.UpdVar.Area.values[i][k],self.UpdVar.Area.values[i][k+1]))
+                               * self.UpdVar.Area.values[i].Mid(k))
 
         self.massflux_h[kb_1] = 0.0
         self.massflux_qt[kb_1] = 0.0
         for k in self.grid.over_elems_real(Center()):
             self.massflux_h[k] = 0.0
             self.massflux_qt[k] = 0.0
-            env_h_interp = interp2pt(self.EnvVar.H.values[k], self.EnvVar.H.values[k+1])
-            env_qt_interp = interp2pt(self.EnvVar.QT.values[k], self.EnvVar.QT.values[k+1])
             for i in range(self.n_updrafts):
-                self.massflux_h[k] += self.m[i][k] * (interp2pt(self.UpdVar.H.values[i][k],
-                                                               self.UpdVar.H.values[i][k+1]) - env_h_interp )
-                self.massflux_qt[k] += self.m[i][k] * (interp2pt(self.UpdVar.QT.values[i][k],
-                                                                self.UpdVar.QT.values[i][k+1]) - env_qt_interp )
+                self.massflux_h[k] += self.m[i][k] * (self.UpdVar.H.values[i].Mid(k) - self.EnvVar.H.values.Mid(k))
+                self.massflux_qt[k] += self.m[i][k] * (self.UpdVar.QT.values[i].Mid(k) - self.EnvVar.QT.values.Mid(k))
 
         # Compute the  mass flux tendencies
         # Adjust the values of the grid mean variables
@@ -1432,8 +1422,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             for i in range(self.n_updrafts):
                 if Covar.name == 'tke':
                     tke_factor = 0.5
-                    phi_diff = interp2pt(phi_u.values[i][k-1], phi_u.values[i][k])-interp2pt(phi_e.values[k-1], phi_e.values[k])
-                    psi_diff = interp2pt(psi_u.values[i][k-1], psi_u.values[i][k])-interp2pt(psi_e.values[k-1], psi_e.values[k])
+                    phi_diff = phi_u.values[i].Mid(k) - phi_e.values.Mid(k)
+                    psi_diff = psi_u.values[i].Mid(k) - psi_e.values.Mid(k)
                 else:
                     tke_factor = 1.0
                     phi_diff = phi_u.values[i][k]-phi_e.values[k]
@@ -1447,10 +1437,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             Covar.entr_gain[k] = 0.0
             for i in range(self.n_updrafts):
                 if Covar.name =='tke':
-                    updvar1 = interp2pt(UpdVar1.values[i][k], UpdVar1.values[i][k-1])
-                    updvar2 = interp2pt(UpdVar2.values[i][k], UpdVar2.values[i][k-1])
-                    envvar1 = interp2pt(EnvVar1.values[k], EnvVar1.values[k-1])
-                    envvar2 = interp2pt(EnvVar2.values[k], EnvVar2.values[k-1])
+                    updvar1 = UpdVar1.values[i].Mid(k)
+                    updvar2 = UpdVar2.values[i].Mid(k)
+                    envvar1 = EnvVar1.values.Mid(k)
+                    envvar2 = EnvVar2.values.Mid(k)
                     tke_factor = 0.5
                 else:
                     updvar1 = UpdVar1.values[i][k]
@@ -1523,7 +1513,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
             ae_old[k] = 1.0 - np.sum([self.UpdVar.Area.old[i][k] for i in range(self.n_updrafts)])
-            whalf[k] = interp2pt(self.EnvVar.W.values[k-1], self.EnvVar.W.values[k])
+            whalf[k] = self.EnvVar.W.values.Mid(k)
         D_env = 0.0
 
         for k in self.grid.over_elems_real(Node()):
