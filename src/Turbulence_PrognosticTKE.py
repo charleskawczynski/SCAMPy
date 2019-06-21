@@ -920,35 +920,34 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         # Solve for area fraction
         for i in range(self.n_updrafts):
-            self.entr_sc[i][k_1] = 2.0 * dzi
-            self.detr_sc[i][k_1] = 0.0
-            self.UpdVar.W.new[i][kb_1] = self.w_surface_bc[i]
-            self.UpdVar.Area.new[i][k_1] = self.area_surface_bc[i]
             au_lim = self.area_surface_bc[i] * self.max_area_factor
-
             for k in self.grid.over_elems_real(Center()):
-
-                whalf_kp = self.UpdVar.W.values[i].Mid(k+1)
-                w_cut = self.UpdVar.W.values[i].DualCut(k+1)
-                ρaw_cut = self.Ref.rho0_half.Cut(k+1)*self.UpdVar.Area.values[i].Cut(k+1)*w_cut
-                α_0_kp = self.Ref.alpha0_half[k+1]
+                whalf_kp = self.UpdVar.W.values[i].Mid(k)
+                w_cut = self.UpdVar.W.values[i].DualCut(k)
+                ρaw_cut = self.Ref.rho0_half.Cut(k)*self.UpdVar.Area.values[i].Cut(k)*w_cut
+                α_0_kp = self.Ref.alpha0_half[k]
                 adv = - α_0_kp * advect(ρaw_cut, w_cut, self.grid)
 
-                entr_term = self.UpdVar.Area.values[i][k+1] * whalf_kp * (+ self.entr_sc[i][k+1])
-                detr_term = self.UpdVar.Area.values[i][k+1] * whalf_kp * (- self.detr_sc[i][k+1])
+                entr_term = self.UpdVar.Area.values[i][k] * whalf_kp * (+ self.entr_sc[i][k])
+                detr_term = self.UpdVar.Area.values[i][k] * whalf_kp * (- self.detr_sc[i][k])
 
-                self.UpdVar.Area.new[i][k+1] = self.UpdVar.Area.values[i][k+1] + dt_ * (adv + entr_term + detr_term)
-                self.UpdVar.Area.new[i][k+1] = np.fmax(self.UpdVar.Area.new[i][k+1], 0.0)
+                self.UpdVar.Area.new[i][k] = self.UpdVar.Area.values[i][k] + dt_ * (adv + entr_term + detr_term)
+                self.UpdVar.Area.new[i][k] = np.fmax(self.UpdVar.Area.new[i][k], 0.0)
 
-                if self.UpdVar.Area.new[i][k+1] > au_lim:
-                    self.UpdVar.Area.new[i][k+1] = au_lim
-                    if self.UpdVar.Area.values[i][k+1] > 0.0:
-                        self.detr_sc[i][k+1] = (((au_lim-self.UpdVar.Area.values[i][k+1])* dti_ - adv -entr_term)/(-self.UpdVar.Area.values[i][k+1]  * whalf_kp))
+                if self.UpdVar.Area.new[i][k] > au_lim:
+                    self.UpdVar.Area.new[i][k] = au_lim
+                    if self.UpdVar.Area.values[i][k] > 0.0:
+                        self.detr_sc[i][k] = (((au_lim-self.UpdVar.Area.values[i][k])* dti_ - adv -entr_term)/(-self.UpdVar.Area.values[i][k]  * whalf_kp))
                     else:
-                        self.detr_sc[i][k+1] = (((au_lim-self.UpdVar.Area.values[i][k+1])* dti_ - adv -entr_term)/(-au_lim  * whalf_kp))
+                        self.detr_sc[i][k] = (((au_lim-self.UpdVar.Area.values[i][k])* dti_ - adv -entr_term)/(-au_lim  * whalf_kp))
+
+            self.entr_sc[i][k_1] = 2.0 * dzi
+            self.detr_sc[i][k_1] = 0.0
+            self.UpdVar.Area.new[i][k_1] = self.area_surface_bc[i]
 
         # Solve for updraft velocity
         for i in range(self.n_updrafts):
+            self.UpdVar.W.new[i][kb_1] = self.w_surface_bc[i]
             for k in self.grid.over_elems_real(Center()):
                 a_new_k = self.UpdVar.Area.new[i].Mid(k)
                 if a_new_k >= self.minimum_area:
