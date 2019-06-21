@@ -336,13 +336,9 @@ class UpdraftMicrophysics:
 
     def compute_update_combined_local_thetal(self, p0, T, qt, ql, qr, h, i, k):
 
-        # Language note: array indexing must be used to dereference pointers in Cython. * notation (C-style dereferencing)
-        # is reserved for packing tuples
-
         tmp_qr = acnv_instant(ql[i][k], qt[i][k], self.max_supersaturation, T[i][k], p0[k])
         self.prec_source_qt[i][k] = -tmp_qr
         self.prec_source_h[i][k]  = rain_source_to_thetal(p0[k], T[i][k], qt[i][k], ql[i][k], 0.0, tmp_qr)
-                                                                             #TODO - assumes no ice
         qt[i][k] += self.prec_source_qt[i][k]
         ql[i][k] += self.prec_source_qt[i][k]
         qr[i][k] -= self.prec_source_qt[i][k]

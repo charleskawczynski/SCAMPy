@@ -1039,17 +1039,27 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 # write the discrete equations in form:
                 # c1 * phi_new[k] = c2 * phi[k] + c3 * phi[k-1] + c4 * phi_entr
                 if self.UpdVar.Area.new[i][k] >= self.minimum_area:
-                    m_k = (tmp['ρ_0', k] * self.UpdVar.Area.values[i][k] * self.UpdVar.W.values[i].Mid(k))
-                    m_km = (tmp['ρ_0', k-1] * self.UpdVar.Area.values[i][k-1] * self.UpdVar.W.values[i].Mid(k-1))
-                    c1 = tmp['ρ_0', k] * self.UpdVar.Area.new[i][k] * dti_
-                    c2 = (tmp['ρ_0', k] * self.UpdVar.Area.values[i][k] * dti_ - m_k * (dzi + self.detr_sc[i][k]))
-                    c3 = m_km * dzi
-                    c4 = m_k * self.entr_sc[i][k]
+                    a_k = self.UpdVar.Area.values[i][k]
+                    a_k_new = self.UpdVar.Area.new[i][k]
+                    a_km = self.UpdVar.Area.values[i][k-1]
+                    H_cut = self.UpdVar.H.values[i].Cut(k)
+                    QT_cut = self.UpdVar.QT.values[i].Cut(k)
+                    ρ_k = self.Ref.rho0_half[k]
+                    ρ_km = self.Ref.rho0_half[k-1]
+                    w_k = self.UpdVar.W.values[i].Mid(k)
+                    w_km = self.UpdVar.W.values[i].Mid(k-1)
+                    ε_sc = self.entr_sc[i][k]
+                    δ_sc = self.detr_sc[i][k]
 
-                    self.UpdVar.H.new[i][k] =  (c2 * self.UpdVar.H.values[i][k]  + c3 * self.UpdVar.H.values[i][k-1]
-                                               + c4 * H_entr)/c1
-                    self.UpdVar.QT.new[i][k] = (c2 * self.UpdVar.QT.values[i][k] + c3 * self.UpdVar.QT.values[i][k-1]
-                                               + c4* QT_entr)/c1
+                    m_k = ρ_k * a_k * w_k
+                    m_km = ρ_km * a_km * w_km
+                    c1 = ρ_k * a_k_new * dti_
+                    c2 = ρ_k * a_k * dti_ - m_k * (dzi + δ_sc)
+                    c3 = m_km * dzi
+                    c4 = m_k * ε_sc
+
+                    self.UpdVar.H.new[i][k] =  (c2 * H_cut[1]  + c3 * H_cut[0] + c4 * H_entr)/c1
+                    self.UpdVar.QT.new[i][k] = (c2 * QT_cut[1] + c3 * QT_cut[0] + c4* QT_entr)/c1
                 else:
                     self.UpdVar.H.new[i][k] = GMV.H.values[k]
                     self.UpdVar.QT.new[i][k] = GMV.QT.values[k]
