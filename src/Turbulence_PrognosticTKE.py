@@ -1050,11 +1050,19 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     δ_sc = self.detr_sc[i][k]
                     ρa_k = ρ_k*a_k
 
+                    # ρaw_cut = ρ_cut * a_cut * w_cut
+                    # ρa_new_k = ρ_k * a_k_new
+
+                    # tendencies_H  = -ρaw_cut[1]*H_cut[1]  * (dzi + δ_sc) + ρaw_cut[0] * dzi * H_cut[0]  + ρaw_cut[1] * ε_sc * H_env
+                    # tendencies_QT = -ρaw_cut[1]*QT_cut[1] * (dzi + δ_sc) + ρaw_cut[0] * dzi * QT_cut[0] + ρaw_cut[1] * ε_sc * QT_env
+
                     ρaw_cut = ρ_cut * a_cut * w_cut
+                    ρawH_cut = ρaw_cut * H_cut
+                    ρawQT_cut = ρaw_cut * QT_cut
                     ρa_new_k = ρ_k * a_k_new
 
-                    tendencies_H = -ρaw_cut[1]*H_cut[1]  * (dzi + δ_sc) + ρaw_cut[0] * dzi * H_cut[0]  + ρaw_cut[1] * ε_sc * H_env
-                    tendencies_QT = -ρaw_cut[1]*QT_cut[1] * (dzi + δ_sc) + ρaw_cut[0] * dzi * QT_cut[0] + ρaw_cut[1] * ε_sc * QT_env
+                    tendencies_H  = -advect(ρawH_cut , w_cut, self.grid) + ρaw_cut[1] * (- δ_sc * H_cut[1]  + ε_sc * H_env )
+                    tendencies_QT = -advect(ρawQT_cut, w_cut, self.grid) + ρaw_cut[1] * (- δ_sc * QT_cut[1] + ε_sc * QT_env)
 
                     self.UpdVar.H.new[i][k] =  ρa_k/ρa_new_k * H_cut[1]  + dt_*tendencies_H/ρa_new_k
                     self.UpdVar.QT.new[i][k] = ρa_k/ρa_new_k * QT_cut[1] + dt_*tendencies_QT/ρa_new_k
