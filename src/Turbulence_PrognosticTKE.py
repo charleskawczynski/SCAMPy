@@ -1033,8 +1033,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
             # starting from the bottom do entrainment at each level
             for k in self.grid.over_elems_real(Center())[1:]:
-                H_entr = self.EnvVar.H.values[k]
-                QT_entr = self.EnvVar.QT.values[k]
+                dt_ = 1.0/dti_
+                H_env = self.EnvVar.H.values[k]
+                QT_env = self.EnvVar.QT.values[k]
 
                 if self.UpdVar.Area.new[i][k] >= self.minimum_area:
                     a_k = self.UpdVar.Area.values[i][k]
@@ -1047,15 +1048,16 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     w_cut = self.UpdVar.W.values[i].DualCut(k)
                     ε_sc = self.entr_sc[i][k]
                     δ_sc = self.detr_sc[i][k]
+                    ρa_k = ρ_k*a_k
 
                     ρaw_cut = ρ_cut * a_cut * w_cut
-                    c1 = ρ_k * a_k_new * dti_
-                    c2 = ρ_k * a_k * dti_ - ρaw_cut[1] * (dzi + δ_sc)
-                    c3 = ρaw_cut[0] * dzi
-                    c4 = ρaw_cut[1] * ε_sc
+                    ρa_new_k = ρ_k * a_k_new
 
-                    self.UpdVar.H.new[i][k] =  (c2 * H_cut[1]  + c3 * H_cut[0] + c4 * H_entr)/c1
-                    self.UpdVar.QT.new[i][k] = (c2 * QT_cut[1] + c3 * QT_cut[0] + c4* QT_entr)/c1
+                    tendencies_H = -ρaw_cut[1]*H_cut[1]  * (dzi + δ_sc) + ρaw_cut[0] * dzi * H_cut[0]  + ρaw_cut[1] * ε_sc * H_env
+                    tendencies_QT = -ρaw_cut[1]*QT_cut[1] * (dzi + δ_sc) + ρaw_cut[0] * dzi * QT_cut[0] + ρaw_cut[1] * ε_sc * QT_env
+
+                    self.UpdVar.H.new[i][k] =  ρa_k/ρa_new_k * H_cut[1]  + dt_*tendencies_H/ρa_new_k
+                    self.UpdVar.QT.new[i][k] = ρa_k/ρa_new_k * QT_cut[1] + dt_*tendencies_QT/ρa_new_k
                 else:
                     self.UpdVar.H.new[i][k] = GMV.H.values[k]
                     self.UpdVar.QT.new[i][k] = GMV.QT.values[k]
