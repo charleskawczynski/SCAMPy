@@ -192,7 +192,7 @@ class GridMeanVariables:
             Stats.write_profile_new('HQTcov_mean', self.grid, self.HQTcov.values)
 
         for k in self.grid.over_elems_real(Center()):
-            lwp += tmp['ρ_0', k]*self.QL.values[k]*self.grid.dz
+            lwp += tmp['ρ_0'][k]*self.QL.values[k]*self.grid.dz
         Stats.write_ts('lwp', lwp)
 
         return
@@ -201,12 +201,12 @@ class GridMeanVariables:
         for k in self.grid.over_elems(Center()):
             h = self.H.values[k]
             qt = self.QT.values[k]
-            p0 = tmp['p_0', k]
+            p0 = tmp['p_0'][k]
             T, ql = eos(self.t_to_prog_fp, self.prog_to_t_fp, p0, qt, h )
             self.QL.values[k] = ql
             self.T.values[k] = T
             qv = qt - ql
             self.THL.values[k] = t_to_thetali_c(p0, T, qt, ql,0.0)
             alpha = alpha_c(p0, T, qt, qv)
-            self.B.values[k] = buoyancy_c(tmp['α_0', k], alpha)
+            self.B.values[k] = buoyancy_c(tmp['α_0'][k], alpha)
         return

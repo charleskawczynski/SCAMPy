@@ -32,6 +32,12 @@ class Field:
     def __len__(self):
         return len(self.values)
 
+    def __str__(self):
+        s = ''
+        s+=str(self.loc)
+        s+=str(self.values)
+        return s
+
     def export_data(self, grid, file_name):
         if isinstance(self.loc, Node):
             a = np.transpose(grid.z)

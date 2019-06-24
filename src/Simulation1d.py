@@ -33,22 +33,22 @@ class Simulation1d:
         N_sd = N_subdomains
 
         unkowns = (
-         ('a'              , N_sd),  ('new_a'              , N_sd), ('old_a'              , N_sd), ('tend_a'              , N_sd), ('mf_a'              , N_sd),
-         ('w'              , N_sd),  ('new_w'              , N_sd), ('old_w'              , N_sd), ('tend_w'              , N_sd), ('mf_w'              , N_sd),
-         ('q_tot'          , N_sd),  ('new_q_tot'          , N_sd), ('old_q_tot'          , N_sd), ('tend_q_tot'          , N_sd), ('mf_q_tot'          , N_sd),
-         ('θ_liq'          , N_sd),  ('new_θ_liq'          , N_sd), ('old_θ_liq'          , N_sd), ('tend_θ_liq'          , N_sd), ('mf_θ_liq'          , N_sd),
-         ('tke'            , N_sd),  ('new_tke'            , N_sd), ('old_tke'            , N_sd), ('tend_tke'            , N_sd), ('mf_tke'            , N_sd),
-         ('cv_q_tot'       , N_sd),  ('new_cv_q_tot'       , N_sd), ('old_cv_q_tot'       , N_sd), ('tend_cv_q_tot'       , N_sd), ('mf_cv_q_tot'       , N_sd),
-         ('cv_θ_liq'       , N_sd),  ('new_cv_θ_liq'       , N_sd), ('old_cv_θ_liq'       , N_sd), ('tend_cv_θ_liq'       , N_sd), ('mf_cv_θ_liq'       , N_sd),
-         ('cv_θ_liq_q_tot' , N_sd),  ('new_cv_θ_liq_q_tot' , N_sd), ('old_cv_θ_liq_q_tot' , N_sd), ('tend_cv_θ_liq_q_tot' , N_sd), ('mf_cv_θ_liq_q_tot' , N_sd),
+         ('a'             , Center() , N_sd),  ('new_a'             , Center() , N_sd), ('old_a'             , Center() , N_sd), ('tend_a'             , Center() , N_sd), ('mf_a'             , Center() , N_sd),
+         ('w'             , Center() , N_sd),  ('new_w'             , Center() , N_sd), ('old_w'             , Center() , N_sd), ('tend_w'             , Center() , N_sd), ('mf_w'             , Center() , N_sd),
+         ('q_tot'         , Center() , N_sd),  ('new_q_tot'         , Center() , N_sd), ('old_q_tot'         , Center() , N_sd), ('tend_q_tot'         , Center() , N_sd), ('mf_q_tot'         , Center() , N_sd),
+         ('θ_liq'         , Center() , N_sd),  ('new_θ_liq'         , Center() , N_sd), ('old_θ_liq'         , Center() , N_sd), ('tend_θ_liq'         , Center() , N_sd), ('mf_θ_liq'         , Center() , N_sd),
+         ('tke'           , Center() , N_sd),  ('new_tke'           , Center() , N_sd), ('old_tke'           , Center() , N_sd), ('tend_tke'           , Center() , N_sd), ('mf_tke'           , Center() , N_sd),
+         ('cv_q_tot'      , Center() , N_sd),  ('new_cv_q_tot'      , Center() , N_sd), ('old_cv_q_tot'      , Center() , N_sd), ('tend_cv_q_tot'      , Center() , N_sd), ('mf_cv_q_tot'      , Center() , N_sd),
+         ('cv_θ_liq'      , Center() , N_sd),  ('new_cv_θ_liq'      , Center() , N_sd), ('old_cv_θ_liq'      , Center() , N_sd), ('tend_cv_θ_liq'      , Center() , N_sd), ('mf_cv_θ_liq'      , Center() , N_sd),
+         ('cv_θ_liq_q_tot', Center() , N_sd),  ('new_cv_θ_liq_q_tot', Center() , N_sd), ('old_cv_θ_liq_q_tot', Center() , N_sd), ('tend_cv_θ_liq_q_tot', Center() , N_sd), ('mf_cv_θ_liq_q_tot', Center() , N_sd),
         )
 
 
-        temp_vars = (('ρ_0', 1),
-                     ('α_0', 1),
-                     ('p_0', 1),
-                     ('K_m', N_sd),
-                     ('K_h', N_sd),
+        temp_vars = (('ρ_0', Center(), 1),
+                     ('α_0', Center(), 1),
+                     ('p_0', Center(), 1),
+                     ('K_m', Center(), N_sd),
+                     ('K_h', Center(), N_sd),
                      )
 
         self.grid = Grid(z_min, z_max, n_elems_real, n_ghost)

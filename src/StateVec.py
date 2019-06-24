@@ -2,6 +2,7 @@ import numpy as np
 import copy
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 import matplotlib.pyplot as plt
+from Field import Field, Full, Half, Dirichlet, Neumann
 
 import numpy as np
 
@@ -19,8 +20,8 @@ def friendly_name(s):
     return s
 
 def get_var_mapper(var_tuple):
-    var_names = [v for (v, nsd) in var_tuple]
-    end_index = list(np.cumsum([nsd for (v, nsd) in var_tuple]))
+    var_names = [var_name for (var_name, loc, nsd) in var_tuple]
+    end_index = list(np.cumsum([nsd for (var_name, loc, nsd) in var_tuple]))
     start_index = [0]+[x for x in end_index][0:-1]
     vals = [list(range(a,b)) for a,b in zip(start_index, end_index)]
     var_mapper = {k : v for k,v in zip(var_names, vals)}
@@ -28,42 +29,33 @@ def get_var_mapper(var_tuple):
 
 class StateVec:
     def __init__(self, var_tuple, grid):
-        self.n_subdomains = max([nsd for v, nsd in var_tuple])
+        self.n_subdomains = max([nsd for var_name, loc, nsd in var_tuple])
         self.i_gm = 0
         self.i_env = 1
-        self.n_vars = sum([nsd for v, nsd in var_tuple])
+        self.n_vars = sum([nsd for var_name, loc, nsd in var_tuple])
         self.var_names, self.var_mapper = get_var_mapper(var_tuple)
         n = len(list(grid.over_elems(Center())))
-        self.fields = np.zeros((self.n_vars, n))
+        self.locs = {var_name : loc for var_name, loc, nsd in var_tuple}
+        self.nsd = {var_name : nsd for var_name, loc, nsd in var_tuple}
+        self.fields = [Field.field(grid, self.locs[v]) for v in self.var_mapper for i in range(self.nsd[v])]
         return
 
     def __getitem__(self, tup):
         if len(tup)==2:
-            name, k = tup
+            name, i = tup
+        else:
+            name = tup
             i = 0
-        elif len(tup)==3:
-            name, k, i = tup
-        else:
-            raise ValueError("__getitem__ called with wrong dimensions in StateVec.py")
-        if not (isinstance(k, Cut) or isinstance(k, Dual)):
-            return self.fields[self.var_mapper[name][i], k]
-        else:
-            if isinstance(k, Cut):
-                name_key = self.var_mapper[name][i]
-                return np.array([self.fields[name_key, j] for j in range(k.k-1,k.k+2)])
-            elif isinstance(k, Dual):
-                name_key = self.var_mapper[name][i]
-                return np.array([(self.fields[name_key, j]+self.fields[name_key, j+1])/2.0 for j in range(k.k-1,k.k+1)])
+        return self.fields[self.var_mapper[name][i]]
 
-    def __setitem__(self, tup, value):
-        if len(tup)==2:
-            name, k = tup
-            i = 0
-        elif len(tup)==3:
-            name, k, i = tup
-        else:
-            raise ValueError("__getitem__ called with wrong dimensions in StateVec.py")
-        self.fields[self.var_mapper[name][i], k] = value
+    # def __setitem__(self, tup, value):
+    #     name, i = tup
+    #     i = 0
+    #     elif len(tup)==3:
+    #         name, k, i = tup
+    #     else:
+    #         raise ValueError("__getitem__ called with wrong dimensions in StateVec.py")
+    #     self.fields[self.var_mapper[name][i], k] = value
 
     def __str__(self):
         s = ''
@@ -71,7 +63,7 @@ class StateVec:
         s+= '\nn_subdomains = '+str(self.n_subdomains)
         s+= '\nvar_names    = '+str(self.var_names)
         s+= '\nvar_mapper   = '+str(self.var_mapper)
-        s+= '\nfields = \n'+str(self.fields)
+        s+= '\nfields = \n'+'\n'.join([str(x) for x in self.fields])
         return s
 
     def over_sub_domains(self, i=None):
@@ -88,7 +80,7 @@ class StateVec:
 
     def surface(self, grid, var_name, i_sd=0):
         k = grid.first_interior(Zmin())
-        return self[var_name, Dual(k), i_sd][0]
+        return self[var_name, i_sd].Dual(k)[0]
 
     def var_names_except(self, names=()):
         return [name for name in self.var_names if not name in names]
@@ -102,16 +94,16 @@ class StateVec:
         if name_idx == None:
             r = 0
             for name_idx in self.var_names:
-                y = [self[name_idx, k, i_sd] for k in domain_range]
+                y = [self[name_idx, i_sd][k] for k in domain_range]
                 plt.plot(y, x, markershapes[r], label=friendly_name(name_idx))
-                plt.hold()
+                plt.hold(True)
                 r+=1
             plt.title('state vector vs z')
             plt.xlabel('state vector')
             plt.ylabel('z')
         else:
             x_name = filename
-            y = [self[name_idx, k, i_sd] for k in domain_range]
+            y = [self[name_idx, i_sd][k] for k in domain_range]
             plt.plot(y, x, markershapes[i_sd])
 
             plt.title(x_name + ' vs z')
@@ -152,14 +144,14 @@ z_max        = 1.0
 n_elems_real = 10
 n_ghost      = 1
 grid = Grid(z_min, z_max, n_elems_real, n_ghost)
-unknowns = (('ρ_0', 1), ('w', 3), ('a', 3), ('alpha_0', 1))
+unknowns = (('ρ_0', Center(), 1), ('w', Node(), 3), ('a', Center(), 3), ('alpha_0', Center(), 1))
 state_vec = StateVec(unknowns, grid)
 print(state_vec)
 
-# state_vec['ρ_0', 1] = 1.0
-# state_vec['ρ_0', 3] = 4.0
+state_vec['ρ_0'][1] = 1.0
+state_vec['ρ_0'][3] = 4.0
 print(state_vec)
-state_vec['w', 2, 2] = 3.0
+state_vec['w', 2][2] = 3.0
 print(state_vec)
 print('grid.z      = ', grid.z)
 print('grid.z_half = ', grid.z_half)
@@ -168,11 +160,13 @@ print(state_vec.over_sub_domains(1))
 print(state_vec.over_sub_domains('ρ_0'))
 print(state_vec.var_names_except('ρ_0'))
 
-for k in grid.over_elems_real(Center()):
-    state_vec['ρ_0', k] = 3.0
-
 for k in grid.over_elems(Center()):
-    state_vec['ρ_0', k] = 2.0
+    state_vec['ρ_0'][k] = 2.0
+    print('k = ', k)
+
+for k in grid.over_elems_real(Center()):
+    state_vec['ρ_0'][k] = 3.0
+    print('k = ', k)
 
 state_vec.plot_state(grid, './', 'test')
 """

@@ -249,7 +249,7 @@ class UpdraftThermodynamics:
         #Update T, QL
         for i in range(self.n_updraft):
             for k in self.grid.over_elems(Center()):
-                T, ql = eos(self.t_to_prog_fp, self.prog_to_t_fp, tmp['p_0', k], UpdVar.QT.values[i][k], UpdVar.H.values[i][k])
+                T, ql = eos(self.t_to_prog_fp, self.prog_to_t_fp, tmp['p_0'][k], UpdVar.QT.values[i][k], UpdVar.H.values[i][k])
                 UpdVar.QL.values[i][k] = ql
                 UpdVar.T.values[i][k] = T
         return
@@ -261,8 +261,8 @@ class UpdraftThermodynamics:
             for i in range(self.n_updraft):
                 for k in self.grid.over_elems(Center()):
                     qv = UpdVar.QT.values[i][k] - UpdVar.QL.values[i][k]
-                    alpha = alpha_c(tmp['p_0', k], UpdVar.T.values[i][k], UpdVar.QT.values[i][k], qv)
-                    UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0', k], alpha) #- GMV.B.values[k]
+                    alpha = alpha_c(tmp['p_0'][k], UpdVar.T.values[i][k], UpdVar.QT.values[i][k], qv)
+                    UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0'][k], alpha) #- GMV.B.values[k]
         else:
             for i in range(self.n_updraft):
                 for k in self.grid.over_elems_real(Center()):
@@ -271,16 +271,16 @@ class UpdraftThermodynamics:
                         qv = UpdVar.QT.values[i][k] - UpdVar.QL.values[i][k]
                         h = UpdVar.H.values[i][k]
                         t = UpdVar.T.values[i][k]
-                        alpha = alpha_c(tmp['p_0', k], t, qt, qv)
-                        UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0', k], alpha)
+                        alpha = alpha_c(tmp['p_0'][k], t, qt, qv)
+                        UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0'][k], alpha)
 
                     else:
-                        T, q_l = eos(self.t_to_prog_fp,self.prog_to_t_fp, tmp['p_0', k], qt, h)
+                        T, q_l = eos(self.t_to_prog_fp,self.prog_to_t_fp, tmp['p_0'][k], qt, h)
                         qt -= q_l
                         qv = qt
                         t = T
-                        alpha = alpha_c(tmp['p_0', k], t, qt, qv)
-                        UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0', k], alpha)
+                        alpha = alpha_c(tmp['p_0'][k], t, qt, qv)
+                        UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0'][k], alpha)
         for k in self.grid.over_elems_real(Center()):
             GMV.B.values[k] = (1.0 - UpdVar.Area.bulkvalues[k]) * EnvVar.B.values[k]
             for i in range(self.n_updraft):
@@ -312,9 +312,9 @@ class UpdraftMicrophysics:
         for i in range(self.n_updraft):
             for k in self.grid.over_elems(Center()):
                 tmp_qr = acnv_instant(UpdVar.QL.values[i][k], UpdVar.QT.values[i][k], self.max_supersaturation,\
-                                      UpdVar.T.values[i][k], tmp['p_0', k])
+                                      UpdVar.T.values[i][k], tmp['p_0'][k])
                 self.prec_source_qt[i][k] = -tmp_qr
-                self.prec_source_h[i][k]  = rain_source_to_thetal(tmp['p_0', k], UpdVar.T.values[i][k],\
+                self.prec_source_h[i][k]  = rain_source_to_thetal(tmp['p_0'][k], UpdVar.T.values[i][k],\
                                              UpdVar.QT.values[i][k], UpdVar.QL.values[i][k], 0.0, tmp_qr)
                                                                                           #TODO assumes no ice
         self.prec_source_h_tot  = np.sum(np.multiply(self.prec_source_h,  UpdVar.Area.values), axis=0)

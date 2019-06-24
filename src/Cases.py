@@ -105,13 +105,13 @@ class Soares(CasesBase):
         if GMV.H.name == 'thetal':
             for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = theta[k]
-                GMV.T.values[k] =  theta[k] * exner_c(tmp['p_0', k])
+                GMV.T.values[k] =  theta[k] * exner_c(tmp['p_0'][k])
                 GMV.THL.values[k] = theta[k]
         elif GMV.H.name == 's':
             for k in grid.over_elems_real(Center()):
-                GMV.T.values[k] = theta[k] * exner_c(tmp['p_0', k])
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k], GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
+                GMV.T.values[k] = theta[k] * exner_c(tmp['p_0'][k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k], GMV.T.values[k], GMV.QT.values[k], ql, qi)
+                GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k], GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
         GMV.H.set_bcs(grid)
         GMV.T.set_bcs(grid)
@@ -205,13 +205,13 @@ class Bomex(CasesBase):
         if GMV.H.name == 'thetal':
             for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
-                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0', k])
+                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0'][k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
             for k in grid.over_elems_real(Center()):
-                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0', k])
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k], GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k], GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
+                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0'][k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k],GMV.T.values[k], GMV.QT.values[k], ql, qi)
+                GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k], GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
         GMV.U.set_bcs(grid)
         GMV.QT.set_bcs(grid)
@@ -242,10 +242,10 @@ class Bomex(CasesBase):
             self.Fo.ug[k] = -10.0 + (1.8e-3)*z[k]
             # Set large-scale cooling
             if z[k] <= 1500.0:
-                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(tmp['p_0', k])
+                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(tmp['p_0'][k])
             else:
                 self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (z[k] - 1500.0)
-                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(tmp['p_0', k])
+                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(tmp['p_0'][k])
             # Set large-scale drying
             if z[k] <= 300.0:
                 self.Fo.dqtdt[k] = -1.2e-8   #kg/(kg * s)
@@ -328,14 +328,14 @@ class life_cycle_Tan2018(CasesBase):
         if GMV.H.name == 'thetal':
             for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
-                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0', k])
+                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0'][k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
             for k in grid.over_elems_real(Center()):
-                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0', k])
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0'][k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
         GMV.U.set_bcs(grid)
@@ -369,10 +369,10 @@ class life_cycle_Tan2018(CasesBase):
             self.Fo.ug[k] = -10.0 + (1.8e-3)*grid.z_half[k]
             # Set large-scale cooling
             if grid.z_half[k] <= 1500.0:
-                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(tmp['p_0', k])
+                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(tmp['p_0'][k])
             else:
                 self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (grid.z_half[k] - 1500.0)
-                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(tmp['p_0', k])
+                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(tmp['p_0'][k])
             # Set large-scale drying
             if grid.z_half[k] <= 300.0:
                 self.Fo.dqtdt[k] = -1.2e-8   #kg/(kg * s)
@@ -450,14 +450,14 @@ class Rico(CasesBase):
         if GMV.H.name == 'thetal':
             for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
-                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0', k])
+                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0'][k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
             for k in grid.over_elems_real(Center()):
-                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0', k])
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0'][k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
         GMV.U.set_bcs(grid)
@@ -494,7 +494,7 @@ class Rico(CasesBase):
             self.Fo.ug[k] = -9.9 + 2.0e-3 * z[k]
             self.Fo.vg[k] = -3.8
             # Set large-scale cooling
-            self.Fo.dTdt[k] =  (-2.5/(3600.0 * 24.0))  * exner_c(tmp['p_0', k])
+            self.Fo.dTdt[k] =  (-2.5/(3600.0 * 24.0))  * exner_c(tmp['p_0'][k])
 
             # Set large-scale moistening
             if z[k] <= 2980.0:
@@ -622,15 +622,15 @@ class TRMM_LBA(CasesBase):
             qv = GMV.QT.values[k] - GMV.QL.values[k]
             GMV.QT.values[k] = qv_star*RH[k]/100.0
             if GMV.H.name == 's':
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0)
             elif GMV.H.name == 'thetal':
-                 GMV.H.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
+                 GMV.H.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
 
-            GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
+            GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
-            theta_rho[k] = theta_rho_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], qv)
+            theta_rho[k] = theta_rho_c(tmp['p_0'][k], GMV.T.values[k], GMV.QT.values[k], qv)
 
         GMV.QT.set_bcs(grid)
         GMV.H.set_bcs(grid)
@@ -867,15 +867,15 @@ class ARM_SGP(CasesBase):
         for k in grid.over_elems_real(Center()):
             GMV.U.values[k] = 10.0
             GMV.QT.values[k] = qt[k]
-            GMV.T.values[k] = Theta[k]*exner_c(tmp['p_0', k])
+            GMV.T.values[k] = Theta[k]*exner_c(tmp['p_0'][k])
             if GMV.H.name == 's':
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0)
             elif GMV.H.name == 'thetal':
-                 GMV.H.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
+                 GMV.H.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
 
-            GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
+            GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
 
 
@@ -946,10 +946,10 @@ class ARM_SGP(CasesBase):
         for k in self.Fo.grid.over_elems(Center()):
                 if self.Fo.grid.z_half[k] <=1000.0:
                     self.Fo.dTdt[k] = dTdt
-                    self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.tmp['p_0', k])
+                    self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.tmp['p_0'][k])
                 elif self.Fo.grid.z_half[k] > 1000.0  and self.Fo.grid.z_half[k] <= 2000.0:
                     self.Fo.dTdt[k] = dTdt*(1-(self.Fo.grid.z_half[k]-1000.0)/1000.0)
-                    self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.tmp['p_0', k])\
+                    self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.tmp['p_0'][k])\
                                         *(1-(self.Fo.grid.z_half[k]-1000.0)/1000.0)
         self.Fo.update(GMV, tmp)
 
@@ -1008,13 +1008,13 @@ class GATE_III(CasesBase):
             GMV.U.values[k] = U[k]
 
             if GMV.H.name == 's':
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0)
             elif GMV.H.name == 'thetal':
-                 GMV.H.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
+                 GMV.H.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
 
-            GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
+            GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
                                                 GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
         GMV.U.set_bcs(grid)
         GMV.QT.set_bcs(grid)
@@ -1178,21 +1178,21 @@ class DYCOMS_RF01(CasesBase):
             # ql and T profile
             # (calculated by saturation adjustment using thetal and qt values provided in DYCOMS
             # and using Rd, cp and L constants as defined in DYCOMS)
-            GMV.T.values[k], GMV.QL.values[k] = self.dycoms_sat_adjst(tmp['p_0', k], thetal[k], GMV.QT.values[k])
+            GMV.T.values[k], GMV.QL.values[k] = self.dycoms_sat_adjst(tmp['p_0'][k], thetal[k], GMV.QT.values[k])
 
             # thermodynamic variable profile (either entropy or thetal)
             # (calculated based on T and ql profiles.
             # Here we use Rd, cp and L constants as defined in scampy)
-            GMV.THL.values[k] = t_to_thetali_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
+            GMV.THL.values[k] = t_to_thetali_c(tmp['p_0'][k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
             if GMV.H.name == 'thetal':
-                GMV.H.values[k] = t_to_thetali_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
+                GMV.H.values[k] = t_to_thetali_c(tmp['p_0'][k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
             elif GMV.H.name == 's':
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k], GMV.T.values[k], GMV.QT.values[k], GMV.QL.values[k], qi)
 
             # buoyancy profile
             qv = GMV.QT.values[k] - qi - GMV.QL.values[k]
-            alpha = alpha_c(tmp['p_0', k], GMV.T.values[k], GMV.QT.values[k], qv)
-            GMV.B.values[k] = buoyancy_c(tmp['α_0', k], alpha)
+            alpha = alpha_c(tmp['p_0'][k], GMV.T.values[k], GMV.QT.values[k], qv)
+            GMV.B.values[k] = buoyancy_c(tmp['α_0'][k], alpha)
 
             # velocity profile (geostrophic)
             GMV.U.values[k] = 7.0
@@ -1319,14 +1319,14 @@ class GABLS(CasesBase):
         if GMV.H.name == 'thetal':
             for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
-                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0', k]) # No water content
+                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0'][k]) # No water content
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
             for k in grid.over_elems_real(Center()):
-                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0', k])
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0'][k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
         GMV.U.set_bcs(grid)
@@ -1414,14 +1414,14 @@ class SP(CasesBase):
         if GMV.H.name == 'thetal':
             for k in grid.over_elems_real(Center()):
                 GMV.H.values[k] = thetal[k]
-                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0', k])
+                GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0'][k])
                 GMV.THL.values[k] = thetal[k]
         elif GMV.H.name == 's':
             for k in grid.over_elems_real(Center()):
-                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0', k])
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0'][k])
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi)
-                GMV.THL.values[k] = thetali_c(tmp['p_0', k],GMV.T.values[k],
+                GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
                                                  GMV.QT.values[k], ql, qi, latent_heat(GMV.T.values[k]))
 
         GMV.U.set_bcs(grid)
@@ -1440,7 +1440,7 @@ class SP(CasesBase):
         theta_surface    = self.Sur.Tsurface / exner_c(Ref.Pg)
         theta_flux = 0.24
         self.Sur.bflux   =  g * theta_flux / theta_surface
-        # self.Sur.bflux = 0.24 * exner_c(tmp['p_0', grid.gw]) * g / (tmp['p_0', grid.gw]*tmp['α_0', grid.gw]/Rd)
+        # self.Sur.bflux = 0.24 * exner_c(tmp['p_0'][grid.gw]) * g / (tmp['p_0'][grid.gw]*tmp['α_0'][grid.gw]/Rd)
         self.Sur.initialize()
         return
 
