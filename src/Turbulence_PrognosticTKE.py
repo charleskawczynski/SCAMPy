@@ -499,6 +499,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     self.EnvVar.QTvar.values[k] = GMV.QTvar.values[k]
                     self.EnvVar.HQTcov.values[k] = GMV.HQTcov.values[k]
 
+        self.UpdVar.set_means(GMV)
         self.decompose_environment(GMV, 'values')
 
         if self.use_steady_updrafts:
@@ -506,17 +507,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         else:
             self.compute_prognostic_updrafts(GMV, Case, TS, tmp)
 
-        # TODO -maybe not needed? - both diagnostic and prognostic updrafts end with decompose_environment
-        # But in general ok here without thermodynamics because MF doesnt depend directly on buoyancy
         self.decompose_environment(GMV, 'values')
 
         self.update_GMV_MF(GMV, TS, tmp)
-        # (###)
-        # decompose_environment +  EnvThermo.satadjust + UpdThermo.buoyancy should always be used together
-        # This ensures that:
-        #   - the buoyancy of updrafts and environment is up to date with the most recent decomposition,
-        #   - the buoyancy of updrafts and environment is updated such that
-        #     the mean buoyancy with repect to reference state alpha_0 is zero.
+
         self.decompose_environment(GMV, 'mf_update')
         self.EnvThermo.satadjust(self.EnvVar, True, tmp)
         self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
@@ -526,8 +520,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.update_GMV_ED(GMV, Case, TS, tmp, q)
         self.compute_covariance(GMV, Case, TS, tmp)
 
-        # Back out the tendencies of the grid mean variables for the whole timestep by differencing GMV.new and
-        # GMV.values
         ParameterizationBase.update(self, GMV, Case, TS)
 
         return
@@ -738,15 +730,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     # or GMV.SomeVar.mf_update (GMV value following massflux substep)
     def decompose_environment(self, GMV, whichvals):
 
-        # first make sure the 'bulkvalues' of the updraft variables are updated
-        self.UpdVar.set_means(GMV)
-
         if whichvals == 'values':
             for k in self.grid.over_elems(Center()):
                 val1 = 1.0/(1.0-self.UpdVar.Area.bulkvalues[k])
                 val2 = self.UpdVar.Area.bulkvalues[k] * val1
                 self.EnvVar.QT.values[k] = val1 * GMV.QT.values[k] - val2 * self.UpdVar.QT.bulkvalues[k]
-                self.EnvVar.H.values[k] = val1 * GMV.H.values[k] - val2 * self.UpdVar.H.bulkvalues[k]
+                self.EnvVar.H.values[k]  = val1 * GMV.H.values[k]  - val2 * self.UpdVar.H.bulkvalues[k]
                 # Have to account for staggering of W--interpolate area fraction to the "full" grid points
                 # Assuming GMV.W = 0!
                 au_full = self.UpdVar.Area.bulkvalues.Mid(k)
@@ -758,7 +747,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 val2 = self.UpdVar.Area.bulkvalues[k] * val1
 
                 self.EnvVar.QT.values[k] = val1 * GMV.QT.mf_update[k] - val2 * self.UpdVar.QT.bulkvalues[k]
-                self.EnvVar.H.values[k] = val1 * GMV.H.mf_update[k] - val2 * self.UpdVar.H.bulkvalues[k]
+                self.EnvVar.H.values[k]  = val1 * GMV.H.mf_update[k]  - val2 * self.UpdVar.H.bulkvalues[k]
                 # Have to account for staggering of W
                 # Assuming GMV.W = 0!
                 au_full = self.UpdVar.Area.bulkvalues.Mid(k)
