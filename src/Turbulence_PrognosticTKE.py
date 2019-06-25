@@ -507,8 +507,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         else:
             self.compute_prognostic_updrafts(GMV, Case, TS, tmp)
 
-        self.decompose_environment(GMV, 'values')
-
         self.update_GMV_MF(GMV, TS, tmp)
 
         self.decompose_environment(GMV, 'mf_update')
