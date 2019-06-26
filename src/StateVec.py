@@ -32,6 +32,7 @@ class StateVec:
         self.n_subdomains = max([nsd for var_name, loc, nsd in var_tuple])
         self.i_gm = 0
         self.i_env = 1
+        self.i_ud = [i for i in range(self.n_subdomains) if not any([i==j for j in [self.i_env, self.i_gm]])]
         self.n_vars = sum([nsd for var_name, loc, nsd in var_tuple])
         self.var_names, self.var_mapper = get_var_mapper(var_tuple)
         n = len(list(grid.over_elems(Center())))
@@ -48,15 +49,6 @@ class StateVec:
             i = 0
         return self.fields[self.var_mapper[name][i]]
 
-    # def __setitem__(self, tup, value):
-    #     name, i = tup
-    #     i = 0
-    #     elif len(tup)==3:
-    #         name, k, i = tup
-    #     else:
-    #         raise ValueError("__getitem__ called with wrong dimensions in StateVec.py")
-    #     self.fields[self.var_mapper[name][i], k] = value
-
     def __str__(self):
         s = ''
         s+= '\n------------------ StateVec'
@@ -65,6 +57,10 @@ class StateVec:
         s+= '\nvar_mapper   = '+str(self.var_mapper)
         s+= '\nfields = \n'+'\n'.join([str(x) for x in self.fields])
         return s
+
+    def domain_idx(self):
+        return self.i_gm, self.i_env, self.i_ud
+        # i_gm, i_env, i_ud = q.domain_idx()
 
     def over_sub_domains(self, i=None):
         if i==None:
@@ -87,8 +83,6 @@ class StateVec:
 
     def plot_state(self, grid, directory, filename, name_idx = None, i_sd = 0, include_ghost = True):
         domain_range = grid.over_elems(Center()) if include_ghost else grid.over_elems_real(Center())
-        # k_stop_local = min(len(domain_range), k_stop_min)
-        # domain_range = domain_range[k_start:k_stop_local]
 
         x = [grid.z_half[k] for k in domain_range]
         if name_idx == None:

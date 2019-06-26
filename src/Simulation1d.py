@@ -1,4 +1,5 @@
 import time
+import copy
 import numpy as np
 from Variables import GridMeanVariables
 from Turbulence_PrognosticTKE import ParameterizationFactory
@@ -33,26 +34,39 @@ class Simulation1d:
         N_sd = N_subdomains
 
         unkowns = (
-         ('a'             , Center() , N_sd),  ('new_a'             , Center() , N_sd), ('old_a'             , Center() , N_sd), ('tend_a'             , Center() , N_sd), ('mf_a'             , Center() , N_sd),
-         ('w'             , Center() , N_sd),  ('new_w'             , Center() , N_sd), ('old_w'             , Center() , N_sd), ('tend_w'             , Center() , N_sd), ('mf_w'             , Center() , N_sd),
-         ('q_tot'         , Center() , N_sd),  ('new_q_tot'         , Center() , N_sd), ('old_q_tot'         , Center() , N_sd), ('tend_q_tot'         , Center() , N_sd), ('mf_q_tot'         , Center() , N_sd),
-         ('θ_liq'         , Center() , N_sd),  ('new_θ_liq'         , Center() , N_sd), ('old_θ_liq'         , Center() , N_sd), ('tend_θ_liq'         , Center() , N_sd), ('mf_θ_liq'         , Center() , N_sd),
-         ('tke'           , Center() , N_sd),  ('new_tke'           , Center() , N_sd), ('old_tke'           , Center() , N_sd), ('tend_tke'           , Center() , N_sd), ('mf_tke'           , Center() , N_sd),
-         ('cv_q_tot'      , Center() , N_sd),  ('new_cv_q_tot'      , Center() , N_sd), ('old_cv_q_tot'      , Center() , N_sd), ('tend_cv_q_tot'      , Center() , N_sd), ('mf_cv_q_tot'      , Center() , N_sd),
-         ('cv_θ_liq'      , Center() , N_sd),  ('new_cv_θ_liq'      , Center() , N_sd), ('old_cv_θ_liq'      , Center() , N_sd), ('tend_cv_θ_liq'      , Center() , N_sd), ('mf_cv_θ_liq'      , Center() , N_sd),
-         ('cv_θ_liq_q_tot', Center() , N_sd),  ('new_cv_θ_liq_q_tot', Center() , N_sd), ('old_cv_θ_liq_q_tot', Center() , N_sd), ('tend_cv_θ_liq_q_tot', Center() , N_sd), ('mf_cv_θ_liq_q_tot', Center() , N_sd),
+         ('a'             , Center() , N_sd),
+         ('w'             , Center() , N_sd),
+         ('q_tot'         , Center() , N_sd),
+         ('θ_liq'         , Center() , N_sd),
+         ('tke'           , Center() , N_sd),
+         ('cv_q_tot'      , Center() , N_sd),
+         ('cv_θ_liq'      , Center() , N_sd),
+         ('cv_θ_liq_q_tot', Center() , N_sd),
         )
 
 
-        temp_vars = (('ρ_0', Center(), 1),
+        temp_vars = (
+                     ('ρ_0', Center(), 1),
                      ('α_0', Center(), 1),
                      ('p_0', Center(), 1),
+                     # ('ρ_0', Node(), 1),
+                     # ('α_0', Node(), 1),
+                     # ('p_0', Node(), 1),
+                     ('ρ_0_half', Center(), 1),
+                     ('α_0_half', Center(), 1),
+                     ('p_0_half', Center(), 1),
                      ('K_m', Center(), N_sd),
                      ('K_h', Center(), N_sd),
                      )
 
         self.grid = Grid(z_min, z_max, n_elems_real, n_ghost)
+
         self.q = StateVec(unkowns, self.grid)
+        self.q_new = copy.deepcopy(self.q)
+        self.q_old = copy.deepcopy(self.q)
+        self.q_tendencies = copy.deepcopy(self.q)
+        self.q_mf = copy.deepcopy(self.q)
+
         self.tmp = StateVec(temp_vars, self.grid)
 
         self.Ref = ReferenceState(self.grid)
