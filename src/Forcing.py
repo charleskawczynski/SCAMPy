@@ -202,6 +202,8 @@ class ForcingDYCOMS_RF01(ForcingBase):
         return
 
     def io(self, Stats):
-        Stats.write_profile('rad_dTdt', self.dTdt[ self.grid.gw     : self.grid.nzg - self.grid.gw])
-        Stats.write_profile('rad_flux', self.f_rad[self.grid.gw + 1 : self.grid.nzg - self.grid.gw + 1])
+        k_1 = self.grid.first_interior(Zmin())
+        k_2 = self.grid.first_interior(Zmax())
+        Stats.write_profile('rad_dTdt', self.dTdt[k_1:k_2])
+        Stats.write_profile('rad_flux', self.f_rad[k_1:k_2])
         return

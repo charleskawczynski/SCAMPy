@@ -255,7 +255,6 @@ class UpdraftThermodynamics:
         return
 
     def buoyancy(self,  UpdVar, EnvVar,GMV, extrap, tmp):
-        gw = self.grid.gw
         UpdVar.Area.bulkvalues[:] = np.sum(UpdVar.Area.values,axis=0)
         if not extrap:
             for i in range(self.n_updraft):

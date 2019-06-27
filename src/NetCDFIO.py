@@ -27,8 +27,10 @@ class NetCDFIO_Stats:
         p.append('.')
         p.append(self.uuid[len(self.uuid )-5:len(self.uuid)])
         self.outpath = str(os.path.join(root_dir, ''.join(p))) + os.sep
+        self.figpath = str(os.path.join(root_dir, ''.join(p))) + os.sep + 'figs'+os.sep
 
         os.makedirs(self.outpath, exist_ok=True)
+        os.makedirs(self.figpath, exist_ok=True)
 
         self.stats_path = str(os.path.join(self.outpath, namelist['stats_io']['stats_dir']))
 
@@ -64,8 +66,12 @@ class NetCDFIO_Stats:
         return
 
     def setup_stats_file(self):
-        kmin = self.grid.gw
-        kmax = self.grid.nzg-self.grid.gw
+        k_b_1 = self.grid.boundary(Zmin())
+        k_b_2 = self.grid.boundary(Zmax())
+        k_1 = k_b_1
+        k_2 = k_b_2
+        # k_1 = self.grid.first_interior(Zmin()) # IO assumes full and half fields are equal sizes
+        # k_2 = self.grid.first_interior(Zmax()) # IO assumes full and half fields are equal sizes
 
         root_grp = nc.Dataset(self.path_plus_file, 'w', format='NETCDF4')
 
@@ -74,9 +80,9 @@ class NetCDFIO_Stats:
         profile_grp.createDimension('z', self.grid.nz)
         profile_grp.createDimension('t', None)
         z = profile_grp.createVariable('z', 'f8', ('z'))
-        z[:] = np.array(self.grid.z[kmin:kmax])
+        z[:] = np.array(self.grid.z[k_b_1:k_b_2])
         z_half = profile_grp.createVariable('z_half', 'f8', ('z'))
-        z_half[:] = np.array(self.grid.z_half[kmin:kmax])
+        z_half[:] = np.array(self.grid.z_half[k_1:k_2])
         profile_grp.createVariable('t', 'f8', ('t'))
         del z
         del z_half
@@ -84,9 +90,9 @@ class NetCDFIO_Stats:
         reference_grp = root_grp.createGroup('reference')
         reference_grp.createDimension('z', self.grid.nz)
         z = reference_grp.createVariable('z', 'f8', ('z'))
-        z[:] = np.array(self.grid.z[kmin:kmax])
+        z[:] = np.array(self.grid.z[k_b_1:k_b_2])
         z_half = reference_grp.createVariable('z_half', 'f8', ('z'))
-        z_half[:] = np.array(self.grid.z_half[kmin:kmax])
+        z_half[:] = np.array(self.grid.z_half[k_1:k_2])
         del z
         del z_half
 
@@ -131,7 +137,9 @@ class NetCDFIO_Stats:
 
     def write_profile_new(self, var_name, grid, data):
         var = self.profiles_grp.variables[var_name]
-        var[-1, :] = np.array(data[grid.gw:grid.nzg-grid.gw])
+        k_1 = grid.boundary(Zmin())
+        k_2 = grid.boundary(Zmax())
+        var[-1, :] = np.array(data[k_1:k_2])
         return
 
     def write_reference_profile(self, var_name, data):

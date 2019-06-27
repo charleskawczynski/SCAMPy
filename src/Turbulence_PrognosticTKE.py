@@ -76,9 +76,9 @@ class ParameterizationBase:
                     break
         elif option == 'thetal_maxgrad':
             for k in self.grid.over_elems_real(Center()):
-                grad =  grad(GMV.THL.values.Dual(k), self.grid)
-                if grad > maxgrad:
-                    maxgrad = grad
+                grad_TH =  grad(GMV.THL.values.Dual(k), self.grid)
+                if grad_TH > maxgrad:
+                    maxgrad = grad_TH
                     self.zi = self.grid.z[k]
         elif option == 'critical_Ri':
             self.zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.grid, self.Ri_bulk_crit)

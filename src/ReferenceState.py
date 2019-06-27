@@ -105,12 +105,12 @@ class ReferenceState:
             tmp['ρ_0'][k] = 1.0/tmp['α_0'][k]
             tmp['p_0'][k] = self.p0_half[k]
 
-        plt.plot(self.p0.values         , Gr.z     ); plt.savefig(Stats.outpath+'p0.png'         ); plt.close()
-        plt.plot(self.p0_half.values    , Gr.z_half); plt.savefig(Stats.outpath+'p0_half.png'    ); plt.close()
-        plt.plot(self.rho0.values       , Gr.z     ); plt.savefig(Stats.outpath+'rho0.png'       ); plt.close()
-        plt.plot(self.rho0_half.values  , Gr.z_half); plt.savefig(Stats.outpath+'rho0_half.png'  ); plt.close()
-        plt.plot(self.alpha0.values     , Gr.z     ); plt.savefig(Stats.outpath+'alpha0.png'     ); plt.close()
-        plt.plot(self.alpha0_half.values, Gr.z_half); plt.savefig(Stats.outpath+'alpha0_half.png'); plt.close()
+        plt.plot(self.p0.values         , Gr.z     ); plt.savefig(Stats.figpath+'p0.png'         ); plt.close()
+        plt.plot(self.p0_half.values    , Gr.z_half); plt.savefig(Stats.figpath+'p0_half.png'    ); plt.close()
+        plt.plot(self.rho0.values       , Gr.z     ); plt.savefig(Stats.figpath+'rho0.png'       ); plt.close()
+        plt.plot(self.rho0_half.values  , Gr.z_half); plt.savefig(Stats.figpath+'rho0_half.png'  ); plt.close()
+        plt.plot(self.alpha0.values     , Gr.z     ); plt.savefig(Stats.figpath+'alpha0.png'     ); plt.close()
+        plt.plot(self.alpha0_half.values, Gr.z_half); plt.savefig(Stats.figpath+'alpha0_half.png'); plt.close()
 
         self.p0.export_data(Gr         ,Stats.outpath+'p0.dat')
         self.p0_half.export_data(Gr    ,Stats.outpath+'p0_half.dat')
@@ -118,25 +118,24 @@ class ReferenceState:
         self.rho0_half.export_data(Gr  ,Stats.outpath+'rho0_half.dat')
         self.alpha0.export_data(Gr     ,Stats.outpath+'alpha0.dat')
         self.alpha0_half.export_data(Gr,Stats.outpath+'alpha0_half.dat')
-        tmp.plot_state(Gr, Stats.outpath, 'tmp', name_idx = 'α_0')
-        # tmp.plot_state(Gr, Stats.outpath, 'tmp')
-        # tmp.export_state(Gr, Stats.outpath, 'tmp')
-        # raise NameErorr('done')
+
+        k_1 = Gr.boundary(Zmin())
+        k_2 = Gr.boundary(Zmax())
 
         Stats.add_reference_profile('alpha0')
-        Stats.write_reference_profile('alpha0', alpha[Gr.gw:-Gr.gw])
+        Stats.write_reference_profile('alpha0', alpha[k_1:k_2])
         Stats.add_reference_profile('alpha0_half')
-        Stats.write_reference_profile('alpha0_half', alpha_half[Gr.gw:-Gr.gw])
+        Stats.write_reference_profile('alpha0_half', alpha_half[k_1:k_2])
 
         Stats.add_reference_profile('p0')
-        Stats.write_reference_profile('p0', p_[Gr.gw:-Gr.gw])
+        Stats.write_reference_profile('p0', p_[k_1:k_2])
         Stats.add_reference_profile('p0_half')
-        Stats.write_reference_profile('p0_half', p_half[Gr.gw:-Gr.gw])
+        Stats.write_reference_profile('p0_half', p_half[k_1:k_2])
 
         Stats.add_reference_profile('rho0')
-        Stats.write_reference_profile('rho0', 1.0 / np.array(alpha[Gr.gw:-Gr.gw]))
+        Stats.write_reference_profile('rho0', 1.0 / np.array(alpha[k_1:k_2]))
         Stats.add_reference_profile('rho0_half')
-        Stats.write_reference_profile('rho0_half', 1.0 / np.array(alpha_half[Gr.gw:-Gr.gw]))
+        Stats.write_reference_profile('rho0_half', 1.0 / np.array(alpha_half[k_1:k_2]))
 
         return
 

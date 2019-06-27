@@ -290,10 +290,10 @@ class life_cycle_Tan2018(CasesBase):
         Ref.Pg = 1.015e5  #Pressure at ground
         Ref.Tg = 300.4  #Temperature at ground
         Ref.qtg = 0.02245   #Total water mixing ratio at surface
-        Ref.initialize(grid, Stats)
+        Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        thetal = np.zeros((grid.nzg,), dtype=np.double, order='c')
+        thetal = Half(grid)
         ql=0.0
         qi =0.0 # IC of Bomex is cloud-free
         for k in grid.over_elems_real(Center()):
@@ -422,10 +422,10 @@ class Rico(CasesBase):
         Ref.Tg = 299.8  #Temperature at ground
         pvg = pv_star(Ref.Tg)
         Ref.qtg = eps_v * pvg/(Ref.Pg - pvg)   #Total water mixing ratio at surface
-        Ref.initialize(grid, Stats)
+        Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        thetal = np.zeros((grid.nzg,), dtype=np.double, order='c')
+        thetal = Half(grid)
         ql=0.0
         qi =0.0 # IC of Rico is cloud-free
 
@@ -469,6 +469,7 @@ class Rico(CasesBase):
 
         return
     def initialize_surface(self, grid, Ref, tmp):
+        k_1 = grid.first_interior(Zmin())
         self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.zrough = 0.00015
@@ -476,7 +477,7 @@ class Rico(CasesBase):
         self.Sur.ch = 0.001094
         self.Sur.cq = 0.001133
         # Adjust for non-IC grid spacing
-        grid_adjust = (np.log(20.0/self.Sur.zrough)/np.log(grid.z_half[grid.gw]/self.Sur.zrough))**2
+        grid_adjust = (np.log(20.0/self.Sur.zrough)/np.log(grid.z_half[k_1]/self.Sur.zrough))**2
         self.Sur.cm = self.Sur.cm * grid_adjust
         self.Sur.ch = self.Sur.ch * grid_adjust
         self.Sur.cq = self.Sur.cq * grid_adjust
@@ -540,10 +541,10 @@ class TRMM_LBA(CasesBase):
         Ref.Tg = 296.85   # surface values for reference state (RS) which outputs p0 rho0 alpha0
         pvg = pv_star(Ref.Tg)
         Ref.qtg = eps_v * pvg/(Ref.Pg - pvg)#Total water mixing ratio at surface
-        Ref.initialize(grid, Stats)
+        Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        p1 = np.zeros((grid.nzg,),dtype=np.double,order='c')
+        p1 = Half(grid)
 
         # TRMM_LBA inputs from Grabowski et al. 2006
         z_in = np.array([0.130,  0.464,  0.573,  1.100,  1.653,  2.216,  2.760,
@@ -596,20 +597,20 @@ class TRMM_LBA(CasesBase):
         # interpolate to the model grid-points
 
         p1 = np.interp(grid.z_half,z_in,p_in)
-        GMV.U.values = np.interp(grid.z_half,z_in,u_in)
-        GMV.V.values = np.interp(grid.z_half,z_in,v_in)
+        GMV.U.values[:] = np.interp(grid.z_half,z_in,u_in)
+        GMV.V.values[:] = np.interp(grid.z_half,z_in,v_in)
 
         # get the entropy from RH, p, T
-        RH = np.zeros(grid.nzg)
-        RH[grid.gw:grid.nzg-grid.gw] = np.interp(grid.z_half[grid.gw:grid.nzg-grid.gw],z_in,RH_in)
-        RH[0] = RH[3]
-        RH[1] = RH[2]
-        RH[grid.nzg-grid.gw+1] = RH[grid.nzg-grid.gw-1]
+        k_1 = grid.first_interior(Zmin())
+        k_2 = grid.first_interior(Zmax())
+        RH = Half(grid)
+        RH[k_1:k_2] = np.interp(grid.z_half[k_1:k_2], z_in, RH_in)
+        RH.apply_Neumann(grid, 0.0)
 
-        T = np.zeros(grid.nzg)
-        T[grid.gw:grid.nzg-grid.gw] = np.interp(grid.z_half[grid.gw:grid.nzg-grid.gw],z_in,T_in)
-        GMV.T.values = T
-        theta_rho = RH*0.0
+        T = Half(grid)
+        theta_rho = Half(grid)
+        T[k_1:k_2] = np.interp(grid.z_half[k_1:k_2],z_in,T_in)
+        GMV.T.values[:] = T
         epsi = 287.1/461.5
 
         GMV.U.set_bcs(grid)
@@ -622,14 +623,11 @@ class TRMM_LBA(CasesBase):
             qv = GMV.QT.values[k] - GMV.QL.values[k]
             GMV.QT.values[k] = qv_star*RH[k]/100.0
             if GMV.H.name == 's':
-                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k],GMV.T.values[k],
-                                                GMV.QT.values[k], 0.0, 0.0)
+                GMV.H.values[k] = t_to_entropy_c(tmp['p_0'][k],GMV.T.values[k], GMV.QT.values[k], 0.0, 0.0)
             elif GMV.H.name == 'thetal':
-                 GMV.H.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
-                                                GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
+                 GMV.H.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k], GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
 
-            GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k],
-                                                GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
+            GMV.THL.values[k] = thetali_c(tmp['p_0'][k],GMV.T.values[k], GMV.QT.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
             theta_rho[k] = theta_rho_c(tmp['p_0'][k], GMV.T.values[k], GMV.QT.values[k], qv)
 
         GMV.QT.set_bcs(grid)
@@ -654,7 +652,7 @@ class TRMM_LBA(CasesBase):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
-        self.Fo.dTdt = np.zeros(grid.nzg, dtype=np.double)
+        self.Fo.dTdt = Half(grid)
         self.rad_time = np.linspace(10,360,36)*60
         z_in         = np.array([42.5, 200.92, 456.28, 743, 1061.08, 1410.52, 1791.32, 2203.48, 2647,3121.88, 3628.12,
                                  4165.72, 4734.68, 5335, 5966.68, 6629.72, 7324.12,
@@ -847,10 +845,10 @@ class ARM_SGP(CasesBase):
         Ref.Pg = 970.0*100 #Pressure at ground
         Ref.Tg = 299.0   # surface values for reference state (RS) which outputs p0 rho0 alpha0
         Ref.qtg = 15.2/1000#Total water mixing ratio at surface
-        Ref.initialize(grid, Stats)
+        Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        p1 = np.zeros((grid.nzg,),dtype=np.double,order='c')
+        p1 = Half(grid)
 
         # ARM_SGP inputs
         z_in = np.array([0.0, 50.0, 350.0, 650.0, 700.0, 1300.0, 2500.0, 5500.0 ]) #LES z is in meters
@@ -972,13 +970,13 @@ class GATE_III(CasesBase):
         Ref.Pg = 1013.0*100  #Pressure at ground
         Ref.Tg = 299.184   # surface values for reference state (RS) which outputs p0 rho0 alpha0
         Ref.qtg = 16.5/1000#Total water mixing ratio at surface
-        Ref.initialize(grid, Stats)
+        Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        qt = np.zeros((grid.nzg,),dtype=np.double,order='c')
-        T = np.zeros((grid.nzg,),dtype=np.double,order='c')
-        U = np.zeros((grid.nzg,),dtype=np.double,order='c')
-        theta_rho = np.zeros((grid.nzg,),dtype=np.double,order='c')
+        qt = Half(grid)
+        T = Half(grid)
+        U = Half(grid)
+        theta_rho = Half(grid)
 
         # GATE_III inputs - I extended them to z=22 km
         z_in  = np.array([ 0.0,   0.5,  1.0,  1.5,  2.0,   2.5,    3.0,   3.5,   4.0,   4.5,   5.0,  5.5,  6.0,  6.5,
@@ -1102,7 +1100,7 @@ class DYCOMS_RF01(CasesBase):
         Ref.qtg  = 9.0 / 1000.0
         # Use an exner function with values for Rd, and cp given in Stevens 2005 to compute temperature
         Ref.Tg   = 289.0 * exner_c(Ref.Pg, kappa = dycoms_Rd / dycoms_cp)
-        Ref.initialize(grid, Stats)
+        Ref.initialize(grid, Stats, tmp)
         return
 
     # helper function
@@ -1158,8 +1156,8 @@ class DYCOMS_RF01(CasesBase):
             return t_2, ql_2
 
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        thetal = np.zeros((grid.nzg,), dtype=np.double, order='c') # helper variable to recalculate temperature
-        ql     = np.zeros((grid.nzg,), dtype=np.double, order='c') # DYCOMS case is saturated
+        thetal = Half(grid)
+        ql     = Half(grid)
         qi     = 0.0                                             # no ice
 
         for k in grid.over_elems_real(Center()):
@@ -1294,13 +1292,12 @@ class GABLS(CasesBase):
         Ref.Pg = 1.0e5  #Pressure at ground
         Ref.Tg = 265.0  #Temperature at ground
         Ref.qtg = 1.0e-4 #Total water mixing ratio at surface. if set to 0, alpha0, rho0, p0 are NaN (TBD)
-        Ref.initialize(grid, Stats)
+        Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        thetal = np.zeros((grid.nzg,), dtype=np.double, order='c')
+        thetal = Half(grid)
         ql=0.0
         qi =0.0 # IC of GABLS cloud-free
-        theta_pert = np.random.random_sample(grid.nzg)
 
         for k in grid.over_elems_real(Center()):
             #Set wind velocity profile
@@ -1389,11 +1386,11 @@ class SP(CasesBase):
         Ref.Pg = 1.0e5  #Pressure at ground
         Ref.Tg = 300.0  #Temperature at ground
         Ref.qtg = 1.0e-4   #Total water mixing ratio at surface. if set to 0, alpha0, rho0, p0 are NaN.
-        Ref.initialize(grid, Stats)
+        Ref.initialize(grid, Stats, tmp)
         return
 
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        thetal = np.zeros((grid.nzg,), dtype=np.double, order='c')
+        thetal = Half(grid)
         ql=0.0
         qi =0.0 # IC of SP cloud-free
 
@@ -1433,6 +1430,7 @@ class SP(CasesBase):
         return
 
     def initialize_surface(self, grid, Ref, tmp):
+        k_1 = grid.first_interior(Zmin())
         self.Sur.grid = grid
         self.Sur.Ref = Ref
         self.Sur.zrough = 0.1
@@ -1440,7 +1438,7 @@ class SP(CasesBase):
         theta_surface    = self.Sur.Tsurface / exner_c(Ref.Pg)
         theta_flux = 0.24
         self.Sur.bflux   =  g * theta_flux / theta_surface
-        # self.Sur.bflux = 0.24 * exner_c(tmp['p_0'][grid.gw]) * g / (tmp['p_0'][grid.gw]*tmp['α_0'][grid.gw]/Rd)
+        # self.Sur.bflux = 0.24 * exner_c(tmp['p_0'][k_1]) * g / (tmp['p_0'][k_1]*tmp['α_0'][k_1]/Rd)
         self.Sur.initialize()
         return
 
