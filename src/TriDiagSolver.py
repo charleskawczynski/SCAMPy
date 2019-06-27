@@ -1,5 +1,4 @@
 import numpy as np
-from numba import jit, f8
 import copy
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
@@ -47,11 +46,11 @@ def construct_tridiag_diffusion_new(grid, Δt, tmp, q, a, b, c, K_name):
     k2 = grid.first_interior(Zmax())
     Δzi2 = grid.dzi**2.0
     for k in grid.over_elems_real(Center()):
-        ρ_0_dual = tmp['ρ_0', Dual(k)]
+        ρ_0_dual = tmp['ρ_0_half', Dual(k)]
         a_env_dual = q['a', Dual(k), i_env]
         K_dual = tmp[K_name, Dual(k), i_env]
         ρaK_dual = ρ_0_dual * a_env_dual * K_dual
-        denom = tmp['ρ_0', k] * q['a', k, i_env]
+        denom = tmp['ρ_0_half', k] * q['a', k, i_env]
         Z = ρaK_dual[0] * Δzi2 * Δt
         Y = ρaK_dual[1] * Δzi2 * Δt
         # if k == k1:

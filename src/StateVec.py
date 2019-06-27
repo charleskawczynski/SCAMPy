@@ -32,7 +32,7 @@ class StateVec:
         self.n_subdomains = max([nsd for var_name, loc, nsd in var_tuple])
         self.i_gm = 0
         self.i_env = 1
-        self.i_ud = [i for i in range(self.n_subdomains) if not any([i==j for j in [self.i_env, self.i_gm]])]
+        self.i_uds = [i for i in range(self.n_subdomains) if not any([i==j for j in [self.i_env, self.i_gm]])]
         self.n_vars = sum([nsd for var_name, loc, nsd in var_tuple])
         self.var_names, self.var_mapper = get_var_mapper(var_tuple)
         n = len(list(grid.over_elems(Center())))
@@ -59,8 +59,8 @@ class StateVec:
         return s
 
     def domain_idx(self):
-        return self.i_gm, self.i_env, self.i_ud
-        # i_gm, i_env, i_ud = q.domain_idx()
+        return self.i_gm, self.i_env, self.i_uds
+        # i_gm, i_env, i_uds = q.domain_idx()
 
     def over_sub_domains(self, i=None):
         if i==None:

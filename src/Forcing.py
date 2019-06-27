@@ -63,7 +63,7 @@ class ForcingStandard(ForcingBase):
         for k in self.grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
             qv = GMV.QT.values[k] - GMV.QL.values[k]
-            GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0'][k],GMV.QT.values[k],
+            GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.QT.values[k],
                                                                 qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
             GMV.QT.tendencies[k] += self.dqtdt[k]
         if self.apply_subsidence:
@@ -93,7 +93,7 @@ class ForcingStandard(ForcingBase):
 #         for k in self.grid.over_elems_real(Center()):
 #             # Apply large-scale horizontal advection tendencies
 #             qv = GMV.QT.values[k] - GMV.QL.values[k]
-#             GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0'][k],GMV.QT.values[k], qv,
+#             GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.QT.values[k], qv,
 #                                                                 GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
 #             GMV.QT.tendencies[k] += self.dqtdt[k]
 #
@@ -141,7 +141,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
                 idx_zi = k
                 # will be used at cell edges
                 zi     = self.grid.z[idx_zi]
-                rhoi   = tmp['ρ_0'][idx_zi]
+                rhoi   = tmp['ρ_0_half'][idx_zi]
                 break
 
         self.f_rad = Full(self.grid)
@@ -188,7 +188,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         for k in self.grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
             qv = GMV.QT.values[k] - GMV.QL.values[k]
-            GMV.H.tendencies[k]  += self.convert_forcing_prog_fp(tmp['p_0'][k],GMV.QT.values[k], qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
+            GMV.H.tendencies[k]  += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.QT.values[k], qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
             GMV.QT.tendencies[k] += self.dqtdt[k]
             # Apply large-scale subsidence tendencies
             GMV.H.tendencies[k]  -= grad_pos(GMV.H.values.Cut(k), self.grid) * self.subsidence[k]

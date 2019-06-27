@@ -37,12 +37,9 @@ class Simulation1d:
         )
 
         temp_vars = (
-                     ('ρ_0', Center(), 1),
-                     ('α_0', Center(), 1),
-                     ('p_0', Center(), 1),
-                     # ('ρ_0', Node(), 1),
-                     # ('α_0', Node(), 1),
-                     # ('p_0', Node(), 1),
+                     ('ρ_0', Node(), 1),
+                     ('α_0', Node(), 1),
+                     ('p_0', Node(), 1),
                      ('ρ_0_half', Center(), 1),
                      ('α_0_half', Center(), 1),
                      ('p_0_half', Center(), 1),
