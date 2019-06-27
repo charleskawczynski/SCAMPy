@@ -17,6 +17,14 @@ def grad(f, grid):
     else:
       raise ValueError('Bad length in Operators.py')
 
+def grad_pos(f, grid):
+    assert len(f)==3
+    return (f[1]-f[0])*grid.dzi
+
+def grad_neg(f, grid):
+    assert len(f)==3
+    return (f[2]-f[1])*grid.dzi
+
 def Laplacian(f, grid, K = None):
     assert len(f)==3
     if K==None:

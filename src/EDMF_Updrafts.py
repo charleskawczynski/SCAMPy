@@ -137,8 +137,7 @@ class UpdraftVariables:
                     self.H.bulkvalues[k] += self.Area.values[i][k] * self.H.values[i][k]/self.Area.bulkvalues[k]
                     self.T.bulkvalues[k] += self.Area.values[i][k] * self.T.values[i][k]/self.Area.bulkvalues[k]
                     self.B.bulkvalues[k] += self.Area.values[i][k] * self.B.values[i][k]/self.Area.bulkvalues[k]
-                    self.W.bulkvalues[k] += ((self.Area.values[i][k] + self.Area.values[i][k+1]) * self.W.values[i][k]
-                                        /(self.Area.bulkvalues[k] + self.Area.bulkvalues[k+1]))
+                    self.W.bulkvalues[k] += self.Area.values[i].Mid(k) * self.W.values[i][k]/self.Area.bulkvalues.Mid(k)
             else:
                 self.QT.bulkvalues[k] = GMV.QT.values[k]
                 self.QR.bulkvalues[k] = GMV.QR.values[k]
@@ -233,10 +232,10 @@ class UpdraftVariables:
         return
 
 class UpdraftThermodynamics:
-    def __init__(self, n_updraft, Gr, Ref, UpdVar):
+    def __init__(self, n_updrafts, Gr, Ref, UpdVar):
         self.grid = Gr
         self.Ref = Ref
-        self.n_updraft = n_updraft
+        self.n_updrafts = n_updrafts
         if UpdVar.H.name == 's':
             self.t_to_prog_fp = t_to_entropy_c
             self.prog_to_t_fp = eos_first_guess_entropy
@@ -247,7 +246,7 @@ class UpdraftThermodynamics:
         return
     def satadjust(self, UpdVar, tmp):
         #Update T, QL
-        for i in range(self.n_updraft):
+        for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
                 T, ql = eos(self.t_to_prog_fp, self.prog_to_t_fp, tmp['p_0'][k], UpdVar.QT.values[i][k], UpdVar.H.values[i][k])
                 UpdVar.QL.values[i][k] = ql
@@ -257,13 +256,13 @@ class UpdraftThermodynamics:
     def buoyancy(self,  UpdVar, EnvVar,GMV, extrap, tmp):
         UpdVar.Area.bulkvalues[:] = np.sum(UpdVar.Area.values,axis=0)
         if not extrap:
-            for i in range(self.n_updraft):
+            for i in range(self.n_updrafts):
                 for k in self.grid.over_elems(Center()):
                     qv = UpdVar.QT.values[i][k] - UpdVar.QL.values[i][k]
                     alpha = alpha_c(tmp['p_0'][k], UpdVar.T.values[i][k], UpdVar.QT.values[i][k], qv)
                     UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0'][k], alpha) #- GMV.B.values[k]
         else:
-            for i in range(self.n_updraft):
+            for i in range(self.n_updrafts):
                 for k in self.grid.over_elems_real(Center()):
                     if UpdVar.Area.values[i][k] > 1e-3:
                         qt = UpdVar.QT.values[i][k]
@@ -282,9 +281,9 @@ class UpdraftThermodynamics:
                         UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0'][k], alpha)
         for k in self.grid.over_elems_real(Center()):
             GMV.B.values[k] = (1.0 - UpdVar.Area.bulkvalues[k]) * EnvVar.B.values[k]
-            for i in range(self.n_updraft):
+            for i in range(self.n_updrafts):
                 GMV.B.values[k] += UpdVar.Area.values[i][k] * UpdVar.B.values[i][k]
-            for i in range(self.n_updraft):
+            for i in range(self.n_updrafts):
                 UpdVar.B.values[i][k] -= GMV.B.values[k]
             EnvVar.B.values[k] -= GMV.B.values[k]
 
@@ -293,13 +292,13 @@ class UpdraftThermodynamics:
 
 #Implements a simple "microphysics" that clips excess humidity above a user-specified level
 class UpdraftMicrophysics:
-    def __init__(self, paramlist, n_updraft, Gr, Ref):
+    def __init__(self, paramlist, n_updrafts, Gr, Ref):
         self.grid = Gr
         self.Ref = Ref
-        self.n_updraft = n_updraft
+        self.n_updrafts = n_updrafts
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
-        self.prec_source_h = np.zeros((n_updraft, Gr.nzg), dtype=np.double, order='c')
-        self.prec_source_qt = np.zeros((n_updraft, Gr.nzg), dtype=np.double, order='c')
+        self.prec_source_h = [Half(Gr) for i in range(n_updrafts)]
+        self.prec_source_qt = [Half(Gr) for i in range(n_updrafts)]
         self.prec_source_h_tot  = Half(Gr)
         self.prec_source_qt_tot = Half(Gr)
         return
@@ -308,7 +307,7 @@ class UpdraftMicrophysics:
         """
         Compute precipitation source terms for QT, QR and H
         """
-        for i in range(self.n_updraft):
+        for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
                 tmp_qr = acnv_instant(UpdVar.QL.values[i][k], UpdVar.QT.values[i][k], self.max_supersaturation,\
                                       UpdVar.T.values[i][k], tmp['p_0'][k])
@@ -316,8 +315,9 @@ class UpdraftMicrophysics:
                 self.prec_source_h[i][k]  = rain_source_to_thetal(tmp['p_0'][k], UpdVar.T.values[i][k],\
                                              UpdVar.QT.values[i][k], UpdVar.QL.values[i][k], 0.0, tmp_qr)
                                                                                           #TODO assumes no ice
-        self.prec_source_h_tot  = np.sum(np.multiply(self.prec_source_h,  UpdVar.Area.values), axis=0)
-        self.prec_source_qt_tot = np.sum(np.multiply(self.prec_source_qt, UpdVar.Area.values), axis=0)
+        for k in self.grid.over_elems(Center()):
+            self.prec_source_h_tot[k]  = np.sum([self.prec_source_h[i][k] * UpdVar.Area.values[i][k] for i in range(n_updrafts)])
+            self.prec_source_qt_tot[k] = np.sum([self.prec_source_qt[i][k]* UpdVar.Area.values[i][k] for i in range(n_updrafts)])
 
         return
 
@@ -325,7 +325,7 @@ class UpdraftMicrophysics:
         """
         Apply precipitation source terms to QL, QR and H
         """
-        for i in range(self.n_updraft):
+        for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
                 UpdVar.QT.values[i][k] += self.prec_source_qt[i][k]
                 UpdVar.QL.values[i][k] += self.prec_source_qt[i][k]

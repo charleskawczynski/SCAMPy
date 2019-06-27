@@ -2,7 +2,7 @@ import numpy as np
 from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
-from Operators import advect, grad, Laplacian
+from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 
 from Variables import GridMeanVariables, VariablePrognostic
 from forcing_functions import  convert_forcing_entropy, convert_forcing_thetal
@@ -134,44 +134,47 @@ class ForcingDYCOMS_RF01(ForcingBase):
         """
 
         # find zi (level of 8.0 g/kg isoline of qt)
+        k_1 = self.grid.first_interior(Zmin())
+        zi     = self.grid.z[k_1]
         for k in self.grid.over_elems_real(Center()):
             if (GMV.QT.values[k] < 8.0 / 1000):
                 idx_zi = k
                 # will be used at cell edges
                 zi     = self.grid.z[idx_zi]
-                rhoi   = tmp['ρ_0', idx_zi]
+                rhoi   = tmp['ρ_0'][idx_zi]
                 break
+
+        self.f_rad = Full(self.grid)
+        k_2 = self.grid.boundary(Zmax())
+        k_1 = 0
+        k_2 = self.grid.nzg-1
 
         # cloud-top cooling
         q_0 = 0.0
 
-        self.f_rad = Full(self.grid)
-        k_2 = self.grid.boundary(Zmax())
         self.f_rad[k_2] = self.F0 * np.exp(-q_0)
-
-        # Verify correctness of this to original definition
-        for k in reversed(self.grid.over_elems(Node())[1:-1]):
-            q_0           += self.kappa * tmp['ρ_0'][k] * GMV.QL.values[k] * self.grid.dz
+        for k in range(k_2 - 1, -1, -1):
+            q_0           += self.kappa * self.Ref.rho0_half[k] * GMV.QL.values[k] * self.grid.dz
             self.f_rad[k]  = self.F0 * np.exp(-q_0)
 
         # cloud-base warming
         q_1 = 0.0
-        self.f_rad[0] += self.F1 * np.exp(-q_1)
-        for k in self.grid.over_elems_real(Node()):
-            q_1           += self.kappa * tmp['ρ_0'][k - 1] * GMV.QL.values[k - 1] * self.grid.dz
+        self.f_rad[k_1] += self.F1 * np.exp(-q_1)
+        for k in range(1, k_2 + 1):
+            q_1           += self.kappa * self.Ref.rho0_half[k - 1] * GMV.QL.values[k - 1] * self.grid.dz
             self.f_rad[k] += self.F1 * np.exp(-q_1)
 
         # cooling in free troposphere
-        for k in self.grid.over_elems(Node())[1:-1]:
+        for k in range(k_1, k_2):
             if self.grid.z[k] > zi:
-                cbrt_z         = cbrt(self.grid.z[k] - zi)
+                cbrt_z         = np.cbrt(self.grid.z[k] - zi)
                 self.f_rad[k] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + zi * cbrt_z)
         # condition at the top
-        cbrt_z                   = cbrt(self.grid.z[k] + self.grid.dz - zi)
+        cbrt_z                   = np.cbrt(self.grid.z[k] + self.grid.dz - zi)
         self.f_rad[k_2] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + zi * cbrt_z)
 
         for k in self.grid.over_elems_real(Center()):
-            self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / self.grid.dz / tmp['ρ_0'][k] / dycoms_cp
+            self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / self.grid.dz / self.Ref.rho0_half[k] / dycoms_cp
 
         return
 
@@ -180,7 +183,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         return
 
     def update(self, GMV, tmp):
-        self.calculate_radiation(GMV)
+        self.calculate_radiation(GMV, tmp)
 
         for k in self.grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
@@ -188,8 +191,8 @@ class ForcingDYCOMS_RF01(ForcingBase):
             GMV.H.tendencies[k]  += self.convert_forcing_prog_fp(tmp['p_0'][k],GMV.QT.values[k], qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
             GMV.QT.tendencies[k] += self.dqtdt[k]
             # Apply large-scale subsidence tendencies
-            GMV.H.tendencies[k]  -= (GMV.H.values[k+1]-GMV.H.values[k]) * self.grid.dzi * self.subsidence[k]
-            GMV.QT.tendencies[k] -= (GMV.QT.values[k+1]-GMV.QT.values[k]) * self.grid.dzi * self.subsidence[k]
+            GMV.H.tendencies[k]  -= grad_pos(GMV.H.values.Cut(k), self.grid) * self.subsidence[k]
+            GMV.QT.tendencies[k] -= grad_pos(GMV.QT.values.Cut(k), self.grid) * self.subsidence[k]
 
         if self.apply_coriolis:
             self.coriolis_force(GMV.U, GMV.V)
@@ -202,8 +205,8 @@ class ForcingDYCOMS_RF01(ForcingBase):
         return
 
     def io(self, Stats):
-        k_1 = self.grid.first_interior(Zmin())
-        k_2 = self.grid.first_interior(Zmax())
+        k_1 = self.grid.boundary(Zmin())
+        k_2 = self.grid.boundary(Zmax())
         Stats.write_profile('rad_dTdt', self.dTdt[k_1:k_2])
         Stats.write_profile('rad_flux', self.f_rad[k_1:k_2])
         return

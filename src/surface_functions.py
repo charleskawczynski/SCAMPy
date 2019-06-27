@@ -85,12 +85,12 @@ def compute_ustar(windspeed, buoyancy_flux, z0, z1) :
                 delta_ustar = ustar1 - ustar
     return ustar
 
-def exchange_coefficients_byun(Ri, zb, z0, cm, ch, lmo):
+def exchange_coefficients_byun(Ri, zb, z0):
     logz = np.log(zb/z0)
     zfactor = zb/(zb-z0)*logz
     sb = Ri/Pr0
     if Ri > 0.0:
-        zeta = zfactor/(2.0*beta_h*(beta_m*Ri -1.0))*((1.0-2.0*beta_h*Ri)-sqrt(1.0+4.0*(beta_h - beta_m)*sb))
+        zeta = zfactor/(2.0*beta_h*(beta_m*Ri -1.0))*((1.0-2.0*beta_h*Ri)-np.sqrt(1.0+4.0*(beta_h - beta_m)*sb))
         lmo = zb/zeta
         zeta0 = z0/lmo
         psi_m = psi_m_stable(zeta, zeta0)
@@ -100,11 +100,11 @@ def exchange_coefficients_byun(Ri, zb, z0, cm, ch, lmo):
         pb = 1.0/54.0 * (-2.0/(gamma_m*gamma_m*gamma_m) + 9.0/gamma_m * (-gamma_h/gamma_m + 3.0)*sb * sb)
         crit = qb * qb *qb - pb * pb
         if crit < 0.0:
-            tb = cbrt(sqrt(-crit) + fabs(pb))
+            tb = np.cbrt(np.sqrt(-crit) + np.fabs(pb))
             zeta = zfactor * (1.0/(3.0*gamma_m)-(tb + qb/tb))
         else:
-            angle = acos(pb/sqrt(qb * qb * qb))
-            zeta = zfactor * (-2.0 * sqrt(qb) * cos(angle/3.0)+1.0/(3.0*gamma_m))
+            angle = np.arccos(pb/np.sqrt(qb * qb * qb))
+            zeta = zfactor * (-2.0 * np.sqrt(qb) * np.cos(angle/3.0)+1.0/(3.0*gamma_m))
         lmo = zb/zeta
         zeta0 = z0/lmo
         psi_m = psi_m_unstable(zeta, zeta0)
@@ -114,4 +114,4 @@ def exchange_coefficients_byun(Ri, zb, z0, cm, ch, lmo):
     cth = vkb/(logz-psi_h)/Pr0
     cm = cu * cu
     ch = cu * cth
-    return
+    return cm, ch, lmo

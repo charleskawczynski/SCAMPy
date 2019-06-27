@@ -2,7 +2,7 @@ import numpy as np
 from parameters import *
 import sys
 from EDMF_Updrafts import *
-from Operators import advect, grad, Laplacian
+from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 from EDMF_Environment import *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
@@ -324,6 +324,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         a_ = self.surface_area/self.n_updrafts
         self.surface_scalar_coeff = np.zeros((self.n_updrafts,), dtype=np.double, order='c')
+        # i_gm, i_env, i_ud = tmp.domain_idx()
         for i in range(self.n_updrafts):
             self.surface_scalar_coeff[i] = percentile_bounds_mean_norm(1.0-self.surface_area+i*a_,
                                                                        1.0-self.surface_area + (i+1)*a_ , 1000)
@@ -657,8 +658,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         self.UpdVar.Area.set_bcs(self.grid)
 
-        self.UpdMicro.prec_source_h_tot  = np.sum(np.multiply(self.UpdMicro.prec_source_h,  self.UpdVar.Area.values), axis=0)
-        self.UpdMicro.prec_source_qt_tot = np.sum(np.multiply(self.UpdMicro.prec_source_qt, self.UpdVar.Area.values), axis=0)
+        for k in self.grid.over_elems(Center()):
+            self.UpdMicro.prec_source_h_tot[k]  = np.sum([self.UpdMicro.prec_source_h[i][k] * self.UpdVar.Area.values[i][k] for i in range(self.n_updrafts)])
+            self.UpdMicro.prec_source_qt_tot[k] = np.sum([self.UpdMicro.prec_source_qt[i][k]* self.UpdVar.Area.values[i][k] for i in range(self.n_updrafts)])
 
         return
 
@@ -1063,14 +1065,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         if self.use_local_micro:
             # save the total source terms for H and QT due to precipitation
             # TODO - add QR source
-            self.UpdMicro.prec_source_h_tot = np.sum(np.multiply(self.UpdMicro.prec_source_h,
-                                                                 self.UpdVar.Area.values), axis=0)
-            self.UpdMicro.prec_source_qt_tot = np.sum(np.multiply(self.UpdMicro.prec_source_qt,
-                                                                  self.UpdVar.Area.values), axis=0)
+            for k in self.grid.over_elems(Center()):
+                self.UpdMicro.prec_source_h_tot[k]  = np.sum([self.UpdMicro.prec_source_h[i][k] * self.UpdVar.Area.values[i][k] for i in range(self.n_updrafts)])
+                self.UpdMicro.prec_source_qt_tot[k] = np.sum([self.UpdMicro.prec_source_qt[i][k]* self.UpdVar.Area.values[i][k] for i in range(self.n_updrafts)])
         else:
             # Compute the updraft microphysical sources (precipitation)
             #after the entrainment loop is finished
-            self.UpdMicro.compute_sources(self.UpdVar)
+            self.UpdMicro.compute_sources(self.UpdVar, tmp)
             # Update updraft variables with microphysical source tendencies
             self.UpdMicro.update_updraftvars(self.UpdVar)
 
@@ -1551,6 +1552,16 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
             l_mix = np.fmax(self.mixing_length[k], 1.0)
             tke_env = np.fmax(self.EnvVar.TKE.values[k], 0.0)
+
+            # rho_ae_K_m = ae.Dual(k) * self.KH.values.Dual(k) * self.Ref.rho0_half.Dual(k)
+
+            # a[k] = (- rho_ae_K_m[0] * dzi2 )
+            # b[k] = (tmp['ρ_0'][k] * ae[k] * dti
+            #          - tmp['ρ_0'][k] * ae[k] * whalf[k] * dzi
+            #          + rho_ae_K_m[1] * dzi2 + rho_ae_K_m[0] * dzi2
+            #          + D_env
+            #          + tmp['ρ_0'][k] * ae[k] * self.tke_diss_coeff * np.sqrt(tke_env)/l_mix)
+            # c[k] = (tmp['ρ_0'][k+1] * ae[k+1] * whalf[k+1] * dzi - rho_ae_K_m[1] * dzi2)
 
             a[k] = (- rho_ae_K_m[k-1] * dzi2 )
             b[k] = (tmp['ρ_0'][k] * ae[k] * dti

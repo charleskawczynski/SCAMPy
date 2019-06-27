@@ -206,7 +206,7 @@ class GridMeanVariables:
             self.QL.values[k] = ql
             self.T.values[k] = T
             qv = qt - ql
-            self.THL.values[k] = t_to_thetali_c(p0, T, qt, ql,0.0)
+            self.THL.values[k] = t_to_thetali_c(p0, T, qt, ql, 0.0)
             alpha = alpha_c(p0, T, qt, qv)
             self.B.values[k] = buoyancy_c(tmp['α_0'][k], alpha)
         return

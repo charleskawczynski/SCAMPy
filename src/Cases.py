@@ -296,33 +296,34 @@ class life_cycle_Tan2018(CasesBase):
         thetal = Half(grid)
         ql=0.0
         qi =0.0 # IC of Bomex is cloud-free
+        z = grid.z_half
         for k in grid.over_elems_real(Center()):
             #Set Thetal profile
-            if grid.z_half[k] <= 520.:
+            if z[k] <= 520.:
                 thetal[k] = 298.7
-            if grid.z_half[k] > 520.0 and grid.z_half[k] <= 1480.0:
-                thetal[k] = 298.7 + (grid.z_half[k] - 520)  * (302.4 - 298.7)/(1480.0 - 520.0)
-            if grid.z_half[k] > 1480.0 and grid.z_half[k] <= 2000:
-                thetal[k] = 302.4 + (grid.z_half[k] - 1480.0) * (308.2 - 302.4)/(2000.0 - 1480.0)
-            if grid.z_half[k] > 2000.0:
-                thetal[k] = 308.2 + (grid.z_half[k] - 2000.0) * (311.85 - 308.2)/(3000.0 - 2000.0)
+            if z[k] > 520.0 and z[k] <= 1480.0:
+                thetal[k] = 298.7 + (z[k] - 520)  * (302.4 - 298.7)/(1480.0 - 520.0)
+            if z[k] > 1480.0 and z[k] <= 2000:
+                thetal[k] = 302.4 + (z[k] - 1480.0) * (308.2 - 302.4)/(2000.0 - 1480.0)
+            if z[k] > 2000.0:
+                thetal[k] = 308.2 + (z[k] - 2000.0) * (311.85 - 308.2)/(3000.0 - 2000.0)
 
             #Set qt profile
-            if grid.z_half[k] <= 520:
-                GMV.QT.values[k] = (17.0 + (grid.z_half[k]) * (16.3-17.0)/520.0)/1000.0
-            if grid.z_half[k] > 520.0 and grid.z_half[k] <= 1480.0:
-                GMV.QT.values[k] = (16.3 + (grid.z_half[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
-            if grid.z_half[k] > 1480.0 and grid.z_half[k] <= 2000.0:
-                GMV.QT.values[k] = (10.7 + (grid.z_half[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
-            if grid.z_half[k] > 2000.0:
-                GMV.QT.values[k] = (4.2 + (grid.z_half[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
+            if z[k] <= 520:
+                GMV.QT.values[k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
+            if z[k] > 520.0 and z[k] <= 1480.0:
+                GMV.QT.values[k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
+            if z[k] > 1480.0 and z[k] <= 2000.0:
+                GMV.QT.values[k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
+            if z[k] > 2000.0:
+                GMV.QT.values[k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
 
 
             #Set u profile
-            if grid.z_half[k] <= 700.0:
+            if z[k] <= 700.0:
                 GMV.U.values[k] = -8.75
-            if grid.z_half[k] > 700.0:
-                GMV.U.values[k] = -8.75 + (grid.z_half[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+            if z[k] > 700.0:
+                GMV.U.values[k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
 
         if GMV.H.name == 'thetal':
@@ -364,26 +365,27 @@ class life_cycle_Tan2018(CasesBase):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
         self.Fo.initialize(GMV)
+        z = grid.z_half
         for k in grid.over_elems_real(Center()):
             # Geostrophic velocity profiles. vg = 0
-            self.Fo.ug[k] = -10.0 + (1.8e-3)*grid.z_half[k]
+            self.Fo.ug[k] = -10.0 + (1.8e-3)*z[k]
             # Set large-scale cooling
-            if grid.z_half[k] <= 1500.0:
+            if z[k] <= 1500.0:
                 self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(tmp['p_0'][k])
             else:
-                self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (grid.z_half[k] - 1500.0)
+                self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (z[k] - 1500.0)
                                     * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(tmp['p_0'][k])
             # Set large-scale drying
-            if grid.z_half[k] <= 300.0:
+            if z[k] <= 300.0:
                 self.Fo.dqtdt[k] = -1.2e-8   #kg/(kg * s)
-            if grid.z_half[k] > 300.0 and grid.z_half[k] <= 500.0:
-                self.Fo.dqtdt[k] = -1.2e-8 + (grid.z_half[k] - 300.0)*(0.0 - -1.2e-8)/(500.0 - 300.0) #kg/(kg * s)
+            if z[k] > 300.0 and z[k] <= 500.0:
+                self.Fo.dqtdt[k] = -1.2e-8 + (z[k] - 300.0)*(0.0 - -1.2e-8)/(500.0 - 300.0) #kg/(kg * s)
 
             #Set large scale subsidence
-            if grid.z_half[k] <= 1500.0:
-                self.Fo.subsidence[k] = 0.0 + grid.z_half[k]*(-0.65/100.0 - 0.0)/(1500.0 - 0.0)
-            if grid.z_half[k] > 1500.0 and grid.z_half[k] <= 2100.0:
-                self.Fo.subsidence[k] = -0.65/100 + (grid.z_half[k] - 1500.0)* (0.0 - -0.65/100.0)/(2100.0 - 1500.0)
+            if z[k] <= 1500.0:
+                self.Fo.subsidence[k] = 0.0 + z[k]*(-0.65/100.0 - 0.0)/(1500.0 - 0.0)
+            if z[k] > 1500.0 and z[k] <= 2100.0:
+                self.Fo.subsidence[k] = -0.65/100 + (z[k] - 1500.0)* (0.0 - -0.65/100.0)/(2100.0 - 1500.0)
         return
 
     def initialize_io(self, Stats):
@@ -941,14 +943,15 @@ class ARM_SGP(CasesBase):
         Rqt_in = np.array([0.08, 0.02, 0.04, -0.1, -0.16, -0.3])/1000.0/3600.0 # Radiative forcing for qt converted to [kg/kg/sec]
         dTdt = np.interp(TS.t,t_in,AT_in) + np.interp(TS.t,t_in,RT_in)
         dqtdt =  np.interp(TS.t,t_in,Rqt_in)
+        z = self.Fo.grid.z_half
         for k in self.Fo.grid.over_elems(Center()):
-                if self.Fo.grid.z_half[k] <=1000.0:
+                if z[k] <=1000.0:
                     self.Fo.dTdt[k] = dTdt
-                    self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.tmp['p_0'][k])
-                elif self.Fo.grid.z_half[k] > 1000.0  and self.Fo.grid.z_half[k] <= 2000.0:
-                    self.Fo.dTdt[k] = dTdt*(1-(self.Fo.grid.z_half[k]-1000.0)/1000.0)
-                    self.Fo.dqtdt[k]  = dqtdt * exner_c(self.Fo.tmp['p_0'][k])\
-                                        *(1-(self.Fo.grid.z_half[k]-1000.0)/1000.0)
+                    self.Fo.dqtdt[k]  = dqtdt * exner_c(tmp['p_0'][k])
+                elif z[k] > 1000.0  and z[k] <= 2000.0:
+                    self.Fo.dTdt[k] = dTdt*(1-(z[k]-1000.0)/1000.0)
+                    self.Fo.dqtdt[k]  = dqtdt * exner_c(tmp['p_0'][k])\
+                                        *(1-(z[k]-1000.0)/1000.0)
         self.Fo.update(GMV, tmp)
 
         return
@@ -1092,6 +1095,7 @@ class DYCOMS_RF01(CasesBase):
         self.casename = 'DYCOMS_RF01'
         self.Sur = Surface.SurfaceFixedFlux(paramlist)
         self.Fo = Forcing.ForcingDYCOMS_RF01() # radiation is included in Forcing
+        self.Fo.apply_coriolis = False # TODO: Check this
         self.inversion_option = 'thetal_maxgrad'
         return
 
@@ -1160,17 +1164,18 @@ class DYCOMS_RF01(CasesBase):
         ql     = Half(grid)
         qi     = 0.0                                             # no ice
 
+        z = grid.z_half
         for k in grid.over_elems_real(Center()):
             # thetal profile as defined in DYCOMS
-            if grid.z_half[k] <= 840.0:
+            if z[k] <= 840.0:
                thetal[k] = 289.0
-            if grid.z_half[k] > 840.0:
-               thetal[k] = (297.5 + (grid.z_half[k] - 840.0)**(1.0/3.0))
+            if z[k] > 840.0:
+               thetal[k] = (297.5 + (z[k] - 840.0)**(1.0/3.0))
 
             # qt profile as defined in DYCOMS
-            if grid.z_half[k] <= 840.0:
+            if z[k] <= 840.0:
                GMV.QT.values[k] = 9. / 1000.0
-            if grid.z_half[k] > 840.0:
+            if z[k] > 840.0:
                GMV.QT.values[k] = 1.5 / 1000.0
 
             # ql and T profile
@@ -1255,7 +1260,7 @@ class DYCOMS_RF01(CasesBase):
 
         # radiation is treated as a forcing term (see eq. 3 in Stevens et. al. 2005)
         # cloud-top cooling + cloud-base warming + cooling in free troposphere
-        self.Fo.calculate_radiation(GMV)
+        self.Fo.calculate_radiation(GMV, tmp)
 
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
@@ -1394,16 +1399,17 @@ class SP(CasesBase):
         ql=0.0
         qi =0.0 # IC of SP cloud-free
 
+        z = grid.z_half
         for k in grid.over_elems_real(Center()):
             GMV.U.values[k] =  1.0
             GMV.V.values[k] =  0.0
             #Set Thetal profile
-            if grid.z_half[k] <= 974.0:
+            if z[k] <= 974.0:
                 thetal[k] = 300.0
-            elif grid.z_half[k] < 1074.0:
-                thetal[k] = 300.0 + (grid.z_half[k] - 974.0) * 0.08
+            elif z[k] < 1074.0:
+                thetal[k] = 300.0 + (z[k] - 974.0) * 0.08
             else:
-                thetal[k] = 308.0 + (grid.z_half[k] - 1074.0) * 0.003
+                thetal[k] = 308.0 + (z[k] - 1074.0) * 0.003
 
             #Set qt profile
             GMV.QT.values[k] = 0.0

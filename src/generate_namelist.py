@@ -384,6 +384,7 @@ def DYCOMS_RF01():
     namelist['turbulence']['EDMF_PrognosticTKE']['constant_area'] = False
     namelist['turbulence']['EDMF_PrognosticTKE']['use_scalar_var'] = True
     namelist['turbulence']['EDMF_PrognosticTKE']['mixing_length'] = 'sbl'
+    namelist['turbulence']['EDMF_PrognosticTKE']['calc_scalar_var'] = True
 
     namelist['output'] = {}
     namelist['output']['output_root'] = 'OutputFiles/'
@@ -430,6 +431,7 @@ def GABLS():
     namelist['turbulence']['EDMF_PrognosticTKE']['use_sommeria_deardorff'] = False
     namelist['turbulence']['EDMF_PrognosticTKE']['use_scalar_var'] = True
     namelist['turbulence']['EDMF_PrognosticTKE']['mixing_length'] = 'sbl'
+    namelist['turbulence']['EDMF_PrognosticTKE']['calc_scalar_var'] = True
 
     namelist['output'] = {}
     namelist['output']['output_root'] = 'OutputFiles/'
@@ -476,6 +478,7 @@ def SP():
     namelist['turbulence']['EDMF_PrognosticTKE']['use_steady_updrafts'] = False
     namelist['turbulence']['EDMF_PrognosticTKE']['use_sommeria_deardorff'] = False
     namelist['turbulence']['EDMF_PrognosticTKE']['use_scalar_var'] = True
+    namelist['turbulence']['EDMF_PrognosticTKE']['calc_scalar_var'] = True
 
     namelist['output'] = {}
     namelist['output']['output_root'] = 'OutputFiles/'
