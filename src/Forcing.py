@@ -16,11 +16,7 @@ class ForcingBase:
         self.dqtdt      = Half(self.grid)
         self.ug         = Half(self.grid)
         self.vg         = Half(self.grid)
-
-        if GMV.H.name == 's':
-            self.convert_forcing_prog_fp = convert_forcing_entropy
-        elif GMV.H.name == 'thetal':
-            self.convert_forcing_prog_fp = convert_forcing_thetal
+        self.convert_forcing_prog_fp = convert_forcing_thetal
         return
     def update(self, GMV, tmp):
         return

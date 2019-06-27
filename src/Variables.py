@@ -55,16 +55,9 @@ class GridMeanVariables:
         self.QT = VariablePrognostic(Gr, Center(), Neumann(), 'qt', 'kg/kg')
         self.QR = VariablePrognostic(Gr, Center(), Neumann(), 'qr', 'kg/kg')
 
-        if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-            self.H = VariablePrognostic(Gr, Center(), Neumann(),'s', 'J/kg/K' )
-            self.t_to_prog_fp = t_to_entropy_c
-            self.prog_to_t_fp = eos_first_guess_entropy
-        elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-            self.H = VariablePrognostic(Gr, Center(), Neumann(),'thetal', 'K')
-            self.t_to_prog_fp = t_to_thetali_c
-            self.prog_to_t_fp = eos_first_guess_thetal
-        else:
-            sys.exit('Did not recognize thermal variable ' + namelist['thermodynamics']['thermal_variable'])
+        self.H = VariablePrognostic(Gr, Center(), Neumann(),'thetal', 'K')
+        self.t_to_prog_fp = t_to_thetali_c
+        self.prog_to_t_fp = eos_first_guess_thetal
 
         # Diagnostic Variables--same class as the prognostic variables, but we append to diagnostics list
         # self.diagnostics_list  = []
@@ -73,37 +66,16 @@ class GridMeanVariables:
         self.B   = VariableDiagnostic(Gr, Center(), Neumann(), 'buoyancy', 'm^2/s^3')
         self.THL = VariableDiagnostic(Gr, Center(), Neumann(), 'thetal','K')
 
-        if  namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':
-            self.calc_tke = True
-        else:
-            self.calc_tke = False
-        try:
-            self.calc_tke = namelist['turbulence']['EDMF_PrognosticTKE']['calculate_tke']
-        except:
-            pass
-
-        try:
-            self.calc_scalar_var = namelist['turbulence']['EDMF_PrognosticTKE']['calc_scalar_var']
-        except:
-            self.calc_scalar_var = False
-
         try:
             self.EnvThermo_scheme = str(namelist['thermodynamics']['saturation'])
         except:
             self.EnvThermo_scheme = 'sa_mean'
 
-        #Now add the 2nd moment variables
-        if self.calc_tke:
-            self.TKE = VariableDiagnostic(Gr, Center(), Neumann(), 'tke','m^2/s^2' )
+        self.TKE = VariableDiagnostic(Gr, Center(), Neumann(), 'tke','m^2/s^2' )
 
-        if self.calc_scalar_var:
-            self.QTvar = VariableDiagnostic(Gr, Center(), Neumann(), 'qt_var','kg^2/kg^2' )
-            if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-                self.Hvar = VariableDiagnostic(Gr, Center(), Neumann(), 's_var', '(J/kg/K)^2')
-                self.HQTcov = VariableDiagnostic(Gr, Center(), Neumann() ,'s_qt_covar', '(J/kg/K)(kg/kg)' )
-            elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-                self.Hvar = VariableDiagnostic(Gr, Center(), Neumann() ,'thetal_var', 'K^2')
-                self.HQTcov = VariableDiagnostic(Gr, Center(), Neumann() ,'thetal_qt_covar', 'K(kg/kg)' )
+        self.QTvar = VariableDiagnostic(Gr, Center(), Neumann(), 'qt_var','kg^2/kg^2' )
+        self.Hvar = VariableDiagnostic(Gr, Center(), Neumann() ,'thetal_var', 'K^2')
+        self.HQTcov = VariableDiagnostic(Gr, Center(), Neumann() ,'thetal_qt_covar', 'K(kg/kg)' )
 
         if self.EnvThermo_scheme == 'sommeria_deardorff':
             self.THVvar = VariableDiagnostic(Gr, Center(), Neumann(), 'thatav_var','K^2' )
@@ -131,14 +103,10 @@ class GridMeanVariables:
         self.H.set_bcs(self.grid)
         self.QT.set_bcs(self.grid)
         self.QR.set_bcs(self.grid)
-
-        if self.calc_tke:
-            self.TKE.set_bcs(self.grid)
-
-        if self.calc_scalar_var:
-            self.QTvar.set_bcs(self.grid)
-            self.Hvar.set_bcs(self.grid)
-            self.HQTcov.set_bcs(self.grid)
+        self.TKE.set_bcs(self.grid)
+        self.QTvar.set_bcs(self.grid)
+        self.Hvar.set_bcs(self.grid)
+        self.HQTcov.set_bcs(self.grid)
 
         if self.EnvThermo_scheme == 'sommeria_deardorff':
             self.THVvar.set_bcs(self.grid)
@@ -151,21 +119,14 @@ class GridMeanVariables:
         Stats.add_profile('v_mean')
         Stats.add_profile('qt_mean')
         Stats.add_profile('qr_mean')
-        if self.H.name == 's':
-            Stats.add_profile('s_mean')
-            Stats.add_profile('thetal_mean')
-        elif self.H.name == 'thetal':
-            Stats.add_profile('thetal_mean')
-
+        Stats.add_profile('thetal_mean')
         Stats.add_profile('temperature_mean')
         Stats.add_profile('buoyancy_mean')
         Stats.add_profile('ql_mean')
-        if self.calc_tke:
-            Stats.add_profile('tke_mean')
-        if self.calc_scalar_var:
-            Stats.add_profile('Hvar_mean')
-            Stats.add_profile('QTvar_mean')
-            Stats.add_profile('HQTcov_mean')
+        Stats.add_profile('tke_mean')
+        Stats.add_profile('Hvar_mean')
+        Stats.add_profile('QTvar_mean')
+        Stats.add_profile('HQTcov_mean')
 
         Stats.add_ts('lwp')
         return
@@ -179,17 +140,11 @@ class GridMeanVariables:
         Stats.write_profile_new('qr_mean'          , self.grid, self.QR.values)
         Stats.write_profile_new('temperature_mean' , self.grid, self.T.values)
         Stats.write_profile_new('buoyancy_mean'    , self.grid, self.B.values)
-        if self.H.name == 's':
-            Stats.write_profile_new('s_mean'     , self.grid, self.H.values)
-            Stats.write_profile_new('thetal_mean', self.grid, self.THL.values)
-        elif self.H.name == 'thetal':
-            Stats.write_profile_new('thetal_mean', self.grid, self.H.values)
-        if self.calc_tke:
-            Stats.write_profile_new('tke_mean'   , self.grid, self.TKE.values)
-        if self.calc_scalar_var:
-            Stats.write_profile_new('Hvar_mean'  , self.grid, self.Hvar.values)
-            Stats.write_profile_new('QTvar_mean' , self.grid, self.QTvar.values)
-            Stats.write_profile_new('HQTcov_mean', self.grid, self.HQTcov.values)
+        Stats.write_profile_new('thetal_mean'      , self.grid, self.H.values)
+        Stats.write_profile_new('tke_mean'         , self.grid, self.TKE.values)
+        Stats.write_profile_new('Hvar_mean'        , self.grid, self.Hvar.values)
+        Stats.write_profile_new('QTvar_mean'       , self.grid, self.QTvar.values)
+        Stats.write_profile_new('HQTcov_mean'      , self.grid, self.HQTcov.values)
 
         for k in self.grid.over_elems_real(Center()):
             lwp += tmp['ρ_0_half'][k]*self.QL.values[k]*self.grid.dz

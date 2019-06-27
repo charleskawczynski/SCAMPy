@@ -37,6 +37,20 @@ class Simulation1d:
         )
 
         temp_vars = (
+                     ('Area_bulkvalues'             , Center() , N_sd),
+                     ('W_bulkvalues'             , Center() , N_sd),
+                     ('QT_bulkvalues'            , Center() , N_sd),
+                     ('QL_bulkvalues'            , Center() , N_sd),
+                     ('QR_bulkvalues'            , Center() , N_sd),
+                     ('H_bulkvalues'             , Center() , N_sd),
+                     ('T_bulkvalues'             , Center() , N_sd),
+                     ('B_bulkvalues'             , Center() , N_sd),
+                     ('q_tot_bulkvalues'         , Center() , N_sd),
+                     ('θ_liq_bulkvalues'         , Center() , N_sd),
+                     ('tke_bulkvalues'           , Center() , N_sd),
+                     ('cv_q_tot_bulkvalues'      , Center() , N_sd),
+                     ('cv_θ_liq_bulkvalues'      , Center() , N_sd),
+                     ('cv_θ_liq_q_tot_bulkvalues', Center() , N_sd),
                      ('ρ_0', Node(), 1),
                      ('α_0', Node(), 1),
                      ('p_0', Node(), 1),
@@ -72,7 +86,7 @@ class Simulation1d:
         self.Case.initialize_profiles(self.grid, self.GMV, self.Ref, self.tmp, self.q)
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.GMV, self.tmp)
-        self.Turb.initialize(self.GMV, self.tmp)
+        self.Turb.initialize(self.GMV, self.tmp, self.q)
         self.initialize_io()
         self.io()
         return

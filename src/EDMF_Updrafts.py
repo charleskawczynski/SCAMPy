@@ -42,10 +42,7 @@ class UpdraftVariables:
         self.THL  = UpdraftVariable(Gr, nu, Center(), Neumann(), 'thetal', 'K')
         self.T    = UpdraftVariable(Gr, nu, Center(), Neumann(), 'temperature','K' )
         self.B    = UpdraftVariable(Gr, nu, Center(), Neumann(), 'buoyancy','m^2/s^3' )
-        if namelist['thermodynamics']['thermal_variable'] == 'entropy':
-            self.H = UpdraftVariable(Gr, nu, Center(), Neumann(), 's','J/kg/K' )
-        elif namelist['thermodynamics']['thermal_variable'] == 'thetal':
-            self.H = UpdraftVariable(Gr, nu, Center(), Neumann(), 'thetal','K' )
+        self.H = UpdraftVariable(Gr, nu, Center(), Neumann(), 'thetal','K' )
 
 
         if namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':
@@ -69,7 +66,7 @@ class UpdraftVariables:
 
         return
 
-    def initialize(self, GMV, tmp):
+    def initialize(self, GMV, tmp, q):
         k_1 = self.grid.first_interior(Zmin())
 
         for i in range(self.n_updrafts):
@@ -102,11 +99,7 @@ class UpdraftVariables:
         Stats.add_profile('updraft_qt')
         Stats.add_profile('updraft_ql')
         Stats.add_profile('updraft_qr')
-        if self.H.name == 'thetal':
-            Stats.add_profile('updraft_thetal')
-        else:
-            # Stats.add_profile('updraft_thetal')
-            Stats.add_profile('updraft_s')
+        Stats.add_profile('updraft_thetal')
         Stats.add_profile('updraft_temperature')
         Stats.add_profile('updraft_buoyancy')
 
@@ -200,11 +193,7 @@ class UpdraftVariables:
         Stats.write_profile_new('updraft_qt'         , self.grid, self.QT.bulkvalues)
         Stats.write_profile_new('updraft_ql'         , self.grid, self.QL.bulkvalues)
         Stats.write_profile_new('updraft_qr'         , self.grid, self.QR.bulkvalues)
-        if self.H.name == 'thetal':
-            Stats.write_profile_new('updraft_thetal' , self.grid, self.H.bulkvalues)
-        else:
-            Stats.write_profile_new('updraft_s'      , self.grid, self.H.bulkvalues)
-            #Stats.write_profile_new('updraft_thetal', self.grid, self.THL.bulkvalues)
+        Stats.write_profile_new('updraft_thetal' , self.grid, self.H.bulkvalues)
         Stats.write_profile_new('updraft_temperature', self.grid, self.T.bulkvalues)
         Stats.write_profile_new('updraft_buoyancy'   , self.grid, self.B.bulkvalues)
         self.get_cloud_base_top_cover()
@@ -236,12 +225,8 @@ class UpdraftThermodynamics:
         self.grid = Gr
         self.Ref = Ref
         self.n_updrafts = n_updrafts
-        if UpdVar.H.name == 's':
-            self.t_to_prog_fp = t_to_entropy_c
-            self.prog_to_t_fp = eos_first_guess_entropy
-        elif UpdVar.H.name == 'thetal':
-            self.t_to_prog_fp = t_to_thetali_c
-            self.prog_to_t_fp = eos_first_guess_thetal
+        self.t_to_prog_fp = t_to_thetali_c
+        self.prog_to_t_fp = eos_first_guess_thetal
 
         return
     def satadjust(self, UpdVar, tmp):
