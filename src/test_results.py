@@ -83,7 +83,7 @@ def run_case(case, sol_expected, tol_rel_local, tol_rel):
         print('abs_err = ', abs_err)
         print('rel_err = ', rel_err)
         passed_per_element = [e < tol_rel_local for e in rel_err]
-        print('passed_per_element = ',passed_per_element)
+        print('passed_per_element = ', passed_per_element)
         n_pass = passed_per_element.count(True)
         n_fail = passed_per_element.count(False)
         print('n_pass = ',n_pass)

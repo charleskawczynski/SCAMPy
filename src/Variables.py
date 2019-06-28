@@ -14,7 +14,6 @@ class VariablePrognostic:
     def __init__(self, Gr, loc, bc, name, units):
         self.values     = Field.field(Gr, loc)
         self.new        = Field.field(Gr, loc)
-        self.mf_update  = Field.field(Gr, loc)
         self.tendencies = Field.field(Gr, loc)
         self.bc = bc
         self.name = name
@@ -28,7 +27,6 @@ class VariablePrognostic:
 
     def set_bcs(self, Gr):
         self.values.apply_bc(Gr, self.bc, 0.0)
-        self.mf_update.apply_bc(Gr, self.bc, 0.0)
         self.new.apply_bc(Gr, self.bc, 0.0)
         return
 

@@ -10,13 +10,20 @@ from thermodynamic_functions import  *
 from microphysics_functions import *
 
 class EnvironmentVariable:
-    def __init__(self, Gr, loc, name, units):
+    def __init__(self, Gr, loc, bc, name, units):
         self.values = Field.field(Gr, loc)
+        self.bc = bc
         self.name = name
         self.units = units
 
+    def set_bcs(self, Gr):
+        n_updrafts = np.shape(self.values)[0]
+        for i in range(n_updrafts):
+            self.values[i].apply_bc(Gr, self.bc, 0.0)
+        return
+
 class EnvironmentVariable_2m:
-    def __init__(self, Gr, loc, name, units):
+    def __init__(self, Gr, loc, bc, name, units):
         self.values      = Field.field(Gr, loc)
         self.dissipation = Field.field(Gr, loc)
         self.entr_gain   = Field.field(Gr, loc)
@@ -26,23 +33,29 @@ class EnvironmentVariable_2m:
         self.shear       = Field.field(Gr, loc)
         self.interdomain = Field.field(Gr, loc)
         self.rain_src    = Field.field(Gr, loc)
+        self.bc = bc
         self.name = name
         self.units = units
 
+    def set_bcs(self, Gr):
+        n_updrafts = np.shape(self.values)[0]
+        for i in range(n_updrafts):
+            self.values[i].apply_bc(Gr, self.bc, 0.0)
+        return
 
 class EnvironmentVariables:
     def __init__(self,  namelist, Gr  ):
         self.grid = Gr
 
-        self.W   = EnvironmentVariable(Gr, Node(), 'w','m/s' )
-        self.QT  = EnvironmentVariable(Gr, Center(), 'qt','kg/kg' )
-        self.QL  = EnvironmentVariable(Gr, Center(), 'ql','kg/kg' )
-        self.QR  = EnvironmentVariable(Gr, Center(), 'qr','kg/kg' )
-        self.THL = EnvironmentVariable(Gr, Center(), 'thetal', 'K')
-        self.T   = EnvironmentVariable(Gr, Center(), 'temperature','K' )
-        self.B   = EnvironmentVariable(Gr, Center(), 'buoyancy','m^2/s^3' )
-        self.CF  = EnvironmentVariable(Gr, Center(),'cloud_fraction', '-')
-        self.H = EnvironmentVariable(Gr, Center(), 'thetal','K' )
+        self.W   = EnvironmentVariable(Gr, Node(), Dirichlet(), 'w','m/s' )
+        self.QT  = EnvironmentVariable(Gr, Center(), Neumann(), 'qt','kg/kg' )
+        self.QL  = EnvironmentVariable(Gr, Center(), Neumann(), 'ql','kg/kg' )
+        self.QR  = EnvironmentVariable(Gr, Center(), Neumann(), 'qr','kg/kg' )
+        self.THL = EnvironmentVariable(Gr, Center(), Neumann(), 'thetal', 'K')
+        self.T   = EnvironmentVariable(Gr, Center(), Neumann(), 'temperature','K' )
+        self.B   = EnvironmentVariable(Gr, Center(), Neumann(), 'buoyancy','m^2/s^3' )
+        self.CF  = EnvironmentVariable(Gr, Center(), Neumann(),'cloud_fraction', '-')
+        self.H = EnvironmentVariable(Gr, Center(), Neumann(), 'thetal','K' )
 
         try:
             self.EnvThermo_scheme = str(namelist['thermodynamics']['saturation'])
@@ -50,14 +63,14 @@ class EnvironmentVariables:
             self.EnvThermo_scheme = 'sa_mean'
             print('Defaulting to saturation adjustment with respect to environmental means')
 
-        self.TKE = EnvironmentVariable_2m(Gr, Center(), 'tke','m^2/s^2' )
+        self.TKE = EnvironmentVariable_2m(Gr, Center(), Neumann(), 'tke','m^2/s^2' )
 
-        self.QTvar = EnvironmentVariable_2m(Gr, Center(), 'qt_var','kg^2/kg^2' )
-        self.Hvar = EnvironmentVariable_2m(Gr, Center(), 'thetal_var', 'K^2')
-        self.HQTcov = EnvironmentVariable_2m(Gr, Center(), 'thetal_qt_covar', 'K(kg/kg)' )
+        self.QTvar = EnvironmentVariable_2m(Gr, Center(), Neumann(), 'qt_var','kg^2/kg^2' )
+        self.Hvar = EnvironmentVariable_2m(Gr, Center(), Neumann(), 'thetal_var', 'K^2')
+        self.HQTcov = EnvironmentVariable_2m(Gr, Center(), Neumann(), 'thetal_qt_covar', 'K(kg/kg)' )
 
         if self.EnvThermo_scheme == 'sommeria_deardorff':
-            self.THVvar = EnvironmentVariable(Gr, Center(), 'thetav_var', 'K^2' )
+            self.THVvar = EnvironmentVariable(Gr, Center(), Neumann(), 'thetav_var', 'K^2' )
 
         #TODO  - most likely a temporary solution (unless it could be useful for testing)
         try:

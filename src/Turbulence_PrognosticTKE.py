@@ -76,7 +76,7 @@ class ParameterizationBase:
                     break
         elif option == 'thetal_maxgrad':
             for k in self.grid.over_elems_real(Center()):
-                grad_TH =  grad(GMV.THL.values.Dual(k), self.grid)
+                grad_TH = grad(GMV.THL.values.Dual(k), self.grid)
                 if grad_TH > maxgrad:
                     maxgrad = grad_TH
                     self.zi = self.grid.z[k]
@@ -467,21 +467,18 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 self.EnvVar.HQTcov.values[k] = GMV.HQTcov.values[k]
 
         self.UpdVar.set_means(GMV)
-        self.decompose_environment(GMV, 'values')
+        self.decompose_environment(GMV, 'values', TS)
 
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.W,  self.UpdVar.W,  self.EnvVar.W,  self.EnvVar.W,  self.EnvVar.TKE,    GMV.W.values,  GMV.W.values,  GMV.TKE.values)
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.H,  self.UpdVar.H,  self.EnvVar.H,  self.EnvVar.H,  self.EnvVar.Hvar,   GMV.H.values,  GMV.H.values,  GMV.Hvar.values)
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.QT, self.UpdVar.QT, self.EnvVar.QT, self.EnvVar.QT, self.EnvVar.QTvar,  GMV.QT.values, GMV.QT.values, GMV.QTvar.values)
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.H,  self.UpdVar.QT, self.EnvVar.H,  self.EnvVar.QT, self.EnvVar.HQTcov, GMV.H.values,  GMV.QT.values, GMV.HQTcov.values)
 
-        if self.use_steady_updrafts:
-            self.compute_diagnostic_updrafts(GMV, Case, tmp)
-        else:
-            self.compute_prognostic_updrafts(GMV, Case, TS, tmp)
+        self.compute_prognostic_updrafts(GMV, Case, TS, tmp)
 
         self.update_GMV_MF(GMV, TS, tmp)
 
-        self.decompose_environment(GMV, 'mf_update')
+        self.decompose_environment(GMV, 'mf_update', TS)
         self.EnvThermo.satadjust(self.EnvVar, True, tmp)
         self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
 
@@ -514,118 +511,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             # It would be better to have a simple linear rule for updating environment here
             # instead of calling EnvThermo saturation adjustment scheme for every updraft.
             # If we are using quadratures this is expensive and probably unnecessary.
-            self.decompose_environment(GMV, 'values')
+            self.decompose_environment(GMV, 'values', TS)
             self.EnvThermo.satadjust(self.EnvVar, False, tmp)
             self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
-        return
-
-    def compute_diagnostic_updrafts(self, GMV, Case, tmp):
-        k_1 = self.grid.first_interior(Zmin())
-        kb_1 = self.grid.boundary(Zmin())
-        dz = self.grid.dz
-        dzi = self.grid.dzi
-
-        self.set_updraft_surface_bc(GMV, Case)
-        self.compute_entrainment_detrainment(GMV, Case)
-
-        for i in range(self.n_updrafts):
-            self.UpdVar.H.values[i][k_1] = self.h_surface_bc[i]
-            self.UpdVar.QT.values[i][k_1] = self.qt_surface_bc[i]
-            # Find the cloud liquid content
-            T, ql = eos(self.UpdThermo.t_to_prog_fp,self.UpdThermo.prog_to_t_fp, tmp['p_0_half'][k_1], self.UpdVar.QT.values[i][k_1], self.UpdVar.H.values[i][k_1])
-            self.UpdVar.QL.values[i][k_1] = ql
-            self.UpdVar.T.values[i][k_1] = T
-            self.UpdMicro.compute_update_combined_local_thetal(self.Ref.p0_half, self.UpdVar.T.values,
-                                                               self.UpdVar.QT.values, self.UpdVar.QL.values,
-                                                               self.UpdVar.QR.values, self.UpdVar.H.values,
-                                                               i, k_1)
-            for k in self.grid.over_elems_real(Center()):
-                denom = 1.0 + self.entr_sc[i][k] * dz
-                self.UpdVar.H.values[i][k] = (self.UpdVar.H.values[i][k-1] + self.entr_sc[i][k] * dz * GMV.H.values[k])/denom
-                self.UpdVar.QT.values[i][k] = (self.UpdVar.QT.values[i][k-1] + self.entr_sc[i][k] * dz * GMV.QT.values[k])/denom
-
-
-                T, ql = eos(self.UpdThermo.t_to_prog_fp,self.UpdThermo.prog_to_t_fp, tmp['p_0_half'][k], self.UpdVar.QT.values[i][k], self.UpdVar.H.values[i][k])
-                self.UpdVar.QL.values[i][k] = ql
-                self.UpdVar.T.values[i][k] = T
-                self.UpdMicro.compute_update_combined_local_thetal(self.Ref.p0_half, self.UpdVar.T.values,
-                                                                   self.UpdVar.QT.values, self.UpdVar.QL.values,
-                                                                   self.UpdVar.QR.values, self.UpdVar.H.values,
-                                                                   i, k)
-        self.UpdVar.QT.set_bcs(self.grid)
-        self.UpdVar.QR.set_bcs(self.grid)
-        self.UpdVar.H.set_bcs(self.grid)
-
-        self.decompose_environment(GMV, 'values')
-        self.EnvThermo.satadjust(self.EnvVar, False)
-        self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy)
-
-        # Solve updraft velocity equation
-        for i in range(self.n_updrafts):
-            self.UpdVar.W.values[i, kb_1] = self.w_surface_bc[i]
-            self.entr_sc[i][k_1] = 2.0 /dz
-            self.detr_sc[i][k_1] = 0.0
-            for k in self.grid.over_elems_real(Center()):
-                area_k = self.UpdVar.Area.values[i].Mid(k)
-                if area_k >= self.minimum_area:
-                    w_km = self.UpdVar.W.values[i][k-1]
-                    entr_w = self.entr_sc[i].Mid(k)
-                    detr_w = self.detr_sc[i].Mid(k)
-                    B_k = self.UpdVar.B.values[i].Mid(k)
-                    w2 = ((self.vel_buoy_coeff * B_k + 0.5 * w_km * w_km * dzi)
-                          /(0.5 * dzi +entr_w + self.vel_pressure_coeff/np.sqrt(np.fmax(area_k,self.minimum_area))))
-                    if w2 > 0.0:
-                        self.UpdVar.W.values[i][k] = np.sqrt(w2)
-                    else:
-                        self.UpdVar.W.values[i][k:] = 0
-                        break
-                else:
-                    self.UpdVar.W.values[i][k:] = 0
-
-        self.UpdVar.W.set_bcs(self.grid)
-
-        for i in range(self.n_updrafts):
-            au_lim = self.max_area_factor * self.area_surface_bc[i]
-            self.UpdVar.Area.values[i][k_1] = self.area_surface_bc[i]
-            w_mid = 0.5* (self.UpdVar.W.values[i][k_1])
-            for k in self.grid.over_elems_real(Center())[1:]:
-                w_low = w_mid
-                w_mid = self.UpdVar.W.values[i].Mid(k)
-                if w_mid > 0.0:
-                    if self.entr_sc[i][k]>(0.9/dz):
-                        self.entr_sc[i][k] = 0.9/dz
-
-                    self.UpdVar.Area.values[i][k] = (tmp['ρ_0_half'][k-1]*self.UpdVar.Area.values[i][k-1]*w_low/
-                                                    (1.0-(self.entr_sc[i][k]-self.detr_sc[i][k])*dz)/w_mid/tmp['ρ_0_half'][k])
-                    # # Limit the increase in updraft area when the updraft decelerates
-                    if self.UpdVar.Area.values[i][k] >  au_lim:
-                        self.UpdVar.Area.values[i][k] = au_lim
-                        self.detr_sc[i][k] =(tmp['ρ_0_half'][k-1] * self.UpdVar.Area.values[i][k-1]
-                                            * w_low / au_lim / w_mid / tmp['ρ_0_half'][k] + self.entr_sc[i][k] * dz -1.0)/dz
-                else:
-                    # the updraft has terminated so set its area fraction to zero at this height and all heights above
-                    self.UpdVar.Area.values[i][k] = 0.0
-                    self.UpdVar.H.values[i][k] = GMV.H.values[k]
-                    self.UpdVar.QT.values[i][k] = GMV.QT.values[k]
-                    self.UpdVar.QR.values[i][k] = GMV.QR.values[k]
-                    #TODO wouldnt it be more consistent to have here?
-                    #self.UpdVar.QL.values[i][k] = GMV.QL.values[k]
-                    #self.UpdVar.T.values[i][k] = GMV.T.values[k]
-                    T, ql = eos(self.UpdThermo.t_to_prog_fp, self.UpdThermo.prog_to_t_fp, tmp['p_0_half'][k], self.UpdVar.QT.values[i][k], self.UpdVar.H.values[i][k])
-                    self.UpdVar.QL.values[i][k] = ql
-                    self.UpdVar.T.values[i][k] = T
-
-
-        self.decompose_environment(GMV, 'values')
-        self.EnvThermo.satadjust(self.EnvVar, False)
-        self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy)
-
-        self.UpdVar.Area.set_bcs(self.grid)
-
-        for k in self.grid.over_elems(Center()):
-            self.UpdMicro.prec_source_h_tot[k]  = np.sum([self.UpdMicro.prec_source_h[i][k] * self.UpdVar.Area.values[i][k] for i in range(self.n_updrafts)])
-            self.UpdMicro.prec_source_qt_tot[k] = np.sum([self.UpdMicro.prec_source_qt[i][k]* self.UpdVar.Area.values[i][k] for i in range(self.n_updrafts)])
-
         return
 
     def update_inversion(self,GMV, option, tmp):
@@ -633,7 +521,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def compute_mixing_length(self, obukhov_length):
-        tau =  get_mixing_tau(self.zi, self.wstar)
+        tau = get_mixing_tau(self.zi, self.wstar)
         for k in self.grid.over_elems_real(Center()):
             l1 = tau * np.sqrt(np.fmax(self.EnvVar.TKE.values[k],0.0))
             z_ = self.grid.z_half[k]
@@ -696,8 +584,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     # Find values of environmental variables by subtracting updraft values from grid mean values
     # whichvals used to check which substep we are on--correspondingly use 'GMV.SomeVar.value' (last timestep value)
-    # or GMV.SomeVar.mf_update (GMV value following massflux substep)
-    def decompose_environment(self, GMV, whichvals):
+    def decompose_environment(self, GMV, whichvals, TS):
 
         if whichvals == 'values':
             for k in self.grid.over_elems(Center()):
@@ -709,13 +596,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 au_full = self.UpdVar.Area.bulkvalues.Mid(k)
                 self.EnvVar.W.values[k] = -au_full/(1.0-au_full) * self.UpdVar.W.bulkvalues[k]
         elif whichvals == 'mf_update':
-            # same as above but replace GMV.SomeVar.values with GMV.SomeVar.mf_update
             for k in self.grid.over_elems(Center()):
                 val1 = 1.0/(1.0-self.UpdVar.Area.bulkvalues[k])
                 val2 = self.UpdVar.Area.bulkvalues[k] * val1
 
-                self.EnvVar.QT.values[k] = val1 * GMV.QT.mf_update[k] - val2 * self.UpdVar.QT.bulkvalues[k]
-                self.EnvVar.H.values[k]  = val1 * GMV.H.mf_update[k]  - val2 * self.UpdVar.H.bulkvalues[k]
+                self.EnvVar.QT.values[k] = val1 * (GMV.QT.values[k] + TS.dt * self.massflux_tendency_qt[k] + self.UpdMicro.prec_source_qt_tot[k]) - val2 * self.UpdVar.QT.bulkvalues[k]
+                self.EnvVar.H.values[k]  = val1 * (GMV.H.values[k] +  TS.dt * self.massflux_tendency_h[k]  + self.UpdMicro.prec_source_h_tot[k])  - val2 * self.UpdVar.H.bulkvalues[k]
                 # Assuming GMV.W = 0!
                 au_full = self.UpdVar.Area.bulkvalues.Mid(k)
                 self.EnvVar.W.values[k] = -au_full/(1.0-au_full) * self.UpdVar.W.bulkvalues[k]
@@ -936,7 +822,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     adv = -advect(ρaww_cut, w_cut, self.grid)
                     exch = ρaw_k * (- detr_w * w_i + entr_w * w_env)
                     buoy = ρa_k * B_k
-                    press_buoy =  - ρa_k * B_k * self.pressure_buoy_coeff
+                    press_buoy = - ρa_k * B_k * self.pressure_buoy_coeff
                     press_drag = - ρa_k * (self.pressure_drag_coeff/self.pressure_plume_spacing * (w_i - w_env)**2.0/np.sqrt(np.fmax(a_k, self.minimum_area)))
                     nh_press = press_buoy + press_drag
 
@@ -1005,7 +891,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     tendencies_H  = -advect(ρawH_cut , w_cut, self.grid) + ρaw_cut[1] * (ε_sc * H_env  - δ_sc * H_cut[1] )
                     tendencies_QT = -advect(ρawQT_cut, w_cut, self.grid) + ρaw_cut[1] * (ε_sc * QT_env - δ_sc * QT_cut[1])
 
-                    self.UpdVar.H.new[i][k] =  ρa_k/ρa_new_k * H_cut[1]  + dt_*tendencies_H/ρa_new_k
+                    self.UpdVar.H.new[i][k] = ρa_k/ρa_new_k * H_cut[1]  + dt_*tendencies_H/ρa_new_k
                     self.UpdVar.QT.new[i][k] = ρa_k/ρa_new_k * QT_cut[1] + dt_*tendencies_QT/ρa_new_k
                 else:
                     self.UpdVar.H.new[i][k] = GMV.H.values[k]
@@ -1045,14 +931,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     # 1. compute the mass fluxes (currently not stored as class members, probably will want to do this
     # for output purposes)
     # 2. Apply mass flux tendencies and updraft microphysical tendencies to GMV.SomeVar.Values (old time step values)
-    # thereby updating to GMV.SomeVar.mf_update
     # mass flux tendency is computed as 1st order upwind
 
     def update_GMV_MF(self, GMV, TS, tmp):
         k_1 = self.grid.first_interior(Zmin())
         kb_1 = self.grid.boundary(Zmin())
-        mf_tend_h=0.0
-        mf_tend_qt=0.0
         self.massflux_h[:] = 0.0
         self.massflux_qt[:] = 0.0
 
@@ -1063,8 +946,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 self.m[i][k] = ((self.UpdVar.W.values[i][k] - self.EnvVar.W.values[k] )* self.Ref.rho0[k]
                                * self.UpdVar.Area.values[i].Mid(k))
 
-        self.massflux_h[kb_1] = 0.0
-        self.massflux_qt[kb_1] = 0.0
         for k in self.grid.over_elems_real(Center()):
             self.massflux_h[k] = 0.0
             self.massflux_qt[k] = 0.0
@@ -1072,36 +953,20 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 self.massflux_h[k] += self.m[i][k] * (self.UpdVar.H.values[i].Mid(k) - self.EnvVar.H.values.Mid(k))
                 self.massflux_qt[k] += self.m[i][k] * (self.UpdVar.QT.values[i].Mid(k) - self.EnvVar.QT.values.Mid(k))
 
-        # Compute the  mass flux tendencies
-        # Adjust the values of the grid mean variables
-
         for k in self.grid.over_elems_real(Center()):
-            mf_tend_h = -tmp['α_0_half'][k]*grad(self.massflux_h.Dual(k), self.grid)
-            mf_tend_qt = -tmp['α_0_half'][k]*grad(self.massflux_qt.Dual(k), self.grid)
-
-            GMV.H.mf_update[k] = GMV.H.values[k] +  TS.dt * mf_tend_h + self.UpdMicro.prec_source_h_tot[k]
-            GMV.QT.mf_update[k] = GMV.QT.values[k] + TS.dt * mf_tend_qt + self.UpdMicro.prec_source_qt_tot[k]
-
-            #No mass flux tendency for U, V
-            GMV.U.mf_update[k] = GMV.U.values[k]
-            GMV.V.mf_update[k] = GMV.V.values[k]
-            # Prepare the output
-            self.massflux_tendency_h[k] = mf_tend_h
-            self.massflux_tendency_qt[k] = mf_tend_qt
-
+            self.massflux_tendency_h[k] = -tmp['α_0_half'][k]*grad(self.massflux_h.Dual(k), self.grid)
+            self.massflux_tendency_qt[k] = -tmp['α_0_half'][k]*grad(self.massflux_qt.Dual(k), self.grid)
 
         GMV.H.set_bcs(self.grid)
         GMV.QT.set_bcs(self.grid)
         GMV.QR.set_bcs(self.grid)
         GMV.U.set_bcs(self.grid)
         GMV.V.set_bcs(self.grid)
-
         return
 
     # Update the grid mean variables with the tendency due to eddy diffusion
     # Km and Kh have already been updated
     # 2nd order finite differences plus implicit time step allows solution with tridiagonal matrix solver
-    # Update from GMV.SomeVar.mf_update to GMV.SomeVar.new
     def update_GMV_ED(self, GMV, Case, TS, tmp, q):
         dzi = self.grid.dzi
         a = Half(self.grid)
@@ -1131,13 +996,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         # Solve QT
         for k in self.grid.over_elems(Center()):
-            f[k] =  self.EnvVar.QT.values[k]
+            f[k] = self.EnvVar.QT.values[k]
         f[ki] = f[ki] + TS.dt * Case.Sur.rho_qtflux * dzi * tmp['α_0_half'][ki]/ae[ki]
 
         tridiag_solve_wrapper_new(self.grid, x, f, a, b, c)
 
         for k in self.grid.over_elems(Center()):
-            GMV.QT.new[k] = GMV.QT.mf_update[k] + ae[k] *(x[k] - self.EnvVar.QT.values[k])
+            GMV.QT.new[k] = GMV.QT.values[k] + TS.dt * self.massflux_tendency_qt[k] + self.UpdMicro.prec_source_qt_tot[k] + ae[k] *(x[k] - self.EnvVar.QT.values[k])
 
         # Solve H
         for k in self.grid.over_elems(Center()):
@@ -1147,7 +1012,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         tridiag_solve_wrapper_new(self.grid, x, f, a, b, c)
 
         for k in self.grid.over_elems(Center()):
-            GMV.H.new[k] = GMV.H.mf_update[k] + ae[k] *(x[k] - self.EnvVar.H.values[k])
+            GMV.H.new[k] = GMV.H.values[k] +  TS.dt * self.massflux_tendency_h[k] + self.UpdMicro.prec_source_h_tot[k] + ae[k] *(x[k] - self.EnvVar.H.values[k])
 
         # Solve U
         for k in self.grid.over_elems_real(Node()):
@@ -1384,7 +1249,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     envvar2 = EnvVar2.values[k]
                     tke_factor = 1.0
                 w_u = self.UpdVar.W.values[i].Mid(k)
-                Covar.entr_gain[k] +=  tke_factor*self.UpdVar.Area.values[i][k] * np.fabs(w_u) * self.detr_sc[i][k] * \
+                Covar.entr_gain[k] += tke_factor*self.UpdVar.Area.values[i][k] * np.fabs(w_u) * self.detr_sc[i][k] * \
                                              (updvar1 - envvar1) * (updvar2 - envvar2)
             Covar.entr_gain[k] *= tmp['ρ_0_half'][k]
         return

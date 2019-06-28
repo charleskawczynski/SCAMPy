@@ -28,7 +28,6 @@ class UpdraftVariable:
             self.values[i].apply_bc(Gr, self.bc, 0.0)
         return
 
-
 class UpdraftVariables:
     def __init__(self, nu, namelist, paramlist, Gr):
         self.grid = Gr
@@ -43,7 +42,6 @@ class UpdraftVariables:
         self.T    = UpdraftVariable(Gr, nu, Center(), Neumann(), 'temperature','K' )
         self.B    = UpdraftVariable(Gr, nu, Center(), Neumann(), 'buoyancy','m^2/s^3' )
         self.H = UpdraftVariable(Gr, nu, Center(), Neumann(), 'thetal','K' )
-
 
         if namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':
             try:
