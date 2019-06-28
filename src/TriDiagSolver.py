@@ -82,6 +82,19 @@ def tridiag_solve_wrapper(grid, x, f, a, b, c):
                       β[slice_real])
     return
 
+def tridiag_solve_wrapper_new(grid, x, f, a, b, c):
+    xtemp = Half(grid)
+    β = Half(grid)
+    γ = Half(grid)
+    slice_real = grid.slice_real(Center())
+    tridiag_solve(grid.nz,
+                  f[slice_real],
+                  a[slice_real],
+                  b[slice_real],
+                  c[slice_real])
+    x[:] = f[:]
+    return
+
 def tridiag_solve_new(x, f, a, b, c, n, xtemp, γ, β):
   # Define coefficients:
   β[0] = b[0]
