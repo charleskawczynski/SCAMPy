@@ -59,7 +59,7 @@ class ForcingStandard(ForcingBase):
         for k in self.grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
             qv = GMV.QT.values[k] - GMV.QL.values[k]
-            GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.QT.values[k],
+            GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k], GMV.QT.values[k],
                                                                 qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
             GMV.QT.tendencies[k] += self.dqtdt[k]
         if self.apply_subsidence:

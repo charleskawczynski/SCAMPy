@@ -47,15 +47,15 @@ class EnvironmentVariables:
     def __init__(self,  namelist, Gr  ):
         self.grid = Gr
 
-        self.W   = EnvironmentVariable(Gr, Node(), Dirichlet(), 'w','m/s' )
-        self.QT  = EnvironmentVariable(Gr, Center(), Neumann(), 'qt','kg/kg' )
-        self.QL  = EnvironmentVariable(Gr, Center(), Neumann(), 'ql','kg/kg' )
-        self.QR  = EnvironmentVariable(Gr, Center(), Neumann(), 'qr','kg/kg' )
-        self.THL = EnvironmentVariable(Gr, Center(), Neumann(), 'thetal', 'K')
-        self.T   = EnvironmentVariable(Gr, Center(), Neumann(), 'temperature','K' )
-        self.B   = EnvironmentVariable(Gr, Center(), Neumann(), 'buoyancy','m^2/s^3' )
-        self.CF  = EnvironmentVariable(Gr, Center(), Neumann(),'cloud_fraction', '-')
-        self.H = EnvironmentVariable(Gr, Center(), Neumann(), 'thetal','K' )
+        self.W    = EnvironmentVariable(Gr, Node(), Dirichlet(), 'w','m/s' )
+        self.QT   = EnvironmentVariable(Gr, Center(), Neumann(), 'qt','kg/kg' )
+        self.QL   = EnvironmentVariable(Gr, Center(), Neumann(), 'ql','kg/kg' )
+        self.QR   = EnvironmentVariable(Gr, Center(), Neumann(), 'qr','kg/kg' )
+        self.THL  = EnvironmentVariable(Gr, Center(), Neumann(), 'thetal', 'K')
+        self.T    = EnvironmentVariable(Gr, Center(), Neumann(), 'temperature','K' )
+        self.B    = EnvironmentVariable(Gr, Center(), Neumann(), 'buoyancy','m^2/s^3' )
+        self.CF   = EnvironmentVariable(Gr, Center(), Neumann(),'cloud_fraction', '-')
+        self.H    = EnvironmentVariable(Gr, Center(), Neumann(), 'thetal','K' )
 
         try:
             self.EnvThermo_scheme = str(namelist['thermodynamics']['saturation'])

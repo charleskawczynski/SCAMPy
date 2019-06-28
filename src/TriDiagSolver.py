@@ -20,34 +20,6 @@ def construct_tridiag_diffusion_new_new(grid, dt, rho_ae_K, rho, ae, a, b, c):
         a[k] = - Z/X
         b[k] = 1.0 + Y/X + Z/X
         c[k] = -Y/X
-    # print('a_working = ', a[:])
-    # print('b_working = ', b[:])
-    # print('c_working = ', c[:])
-    return
-
-def construct_tridiag_diffusion_new(grid, Δt, tmp, q, a, b, c, K_name):
-    i_env = q.i_env
-    k1 = grid.first_interior(Zmin())
-    k2 = grid.first_interior(Zmax())
-    Δzi2 = grid.dzi**2.0
-    for k in grid.over_elems_real(Center()):
-        ρ_0_dual = tmp['ρ_0_half', Dual(k)]
-        a_env_dual = q['a', Dual(k), i_env]
-        K_dual = tmp[K_name, Dual(k), i_env]
-        ρaK_dual = ρ_0_dual * a_env_dual * K_dual
-        denom = tmp['ρ_0_half', k] * q['a', k, i_env]
-        Z = ρaK_dual[0] * Δzi2 * Δt
-        Y = ρaK_dual[1] * Δzi2 * Δt
-        # if k == k1:
-        #     Z = 0.0
-        # elif k == k2:
-        #     Y = 0.0
-        a[k] = - Z/denom
-        b[k] = 1.0 + Y/denom + Z/denom
-        c[k] = -Y/denom
-    # print('a_new = ', a[:])
-    # print('b_new = ', b[:])
-    # print('c_new = ', c[:])
     return
 
 def tridiag_solve(nz, x, a, b, c):

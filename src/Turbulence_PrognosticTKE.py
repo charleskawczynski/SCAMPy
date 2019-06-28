@@ -7,7 +7,7 @@ from EDMF_Environment import *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
 
-from TriDiagSolver import tridiag_solve, tridiag_solve_wrapper, construct_tridiag_diffusion_new, construct_tridiag_diffusion_new_new, tridiag_solve_wrapper_new
+from TriDiagSolver import tridiag_solve, tridiag_solve_wrapper, construct_tridiag_diffusion_new_new, tridiag_solve_wrapper_new
 from Variables import VariablePrognostic, VariableDiagnostic, GridMeanVariables
 from Surface import SurfaceBase
 from Cases import  CasesBase
@@ -467,7 +467,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 self.EnvVar.HQTcov.values[k] = GMV.HQTcov.values[k]
 
         self.UpdVar.set_means(GMV)
-        self.decompose_environment(GMV, 'values', TS)
+        self.decompose_environment(GMV)
 
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.W,  self.UpdVar.W,  self.EnvVar.W,  self.EnvVar.W,  self.EnvVar.TKE,    GMV.W.values,  GMV.W.values,  GMV.TKE.values)
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.H,  self.UpdVar.H,  self.EnvVar.H,  self.EnvVar.H,  self.EnvVar.Hvar,   GMV.H.values,  GMV.H.values,  GMV.Hvar.values)
@@ -478,7 +478,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         self.update_GMV_MF(GMV, TS, tmp)
 
-        self.decompose_environment(GMV, 'mf_update', TS)
+        self.decompose_environment(GMV)
         self.EnvThermo.satadjust(self.EnvVar, True, tmp)
         self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
 
@@ -511,7 +511,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             # It would be better to have a simple linear rule for updating environment here
             # instead of calling EnvThermo saturation adjustment scheme for every updraft.
             # If we are using quadratures this is expensive and probably unnecessary.
-            self.decompose_environment(GMV, 'values', TS)
+            self.decompose_environment(GMV)
             self.EnvThermo.satadjust(self.EnvVar, False, tmp)
             self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
         return
@@ -583,29 +583,15 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
 
     # Find values of environmental variables by subtracting updraft values from grid mean values
-    # whichvals used to check which substep we are on--correspondingly use 'GMV.SomeVar.value' (last timestep value)
-    def decompose_environment(self, GMV, whichvals, TS):
-
-        if whichvals == 'values':
-            for k in self.grid.over_elems(Center()):
-                val1 = 1.0/(1.0-self.UpdVar.Area.bulkvalues[k])
-                val2 = self.UpdVar.Area.bulkvalues[k] * val1
-                self.EnvVar.QT.values[k] = val1 * GMV.QT.values[k] - val2 * self.UpdVar.QT.bulkvalues[k]
-                self.EnvVar.H.values[k]  = val1 * GMV.H.values[k]  - val2 * self.UpdVar.H.bulkvalues[k]
-                # Assuming GMV.W = 0!
-                au_full = self.UpdVar.Area.bulkvalues.Mid(k)
-                self.EnvVar.W.values[k] = -au_full/(1.0-au_full) * self.UpdVar.W.bulkvalues[k]
-        elif whichvals == 'mf_update':
-            for k in self.grid.over_elems(Center()):
-                val1 = 1.0/(1.0-self.UpdVar.Area.bulkvalues[k])
-                val2 = self.UpdVar.Area.bulkvalues[k] * val1
-
-                self.EnvVar.QT.values[k] = val1 * (GMV.QT.values[k] + TS.dt * self.massflux_tendency_qt[k] + self.UpdMicro.prec_source_qt_tot[k]) - val2 * self.UpdVar.QT.bulkvalues[k]
-                self.EnvVar.H.values[k]  = val1 * (GMV.H.values[k] +  TS.dt * self.massflux_tendency_h[k]  + self.UpdMicro.prec_source_h_tot[k])  - val2 * self.UpdVar.H.bulkvalues[k]
-                # Assuming GMV.W = 0!
-                au_full = self.UpdVar.Area.bulkvalues.Mid(k)
-                self.EnvVar.W.values[k] = -au_full/(1.0-au_full) * self.UpdVar.W.bulkvalues[k]
-
+    def decompose_environment(self, GMV):
+        for k in self.grid.over_elems(Center()):
+            val1 = 1.0/(1.0-self.UpdVar.Area.bulkvalues[k])
+            val2 = self.UpdVar.Area.bulkvalues[k] * val1
+            self.EnvVar.QT.values[k] = val1 * GMV.QT.values[k] - val2 * self.UpdVar.QT.bulkvalues[k]
+            self.EnvVar.H.values[k]  = val1 * GMV.H.values[k]  - val2 * self.UpdVar.H.bulkvalues[k]
+            # Assuming GMV.W = 0!
+            au_full = self.UpdVar.Area.bulkvalues.Mid(k)
+            self.EnvVar.W.values[k] = -au_full/(1.0-au_full) * self.UpdVar.W.bulkvalues[k]
         return
 
     # Note: this assumes all variables are defined on half levels not full levels (i.e. phi, psi are not w)
@@ -978,7 +964,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         rho_ae_K = Full(self.grid)
         slice_real = self.grid.slice_real(Center())
         ki = self.grid.first_interior(Zmin())
-        bo = self.grid.boundary(Zmin())
 
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
@@ -991,23 +976,17 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         # Solve QT
         for k in self.grid.over_elems(Center()):
-            f[k] = self.EnvVar.QT.values[k] + TS.dt * self.massflux_tendency_qt[k] + self.UpdMicro.prec_source_qt_tot[k]
+            f[k] = GMV.QT.values[k] + TS.dt * self.massflux_tendency_qt[k] + self.UpdMicro.prec_source_qt_tot[k]
         f[ki] = f[ki] + TS.dt * Case.Sur.rho_qtflux * dzi * tmp['α_0_half'][ki]/ae[ki]
 
-        tridiag_solve_wrapper_new(self.grid, x, f, a, b, c)
-
-        for k in self.grid.over_elems(Center()):
-            GMV.QT.new[k] = GMV.QT.values[k] + ae[k] *(x[k] - self.EnvVar.QT.values[k])
+        tridiag_solve_wrapper_new(self.grid, GMV.QT.new, f, a, b, c)
 
         # Solve H
         for k in self.grid.over_elems(Center()):
-            f[k] = self.EnvVar.H.values[k] + TS.dt * self.massflux_tendency_h[k] + self.UpdMicro.prec_source_h_tot[k]
+            f[k] = GMV.H.values[k] + TS.dt * self.massflux_tendency_h[k] + self.UpdMicro.prec_source_h_tot[k]
         f[ki] = f[ki] + TS.dt * Case.Sur.rho_hflux * dzi * tmp['α_0_half'][ki]/ae[ki]
 
-        tridiag_solve_wrapper_new(self.grid, x, f, a, b, c)
-
-        for k in self.grid.over_elems(Center()):
-            GMV.H.new[k] = GMV.H.values[k] + ae[k] * (x[k] - self.EnvVar.H.values[k])
+        tridiag_solve_wrapper_new(self.grid, GMV.H.new, f, a, b, c)
 
         # Solve U
         for k in self.grid.over_elems_real(Node()):
