@@ -4,21 +4,6 @@ from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
 from StateVec import StateVec
 
-def construct_tridiag_diffusion(nzg, gw, dzi, dt, rho_ae_K, rho, ae, a, b, c):
-    nz = nzg - 2* gw
-    for k in range(gw,nzg-gw):
-        X = rho[k] * ae[k]/dt
-        Y = rho_ae_K[k] * dzi * dzi
-        Z = rho_ae_K[k-1] * dzi * dzi
-        if k == gw:
-            Z = 0.0
-        elif k == nzg-gw-1:
-            Y = 0.0
-        a[k-gw] = - Z/X
-        b[k-gw] = 1.0 + Y/X + Z/X
-        c[k-gw] = -Y/X
-    return
-
 def construct_tridiag_diffusion_new_new(grid, dt, rho_ae_K, rho, ae, a, b, c):
     k1 = grid.first_interior(Zmin())
     k2 = grid.first_interior(Zmax())
