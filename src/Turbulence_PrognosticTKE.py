@@ -105,9 +105,6 @@ class ParameterizationBase:
             else:
                 self.KH.values[k] = 0.0
                 self.KM.values[k] = 0.0
-        # Set the boundary points at top and bottom of domain
-        self.KH.set_bcs(self.grid)
-        self.KM.set_bcs(self.grid)
         return
 
     def update_GMV_diagnostics(self, GMV):
@@ -132,9 +129,6 @@ class SimilarityED(ParameterizationBase):
         return
 
     def update(self,GMV, Case, TS, tmp, q):
-
-        GMV.H.set_bcs(self.grid)
-        GMV.QT.set_bcs(self.grid)
 
         ParameterizationBase.compute_eddy_diffusivities_similarity(self, GMV, Case)
 
@@ -488,13 +482,16 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.compute_covariance(GMV, Case, TS, tmp)
 
         ParameterizationBase.update(self, GMV, Case, TS)
+        GMV.H.set_bcs(self.grid)
+        GMV.QT.set_bcs(self.grid)
+        GMV.QR.set_bcs(self.grid)
+        GMV.U.set_bcs(self.grid)
+        GMV.V.set_bcs(self.grid)
 
         return
 
     def compute_prognostic_updrafts(self, GMV, Case, TS, tmp):
-
         time_elapsed = 0.0
-
         self.UpdVar.set_new_with_values()
         self.UpdVar.set_old_with_values()
         self.set_updraft_surface_bc(GMV, Case, tmp)
@@ -506,14 +503,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
             self.solve_updraft_velocity_area(GMV, TS, tmp)
             self.solve_updraft_scalars(GMV, Case, TS, tmp)
+            self.UpdVar.H.set_bcs(self.grid)
+            self.UpdVar.QT.set_bcs(self.grid)
+            self.UpdVar.QR.set_bcs(self.grid)
             self.UpdVar.set_values_with_new()
             time_elapsed += self.dt_upd
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * self.grid.dz/np.fmax(np.max(self.UpdVar.W.values),1e-10))
-            # (####)
-            # TODO - see comment (###)
-            # It would be better to have a simple linear rule for updating environment here
-            # instead of calling EnvThermo saturation adjustment scheme for every updraft.
-            # If we are using quadratures this is expensive and probably unnecessary.
             self.decompose_environment(GMV)
         return
 
@@ -908,10 +903,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.UpdMicro.compute_sources(self.UpdVar, tmp)
             # Update updraft variables with microphysical source tendencies
             self.UpdMicro.update_updraftvars(self.UpdVar)
-
-        self.UpdVar.H.set_bcs(self.grid)
-        self.UpdVar.QT.set_bcs(self.grid)
-        self.UpdVar.QR.set_bcs(self.grid)
         return
 
     # After updating the updraft variables themselves:
@@ -943,12 +934,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for k in self.grid.over_elems_real(Center()):
             self.massflux_tendency_h[k] = -tmp['α_0_half'][k]*grad(self.massflux_h.Dual(k), self.grid)
             self.massflux_tendency_qt[k] = -tmp['α_0_half'][k]*grad(self.massflux_qt.Dual(k), self.grid)
-
-        GMV.H.set_bcs(self.grid)
-        GMV.QT.set_bcs(self.grid)
-        GMV.QR.set_bcs(self.grid)
-        GMV.U.set_bcs(self.grid)
-        GMV.V.set_bcs(self.grid)
         return
 
     # Update the grid mean variables with the tendency due to eddy diffusion
@@ -1008,12 +993,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         f[ki] = f[ki] + TS.dt * Case.Sur.rho_vflux * dzi * tmp['α_0_half'][ki]/ae[ki]
 
         tridiag_solve_wrapper_new(self.grid, GMV.V.new, f, a, b, c)
-
-        GMV.QT.set_bcs(self.grid)
-        GMV.QR.set_bcs(self.grid)
-        GMV.H.set_bcs(self.grid)
-        GMV.U.set_bcs(self.grid)
-        GMV.V.set_bcs(self.grid)
 
         return
 
