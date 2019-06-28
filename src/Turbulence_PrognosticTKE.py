@@ -468,13 +468,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.QT, self.UpdVar.QT, self.EnvVar.QT, self.EnvVar.QT, self.EnvVar.QTvar,  GMV.QT.values, GMV.QT.values, GMV.QTvar.values)
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.H,  self.UpdVar.QT, self.EnvVar.H,  self.EnvVar.QT, self.EnvVar.HQTcov, GMV.H.values,  GMV.QT.values, GMV.HQTcov.values)
 
-        self.compute_prognostic_updrafts(GMV, Case, TS, tmp)
-
         self.update_GMV_MF(GMV, TS, tmp)
 
-        self.decompose_environment(GMV)
-        self.EnvThermo.satadjust(self.EnvVar, True, tmp)
-        self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
+        self.compute_prognostic_updrafts(GMV, Case, TS, tmp)
 
         self.compute_eddy_diffusivities_tke(GMV, Case)
 
@@ -510,6 +506,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             time_elapsed += self.dt_upd
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * self.grid.dz/np.fmax(np.max(self.UpdVar.W.values),1e-10))
             self.decompose_environment(GMV)
+        self.EnvThermo.satadjust(self.EnvVar, True, tmp)
+        self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
         return
 
     def update_inversion(self,GMV, option, tmp):
@@ -1219,7 +1217,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def compute_covariance_rain(self, TS, GMV, tmp):
-        # TODO defined again in compute_covariance_shear and compute_covaraince
         ae = Half(self.grid)
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]

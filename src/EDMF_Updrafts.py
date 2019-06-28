@@ -118,7 +118,6 @@ class UpdraftVariables:
         self.T.bulkvalues[:] = 0.0
         self.B.bulkvalues[:] = 0.0
 
-
         for k in self.grid.over_elems_real(Center()):
             if self.Area.bulkvalues[k] > 1.0e-20:
                 for i in range(self.n_updrafts):
