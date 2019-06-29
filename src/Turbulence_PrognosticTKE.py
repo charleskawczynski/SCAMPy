@@ -18,6 +18,31 @@ from thermodynamic_functions import  *
 from turbulence_functions import *
 from utility_functions import *
 
+def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit):
+    theta_rho = Half(grid)
+    maxgrad = 0.0
+    theta_rho_bl = theta_rho.surface_bl(grid)
+    for k in grid.over_elems_real(Center()):
+        qv = GMV.QT.values[k] - GMV.QL.values[k]
+        theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.QT.values[k], qv)
+    if option == 'theta_rho':
+        for k in grid.over_elems_real(Center()):
+            if theta_rho[k] > theta_rho_bl:
+                zi = grid.z_half[k]
+                break
+    elif option == 'thetal_maxgrad':
+        for k in grid.over_elems_real(Center()):
+            grad_TH = grad(GMV.THL.values.Dual(k), grid)
+            if grad_TH > maxgrad:
+                maxgrad = grad_TH
+                zi = grid.z[k]
+    elif option == 'critical_Ri':
+        zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, grid, Ri_bulk_crit)
+    else:
+        print('INVERSION HEIGHT OPTION NOT RECOGNIZED')
+    return zi
+
+
 def ParameterizationFactory(namelist, paramlist, Gr, Ref):
     scheme = namelist['turbulence']['scheme']
     if scheme == 'EDMF_PrognosticTKE':
@@ -61,7 +86,7 @@ class ParameterizationBase:
         return
 
     # Update the diagnosis of the inversion height, using the maximum temperature gradient method
-    def update_inversion(self, GMV, option, tmp):
+    def compute_inversion(self, GMV, option, tmp):
         theta_rho = Half(self.grid)
         maxgrad = 0.0
         theta_rho_bl = theta_rho.surface_bl(self.grid)
@@ -90,7 +115,7 @@ class ParameterizationBase:
 
     # Compute eddy diffusivities from similarity theory (Siebesma 2007)
     def compute_eddy_diffusivities_similarity(self, GMV, Case, tmp):
-        self.update_inversion(GMV, Case.inversion_option, tmp)
+        self.zi = compute_inversion(self.grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         ustar = Case.Sur.ustar
         for k in self.grid.over_elems_real(Center()):
@@ -182,10 +207,6 @@ class SimilarityED(ParameterizationBase):
         self.update_GMV_diagnostics(GMV)
         ParameterizationBase.update(self, GMV,Case, TS)
 
-        return
-
-    def update_inversion(self, GMV, option, tmp):
-        ParameterizationBase.update_inversion(self, GMV, option, tmp)
         return
 
     def update_GMV_diagnostics(self, GMV):
@@ -448,7 +469,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def update(self, GMV, Case, TS, tmp, q):
 
-        self.update_inversion(GMV, Case.inversion_option, tmp)
+        self.zi = compute_inversion(self.grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
 
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
 
@@ -467,15 +488,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.H,  self.UpdVar.H,  self.EnvVar.H,  self.EnvVar.H,  self.EnvVar.Hvar,   GMV.H.values,  GMV.H.values,  GMV.Hvar.values)
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.QT, self.UpdVar.QT, self.EnvVar.QT, self.EnvVar.QT, self.EnvVar.QTvar,  GMV.QT.values, GMV.QT.values, GMV.QTvar.values)
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.H,  self.UpdVar.QT, self.EnvVar.H,  self.EnvVar.QT, self.EnvVar.HQTcov, GMV.H.values,  GMV.QT.values, GMV.HQTcov.values)
-
         self.update_GMV_MF(GMV, TS, tmp)
+        self.compute_eddy_diffusivities_tke(GMV, Case)
+        self.compute_covariance(GMV, Case, TS, tmp)
 
         self.compute_prognostic_updrafts(GMV, Case, TS, tmp)
 
-        self.compute_eddy_diffusivities_tke(GMV, Case)
-
         self.update_GMV_ED(GMV, Case, TS, tmp, q)
-        self.compute_covariance(GMV, Case, TS, tmp)
 
         ParameterizationBase.update(self, GMV, Case, TS)
         GMV.H.set_bcs(self.grid)
@@ -510,10 +529,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
         return
 
-    def update_inversion(self,GMV, option, tmp):
-        ParameterizationBase.update_inversion(self, GMV,option, tmp)
-        return
-
     def compute_mixing_length(self, obukhov_length):
         tau = get_mixing_tau(self.zi, self.wstar)
         for k in self.grid.over_elems_real(Center()):
@@ -542,7 +557,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def set_updraft_surface_bc(self, GMV, Case, tmp):
-        self.update_inversion(GMV, Case.inversion_option, tmp)
+        self.zi = compute_inversion(self.grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         k_1 = self.grid.first_interior(Zmin())
         zLL = self.grid.z_half[k_1]
