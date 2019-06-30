@@ -92,7 +92,15 @@ class Simulation1d:
         return
 
     def run(self):
-        sol = type('', (), {})()
+        self.GMV.zero_tendencies()
+        self.Case.update_surface(self.GMV, self.TS, self.tmp)
+        self.Case.update_forcing(self.GMV, self.TS, self.tmp)
+        self.Turb.initialize_covariance(self.GMV, self.Case, self.tmp)
+        for k in self.grid.over_elems(Center()):
+            self.Turb.EnvVar.TKE.values[k] = self.GMV.TKE.values[k]
+            self.Turb.EnvVar.Hvar.values[k] = self.GMV.Hvar.values[k]
+            self.Turb.EnvVar.QTvar.values[k] = self.GMV.QTvar.values[k]
+            self.Turb.EnvVar.HQTcov.values[k] = self.GMV.HQTcov.values[k]
 
         while self.TS.t <= self.TS.t_max:
             print('Percent complete: ', self.TS.t/self.TS.t_max*100)
@@ -102,12 +110,15 @@ class Simulation1d:
             self.Turb.update(self.GMV, self.Case, self.TS, self.tmp, self.q)
 
             self.TS.update()
-            # Apply the tendencies, also update the BCs and diagnostic thermodynamics
             self.GMV.update(self.TS)
             self.Turb.update_GMV_diagnostics(self.GMV, self.tmp)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
+        sol = self.package_sol()
+        return sol
 
+    def package_sol(self):
+        sol = type('', (), {})()
         sol.z = self.grid.z
         sol.z_half = self.grid.z_half
 
@@ -143,7 +154,6 @@ class Simulation1d:
         sol.gm_QL = self.GMV.QL.values
         sol.gm_B = self.GMV.B.values
 
-
         plt.plot(sol.ud_W   , sol.z); plt.savefig(self.Stats.figpath+'ud_W.png'); plt.close()
         plt.plot(sol.ud_Area, sol.z); plt.savefig(self.Stats.figpath+'ud_Area.png'); plt.close()
         plt.plot(sol.ud_QT  , sol.z); plt.savefig(self.Stats.figpath+'ud_QT.png'); plt.close()
@@ -173,11 +183,9 @@ class Simulation1d:
         plt.plot(sol.gm_V  , sol.z); plt.savefig(self.Stats.figpath+'gm_V.png'); plt.close()
         plt.plot(sol.gm_QL , sol.z); plt.savefig(self.Stats.figpath+'gm_QL.png'); plt.close()
         plt.plot(sol.gm_B  , sol.z); plt.savefig(self.Stats.figpath+'gm_B.png'); plt.close()
-
         return sol
 
     def initialize_io(self):
-
         self.GMV.initialize_io(self.Stats)
         self.Case.initialize_io(self.Stats)
         self.Turb.initialize_io(self.Stats)

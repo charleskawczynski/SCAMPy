@@ -165,8 +165,6 @@ class SimilarityED(ParameterizationBase):
         ae = Half(self.grid)
         rho_K = Full(self.grid)
 
-        slice_real = self.grid.slice_real(Center())
-
         for k in self.grid.over_elems(Center()):
             ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
 
@@ -288,7 +286,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.pressure_buoy_coeff = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_buoy_coeff']
         self.pressure_drag_coeff = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_drag_coeff']
         self.pressure_plume_spacing = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_plume_spacing']
-        # "Legacy" coefficients used by the steady updraft routine
         self.vel_pressure_coeff = self.pressure_drag_coeff/self.pressure_plume_spacing
         self.vel_buoy_coeff = 1.0-self.pressure_buoy_coeff
         self.tke_ed_coeff = paramlist['turbulence']['EDMF_PrognosticTKE']['tke_ed_coeff']
@@ -303,7 +300,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.UpdThermo = UpdraftThermodynamics(self.n_updrafts, Gr, Ref, self.UpdVar)
         # Create the class for updraft microphysics
         self.UpdMicro = UpdraftMicrophysics(paramlist, self.n_updrafts, Gr, Ref)
-
         # Create the environment variable class (major diagnostic and prognostic variables)
         self.EnvVar = EnvironmentVariables(namelist,Gr)
         # Create the class for environment thermodynamics
@@ -322,8 +318,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         # Mass flux
         self.m = [Full(Gr) for i in range(self.n_updrafts)]
-
-        # mixing length
         self.mixing_length = Half(Gr)
 
         # Near-surface BC of updraft area fraction
@@ -340,7 +334,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.massflux_h = Full(Gr)
         self.massflux_qt = Full(Gr)
 
-        # Added by Ignacio : Length scheme in use (mls), and smooth min effect (ml_ratio)
         self.mls = Half(Gr)
         self.ml_ratio = Half(Gr)
         return
@@ -470,20 +463,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     def update(self, GMV, Case, TS, tmp, q):
 
         self.zi = compute_inversion(self.grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
-
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
-
-        if TS.nstep == 0:
-            self.initialize_covariance(GMV, Case, tmp)
-            for k in self.grid.over_elems(Center()):
-                self.EnvVar.TKE.values[k] = GMV.TKE.values[k]
-                self.EnvVar.Hvar.values[k] = GMV.Hvar.values[k]
-                self.EnvVar.QTvar.values[k] = GMV.QTvar.values[k]
-                self.EnvVar.HQTcov.values[k] = GMV.HQTcov.values[k]
-
         self.UpdVar.set_means(GMV)
         self.decompose_environment(GMV)
-
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.W,  self.UpdVar.W,  self.EnvVar.W,  self.EnvVar.W,  self.EnvVar.TKE,    GMV.W.values,  GMV.W.values,  GMV.TKE.values)
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.H,  self.UpdVar.H,  self.EnvVar.H,  self.EnvVar.H,  self.EnvVar.Hvar,   GMV.H.values,  GMV.H.values,  GMV.Hvar.values)
         self.get_GMV_CoVar(self.UpdVar.Area, self.UpdVar.QT, self.UpdVar.QT, self.EnvVar.QT, self.EnvVar.QT, self.EnvVar.QTvar,  GMV.QT.values, GMV.QT.values, GMV.QTvar.values)
@@ -846,7 +828,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for i in range(self.n_updrafts):
             self.UpdVar.H.new[i][k_1] = self.h_surface_bc[i]
             self.UpdVar.QT.new[i][k_1] = self.qt_surface_bc[i]
-            self.UpdVar.QR.new[i][k_1] = 0.0 #TODO
+            self.UpdVar.QR.new[i][k_1] = 0.0
 
             if self.use_local_micro:
                 # do saturation adjustment
@@ -961,7 +943,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         f = Half(self.grid)
         ae = Half(self.grid)
         rho_ae_K = Full(self.grid)
-        slice_real = self.grid.slice_real(Center())
         ki = self.grid.first_interior(Zmin())
 
         for k in self.grid.over_elems(Center()):
@@ -1117,6 +1098,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
 
     def initialize_covariance(self, GMV, Case, tmp):
+        self.zi = compute_inversion(self.grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
+        self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         ws = self.wstar
         us = Case.Sur.ustar
         zs = self.zi
@@ -1262,7 +1245,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         dti = TS.dti
         k_1 = self.grid.first_interior(Zmin())
         k_2 = self.grid.first_interior(Zmax())
-        slice_real = self.grid.slice_real(Center())
 
         alpha0LL  = self.Ref.alpha0_half[k_1]
         zLL = self.grid.z_half[k_1]

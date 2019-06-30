@@ -32,4 +32,3 @@ def Laplacian(f, grid, K = None):
     else:
       assert len(f)==2
       return (K[1]*(f[2]-f[1])-K[0]*(f[1]-f[0]))*grid.dzi2
-
