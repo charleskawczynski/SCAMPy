@@ -235,32 +235,19 @@ class UpdraftThermodynamics:
                 UpdVar.T.values[i][k] = T
         return
 
-    def buoyancy(self,  UpdVar, EnvVar,GMV, extrap, tmp):
+    def buoyancy(self,  UpdVar, EnvVar, GMV, extrap, tmp):
         UpdVar.Area.bulkvalues[:] = np.sum(UpdVar.Area.values,axis=0)
-        if not extrap:
-            for i in range(self.n_updrafts):
-                for k in self.grid.over_elems(Center()):
-                    qv = UpdVar.QT.values[i][k] - UpdVar.QL.values[i][k]
-                    alpha = alpha_c(tmp['p_0_half'][k], UpdVar.T.values[i][k], UpdVar.QT.values[i][k], qv)
-                    UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0_half'][k], alpha) #- GMV.B.values[k]
-        else:
-            for i in range(self.n_updrafts):
-                for k in self.grid.over_elems_real(Center()):
-                    if UpdVar.Area.values[i][k] > 1e-3:
-                        qt = UpdVar.QT.values[i][k]
-                        qv = UpdVar.QT.values[i][k] - UpdVar.QL.values[i][k]
-                        h = UpdVar.H.values[i][k]
-                        t = UpdVar.T.values[i][k]
-                        alpha = alpha_c(tmp['p_0_half'][k], t, qt, qv)
-                        UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0_half'][k], alpha)
+        for i in range(self.n_updrafts):
+            for k in self.grid.over_elems_real(Center()):
+                if UpdVar.Area.values[i][k] > 1e-3:
+                    q_tot = UpdVar.QT.values[i][k]
+                    q_vap = UpdVar.QT.values[i][k] - UpdVar.QL.values[i][k]
+                    T = UpdVar.T.values[i][k]
+                    α_i = alpha_c(tmp['p_0_half'][k], T, q_tot, q_vap)
+                    UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0_half'][k], α_i)
+                else:
+                    UpdVar.B.values[i][k] = EnvVar.B.values[k]
 
-                    else:
-                        T, q_l = eos(self.t_to_prog_fp,self.prog_to_t_fp, tmp['p_0_half'][k], qt, h)
-                        qt -= q_l
-                        qv = qt
-                        t = T
-                        alpha = alpha_c(tmp['p_0_half'][k], t, qt, qv)
-                        UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0_half'][k], alpha)
         for k in self.grid.over_elems_real(Center()):
             GMV.B.values[k] = (1.0 - UpdVar.Area.bulkvalues[k]) * EnvVar.B.values[k]
             for i in range(self.n_updrafts):

@@ -137,7 +137,7 @@ class SurfaceMoninObukhov(SurfaceBase):
     def update(self, GMV, tmp):
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
         k_1 = self.grid.first_interior(Zmin())
-        zb = self.grid.z_half[k_1]
+        z_1 = self.grid.z_half[k_1]
         theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
         theta_rho_b = theta_rho_c(tmp['p_0_half'][k_1], GMV.T.values[k_1], self.qsurface, self.qsurface)
         lv = latent_heat(GMV.T.values[k_1])
@@ -146,8 +146,8 @@ class SurfaceMoninObukhov(SurfaceBase):
 
 
         self.windspeed = compute_windspeed(GMV, self.grid, 0.0)
-        Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/zb
-        Ri = Nb2 * zb * zb/(self.windspeed * self.windspeed)
+        Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/z_1
+        Ri = Nb2 * z_1 * z_1/(self.windspeed * self.windspeed)
 
         self.cm, self.ch, self.obukhov_length = exchange_coefficients_byun(Ri, self.grid.z_half[k_1], self.zrough)
 
@@ -183,27 +183,27 @@ class SurfaceSullivanPatton(SurfaceBase):
         return
     def update(self, GMV, tmp):
         k_1 = self.grid.first_interior(Zmin())
-        zb = self.grid.z_half[k_1]
+        z_1 = self.grid.z_half[k_1]
+        p_0_1 = tmp['p_0_half'][k_1]
+        ρ_0_surf = tmp.surface(self.grid, 'ρ_0_half')
+        T_1 = GMV.T.values[k_1]
+        QT_1 = GMV.QT.values[k_1]
         theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
-        theta_rho_b = theta_rho_c(tmp['p_0_half'][k_1], GMV.T.values[k_1], self.qsurface, self.qsurface)
-        lv = latent_heat(GMV.T.values[k_1])
-        g=9.81
-        T0 = tmp['p_0_half'][k_1] * tmp['α_0_half'][k_1]/Rd
+        theta_rho_b = theta_rho_c(p_0_1, T_1, self.qsurface, self.qsurface)
+        lv = latent_heat(T_1)
+        T0 = p_0_1 * tmp['α_0_half'][k_1]/Rd
 
         theta_flux = 0.24
-        self.bflux = g * theta_flux * exner_c(tmp['p_0_half'][k_1]) / T0
+        self.bflux = g * theta_flux * exner_c(p_0_1) / T0
 
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
         h_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
 
-
         self.windspeed = compute_windspeed(GMV, self.grid, 0.0)
-        Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/zb
-        Ri = Nb2 * zb * zb/(self.windspeed * self.windspeed)
+        Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/z_1
+        Ri = Nb2 * z_1 * z_1/(self.windspeed * self.windspeed)
 
-        self.cm, self.ch, self.obukhov_length = exchange_coefficients_byun(Ri, self.grid.z_half[k_1], self.zrough)
-
-        ρ_0_surf = tmp.surface(self.grid, 'ρ_0_half')
+        self.cm, self.ch, self.obukhov_length = exchange_coefficients_byun(Ri, z_1, self.zrough)
 
         self.rho_uflux = -self.cm * self.windspeed * (GMV.U.values[k_1] ) * ρ_0_surf
         self.rho_vflux = -self.cm * self.windspeed * (GMV.V.values[k_1] ) * ρ_0_surf
@@ -212,7 +212,7 @@ class SurfaceSullivanPatton(SurfaceBase):
         self.rho_qtflux = -self.ch * self.windspeed * (GMV.QT.values[k_1] - self.qsurface) * ρ_0_surf
         self.lhf = lv * self.rho_qtflux
 
-        self.shf = cpm_c(GMV.QT.values[k_1])  * self.rho_hflux
+        self.shf = cpm_c(QT_1)  * self.rho_hflux
 
         self.ustar =  sqrt(self.cm) * self.windspeed
         # CK--testing this--EDMF scheme checks greater or less than zero,
