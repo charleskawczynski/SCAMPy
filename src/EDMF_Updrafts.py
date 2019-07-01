@@ -227,7 +227,6 @@ class UpdraftThermodynamics:
 
         return
     def satadjust(self, UpdVar, tmp):
-        #Update T, QL
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
                 T, ql = eos(self.t_to_prog_fp, self.prog_to_t_fp, tmp['p_0_half'][k], UpdVar.QT.values[i][k], UpdVar.H.values[i][k])
@@ -247,7 +246,7 @@ class UpdraftThermodynamics:
                     UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0_half'][k], α_i)
                 else:
                     UpdVar.B.values[i][k] = EnvVar.B.values[k]
-
+        # Subtract grid mean buoyancy
         for k in self.grid.over_elems_real(Center()):
             GMV.B.values[k] = (1.0 - UpdVar.Area.bulkvalues[k]) * EnvVar.B.values[k]
             for i in range(self.n_updrafts):
@@ -255,9 +254,7 @@ class UpdraftThermodynamics:
             for i in range(self.n_updrafts):
                 UpdVar.B.values[i][k] -= GMV.B.values[k]
             EnvVar.B.values[k] -= GMV.B.values[k]
-
         return
-
 
 #Implements a simple "microphysics" that clips excess humidity above a user-specified level
 class UpdraftMicrophysics:

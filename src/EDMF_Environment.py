@@ -17,9 +17,7 @@ class EnvironmentVariable:
         self.units = units
 
     def set_bcs(self, Gr):
-        n_updrafts = np.shape(self.values)[0]
-        for i in range(n_updrafts):
-            self.values[i].apply_bc(Gr, self.bc, 0.0)
+        self.values.apply_bc(Gr, self.bc, 0.0)
         return
 
 class EnvironmentVariable_2m:
@@ -38,9 +36,7 @@ class EnvironmentVariable_2m:
         self.units = units
 
     def set_bcs(self, Gr):
-        n_updrafts = np.shape(self.values)[0]
-        for i in range(n_updrafts):
-            self.values[i].apply_bc(Gr, self.bc, 0.0)
+        self.values.apply_bc(Gr, self.bc, 0.0)
         return
 
 class EnvironmentVariables:
@@ -177,8 +173,9 @@ class EnvironmentThermodynamics:
 
         for k in self.grid.over_elems_real(Center()):
             # condensation + autoconversion
-            T, ql  = eos(self.t_to_prog_fp, self.prog_to_t_fp, tmp['p_0_half'][k], EnvVar.QT.values[k], EnvVar.H.values[k])
-            mph = microphysics(T, ql, tmp['p_0_half'][k], EnvVar.QT.values[k], self.max_supersaturation, in_Env)
+            p_0_k = tmp['p_0_half'][k]
+            T, ql  = eos(self.t_to_prog_fp, self.prog_to_t_fp, p_0_k, EnvVar.QT.values[k], EnvVar.H.values[k])
+            mph = microphysics(T, ql, p_0_k, EnvVar.QT.values[k], self.max_supersaturation, in_Env)
 
             self.update_EnvVar(tmp,   k, EnvVar, mph.T, mph.thl, mph.qt, mph.ql, mph.qr, mph.alpha)
             self.update_cloud_dry(k, EnvVar, mph.T, mph.th,  mph.qt, mph.ql, mph.qv)
