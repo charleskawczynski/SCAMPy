@@ -12,10 +12,9 @@ from thermodynamic_functions import eos, t_to_entropy_c, t_to_thetali_c, \
 
 class VariablePrognostic:
     def __init__(self, Gr, loc, bc, name, units):
-        self.values     = Field.field(Gr, loc)
-        self.new        = Field.field(Gr, loc)
-        self.tendencies = Field.field(Gr, loc)
-        self.bc = bc
+        self.values     = Field.field(Gr, loc, bc)
+        self.new        = Field.field(Gr, loc, bc)
+        self.tendencies = Field.field(Gr, loc, bc)
         self.name = name
         self.units = units
         return
@@ -26,20 +25,19 @@ class VariablePrognostic:
         return
 
     def set_bcs(self, Gr):
-        self.values.apply_bc(Gr, self.bc, 0.0)
-        self.new.apply_bc(Gr, self.bc, 0.0)
+        self.values.apply_bc(Gr, 0.0)
+        self.new.apply_bc(Gr, 0.0)
         return
 
 class VariableDiagnostic:
 
     def __init__(self, Gr, loc, bc, name, units):
-        self.values = Field.field(Gr, loc)
-        self.bc = bc
+        self.values = Field.field(Gr, loc, bc)
         self.name = name
         self.units = units
         return
     def set_bcs(self, Gr):
-        self.values.apply_bc(Gr, self.bc, 0.0)
+        self.values.apply_bc(Gr, 0.0)
         return
 
 class GridMeanVariables:

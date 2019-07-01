@@ -11,32 +11,30 @@ from microphysics_functions import *
 
 class EnvironmentVariable:
     def __init__(self, Gr, loc, bc, name, units):
-        self.values = Field.field(Gr, loc)
-        self.bc = bc
+        self.values = Field.field(Gr, loc, bc)
         self.name = name
         self.units = units
 
     def set_bcs(self, Gr):
-        self.values.apply_bc(Gr, self.bc, 0.0)
+        self.values.apply_bc(Gr, 0.0)
         return
 
 class EnvironmentVariable_2m:
     def __init__(self, Gr, loc, bc, name, units):
-        self.values      = Field.field(Gr, loc)
-        self.dissipation = Field.field(Gr, loc)
-        self.entr_gain   = Field.field(Gr, loc)
-        self.detr_loss   = Field.field(Gr, loc)
-        self.buoy        = Field.field(Gr, loc)
-        self.press       = Field.field(Gr, loc)
-        self.shear       = Field.field(Gr, loc)
-        self.interdomain = Field.field(Gr, loc)
-        self.rain_src    = Field.field(Gr, loc)
-        self.bc = bc
+        self.values      = Field.field(Gr, loc, bc)
+        self.dissipation = Field.field(Gr, loc, bc)
+        self.entr_gain   = Field.field(Gr, loc, bc)
+        self.detr_loss   = Field.field(Gr, loc, bc)
+        self.buoy        = Field.field(Gr, loc, bc)
+        self.press       = Field.field(Gr, loc, bc)
+        self.shear       = Field.field(Gr, loc, bc)
+        self.interdomain = Field.field(Gr, loc, bc)
+        self.rain_src    = Field.field(Gr, loc, bc)
         self.name = name
         self.units = units
 
     def set_bcs(self, Gr):
-        self.values.apply_bc(Gr, self.bc, 0.0)
+        self.values.apply_bc(Gr, 0.0)
         return
 
 class EnvironmentVariables:

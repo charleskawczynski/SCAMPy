@@ -5,6 +5,7 @@ from Variables import GridMeanVariables
 from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
+from Field import Field, Full, Half, Dirichlet, Neumann
 from StateVec import StateVec
 from ReferenceState import ReferenceState
 import matplotlib.pyplot as plt
@@ -26,41 +27,42 @@ class Simulation1d:
         N_sd = N_subdomains
 
         unkowns = (
-         ('a'             , Center() , N_sd),
-         ('w'             , Center() , N_sd),
-         ('q_tot'         , Center() , N_sd),
-         ('θ_liq'         , Center() , N_sd),
-         ('tke'           , Center() , N_sd),
-         ('cv_q_tot'      , Center() , N_sd),
-         ('cv_θ_liq'      , Center() , N_sd),
-         ('cv_θ_liq_q_tot', Center() , N_sd),
+         ('a'             , Center() , Neumann() , N_sd),
+         ('w'             , Node()   , Dirichlet() , N_sd),
+         ('q_tot'         , Center() , Neumann() , N_sd),
+         ('q_rai'         , Center() , Neumann() , N_sd),
+         ('θ_liq'         , Center() , Neumann() , N_sd),
+         ('tke'           , Center() , Neumann() , N_sd),
+         ('cv_q_tot'      , Center() , Neumann() , N_sd),
+         ('cv_θ_liq'      , Center() , Neumann() , N_sd),
+         ('cv_θ_liq_q_tot', Center() , Neumann() , N_sd),
         )
 
         temp_vars = (
-                     ('Area_bulkvalues'             , Center() , N_sd),
-                     ('W_bulkvalues'             , Center() , N_sd),
-                     ('QT_bulkvalues'            , Center() , N_sd),
-                     ('QL_bulkvalues'            , Center() , N_sd),
-                     ('QR_bulkvalues'            , Center() , N_sd),
-                     ('H_bulkvalues'             , Center() , N_sd),
-                     ('T_bulkvalues'             , Center() , N_sd),
-                     ('B_bulkvalues'             , Center() , N_sd),
-                     ('q_tot_bulkvalues'         , Center() , N_sd),
-                     ('θ_liq_bulkvalues'         , Center() , N_sd),
-                     ('tke_bulkvalues'           , Center() , N_sd),
-                     ('cv_q_tot_bulkvalues'      , Center() , N_sd),
-                     ('cv_θ_liq_bulkvalues'      , Center() , N_sd),
-                     ('cv_θ_liq_q_tot_bulkvalues', Center() , N_sd),
-                     ('ρ_0', Node(), 1),
-                     ('α_0', Node(), 1),
-                     ('p_0', Node(), 1),
-                     ('ρ_0_half', Center(), 1),
-                     ('α_0_half', Center(), 1),
-                     ('p_0_half', Center(), 1),
-                     ('K_m', Center(), N_sd),
-                     ('K_h', Center(), N_sd),
-                     ('ρaK_m', Node(), N_sd),
-                     ('ρaK_h', Node(), N_sd),
+                     ('ρ_0'         , Node()   , Neumann(), 1),
+                     ('α_0'         , Node()   , Neumann(), 1),
+                     ('p_0'         , Node()   , Neumann(), 1),
+                     ('ρ_0_half'    , Center() , Neumann(), 1),
+                     ('α_0_half'    , Center() , Neumann(), 1),
+                     ('p_0_half'    , Center() , Neumann(), 1),
+                     ('K_m'         , Center() , Neumann(), N_sd),
+                     ('K_h'         , Center() , Neumann(), N_sd),
+                     ('ρaK_m'       , Node()   , Neumann(), N_sd),
+                     ('ρaK_h'       , Node()   , Neumann(), N_sd),
+                     ('T_bulkvalues', Center() , Neumann(), 1),
+                     ('B_bulkvalues', Center() , Neumann(), 1),
+                     )
+
+        moment_2_vars = (
+                     ('values'     , Center(), Neumann(), 1),
+                     ('dissipation', Center(), Neumann(), 1),
+                     ('entr_gain'  , Center(), Neumann(), 1),
+                     ('detr_loss'  , Center(), Neumann(), 1),
+                     ('buoy'       , Center(), Neumann(), 1),
+                     ('press'      , Center(), Neumann(), 1),
+                     ('shear'      , Center(), Neumann(), 1),
+                     ('interdomain', Center(), Neumann(), 1),
+                     ('rain_src'   , Center(), Neumann(), 1),
                      )
 
         self.grid = Grid(z_min, z_max, n_elems_real, n_ghost)
@@ -69,9 +71,17 @@ class Simulation1d:
         self.q_new = copy.deepcopy(self.q)
         self.q_old = copy.deepcopy(self.q)
         self.q_tendencies = copy.deepcopy(self.q)
-        self.q_mf = copy.deepcopy(self.q)
+        self.q_bulkvalues = copy.deepcopy(self.q)
 
         self.tmp = StateVec(temp_vars, self.grid)
+
+        self.tmp_O2 = {}
+        self.tmp_O2['TKE']    = StateVec(moment_2_vars, self.grid)
+        self.tmp_O2['QTvar']  = StateVec(moment_2_vars, self.grid)
+        self.tmp_O2['Hvar']   = StateVec(moment_2_vars, self.grid)
+        self.tmp_O2['HQTcov'] = StateVec(moment_2_vars, self.grid)
+        self.tmp_O2['TKE']    = StateVec(moment_2_vars, self.grid)
+
 
         self.Ref = ReferenceState(self.grid)
         self.GMV = GridMeanVariables(namelist, self.grid, self.Ref)
@@ -122,7 +132,9 @@ class Simulation1d:
         sol.z = self.grid.z
         sol.z_half = self.grid.z_half
 
-        sol.e_W = self.Turb.EnvVar.W.values
+        i_gm, i_env, i_uds = self.q.domain_idx()
+
+        sol.e_W = self.q['w', i_env].values
         sol.e_QT = self.Turb.EnvVar.QT.values
         sol.e_QL = self.Turb.EnvVar.QL.values
         sol.e_QR = self.Turb.EnvVar.QR.values

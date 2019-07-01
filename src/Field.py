@@ -11,17 +11,18 @@ class Dirichlet:
         return
 
 class Field:
-    def __init__(self, n, loc):
+    def __init__(self, n, loc, bc = None):
         self.loc = loc
+        self.bc = bc
         self.values = np.zeros((n,), dtype=np.double, order='c')
         return
 
     @classmethod
-    def field(cls, grid, loc):
+    def field(cls, grid, loc, bc = None):
         if isinstance(loc, Center):
-            return Half(grid)
+            return Half(grid, bc)
         elif isinstance(loc, Node):
-            return Full(grid)
+            return Full(grid, bc)
         else:
             print('loc = ', loc)
             raise TypeError('Bad location in field in Field.py')
@@ -55,17 +56,17 @@ class Field:
         np.savetxt(file_name, A, fmt=fmt, header="z,"+var_name, comments='')
         return
 
-    def apply_bc(self, grid, bc, value):
-        if isinstance(bc, Dirichlet):
+    def apply_bc(self, grid, value):
+        if isinstance(self.bc, Dirichlet):
             self.apply_Dirichlet(grid, value)
-        elif isinstance(bc, Neumann):
+        elif isinstance(self.bc, Neumann):
             self.apply_Neumann(grid, value)
         else:
             raise TypeError('Bad bc in apply_bc in Field.py')
 
 class Full(Field):
-    def __init__(self, grid):
-        super(Full, self).__init__(grid.nzg, Node())
+    def __init__(self, grid, bc = None):
+        super(Full, self).__init__(grid.nzg, Node(), bc)
         return
 
     def __getitem__(self, key):
@@ -109,8 +110,8 @@ class Full(Field):
         self.values[k_2+1:] = 2.0*self.values[k_2] - self.values[k_2-n_hat_zmax] + 2.0*grid.dz*value*n_hat_zmax
 
 class Half(Field):
-    def __init__(self, grid):
-        super(Half, self).__init__(grid.nzg, Center())
+    def __init__(self, grid, bc = None):
+        super(Half, self).__init__(grid.nzg, Center(), bc)
         return
 
     def __getitem__(self, key):

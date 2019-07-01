@@ -13,19 +13,18 @@ import pylab as plt
 
 class UpdraftVariable:
     def __init__(self, Gr, nu, loc, bc, name, units):
-        self.values     = [Field.field(Gr, loc) for i in range(nu)]
-        self.old        = [Field.field(Gr, loc) for i in range(nu)]
-        self.new        = [Field.field(Gr, loc) for i in range(nu)]
-        self.tendencies = [Field.field(Gr, loc) for i in range(nu)]
-        self.bulkvalues = Field.field(Gr, loc)
-        self.bc = bc
+        self.values     = [Field.field(Gr, loc, bc) for i in range(nu)]
+        self.old        = [Field.field(Gr, loc, bc) for i in range(nu)]
+        self.new        = [Field.field(Gr, loc, bc) for i in range(nu)]
+        self.tendencies = [Field.field(Gr, loc, bc) for i in range(nu)]
+        self.bulkvalues = Field.field(Gr, loc, bc)
         self.name = name
         self.units = units
 
     def set_bcs(self, Gr):
         n_updrafts = np.shape(self.values)[0]
         for i in range(n_updrafts):
-            self.values[i].apply_bc(Gr, self.bc, 0.0)
+            self.values[i].apply_bc(Gr, 0.0)
         return
 
 class UpdraftVariables:

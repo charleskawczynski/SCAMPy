@@ -20,8 +20,8 @@ def friendly_name(s):
     return s
 
 def get_var_mapper(var_tuple):
-    var_names = [var_name for (var_name, loc, nsd) in var_tuple]
-    end_index = list(np.cumsum([nsd for (var_name, loc, nsd) in var_tuple]))
+    var_names = [var_name for (var_name, loc, bc, nsd) in var_tuple]
+    end_index = list(np.cumsum([nsd for (var_name, loc, bc, nsd) in var_tuple]))
     start_index = [0]+[x for x in end_index][0:-1]
     vals = [list(range(a,b)) for a,b in zip(start_index, end_index)]
     var_mapper = {k : v for k,v in zip(var_names, vals)}
@@ -29,16 +29,17 @@ def get_var_mapper(var_tuple):
 
 class StateVec:
     def __init__(self, var_tuple, grid):
-        self.n_subdomains = max([nsd for var_name, loc, nsd in var_tuple])
+        self.n_subdomains = max([nsd for var_name, loc, bc, nsd in var_tuple])
         self.i_gm = 0
         self.i_env = 1
         self.i_uds = [i for i in range(self.n_subdomains) if not any([i==j for j in [self.i_env, self.i_gm]])]
-        self.n_vars = sum([nsd for var_name, loc, nsd in var_tuple])
+        self.n_vars = sum([nsd for var_name, loc, bc, nsd in var_tuple])
         self.var_names, self.var_mapper = get_var_mapper(var_tuple)
         n = len(list(grid.over_elems(Center())))
-        self.locs = {var_name : loc for var_name, loc, nsd in var_tuple}
-        self.nsd = {var_name : nsd for var_name, loc, nsd in var_tuple}
-        self.fields = [Field.field(grid, self.locs[v]) for v in self.var_mapper for i in range(self.nsd[v])]
+        self.locs = {var_name : loc for var_name, loc, bc, nsd in var_tuple}
+        self.nsd = {var_name : nsd for var_name, loc, bc, nsd in var_tuple}
+        self.bcs = {var_name : bc for var_name, loc, bc, nsd in var_tuple}
+        self.fields = [Field.field(grid, self.locs[v], self.bcs[v]) for v in self.var_mapper for i in range(self.nsd[v])]
         return
 
     def __getitem__(self, tup):
