@@ -296,10 +296,9 @@ class UpdraftMicrophysics:
                 self.prec_source_qt[i][k] = -tmp_qr
                 self.prec_source_h[i][k]  = rain_source_to_thetal(tmp['p_0_half'][k], UpdVar.T.values[i][k],\
                                              UpdVar.QT.values[i][k], UpdVar.QL.values[i][k], 0.0, tmp_qr)
-                                                                                          #TODO assumes no ice
         for k in self.grid.over_elems(Center()):
-            self.prec_source_h_tot[k]  = np.sum([self.prec_source_h[i][k] * UpdVar.Area.values[i][k] for i in range(n_updrafts)])
-            self.prec_source_qt_tot[k] = np.sum([self.prec_source_qt[i][k]* UpdVar.Area.values[i][k] for i in range(n_updrafts)])
+            self.prec_source_h_tot[k]  = np.sum([self.prec_source_h[i][k] * UpdVar.Area.values[i][k] for i in range(self.n_updrafts)])
+            self.prec_source_qt_tot[k] = np.sum([self.prec_source_qt[i][k]* UpdVar.Area.values[i][k] for i in range(self.n_updrafts)])
 
         return
 
