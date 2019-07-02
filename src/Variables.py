@@ -62,19 +62,11 @@ class GridMeanVariables:
         self.B   = VariableDiagnostic(Gr, Center(), Neumann(), 'buoyancy', 'm^2/s^3')
         self.θ_liq = VariableDiagnostic(Gr, Center(), Neumann(), 'thetal','K')
 
-        try:
-            self.EnvThermo_scheme = str(namelist['thermodynamics']['saturation'])
-        except:
-            self.EnvThermo_scheme = 'sa_mean'
-
+        self.EnvThermo_scheme = str(namelist['thermodynamics']['saturation'])
         self.tke = VariableDiagnostic(Gr, Center(), Neumann(), 'tke','m^2/s^2' )
-
         self.cv_q_tot = VariableDiagnostic(Gr, Center(), Neumann(), 'qt_var','kg^2/kg^2' )
         self.cv_θ_liq = VariableDiagnostic(Gr, Center(), Neumann() ,'thetal_var', 'K^2')
         self.cv_θ_liq_q_tot = VariableDiagnostic(Gr, Center(), Neumann() ,'thetal_qt_covar', 'K(kg/kg)' )
-
-        if self.EnvThermo_scheme == 'sommeria_deardorff':
-            self.THVvar = VariableDiagnostic(Gr, Center(), Neumann(), 'thatav_var','K^2' )
 
         return
 
@@ -103,10 +95,6 @@ class GridMeanVariables:
         self.cv_q_tot.set_bcs(self.grid)
         self.cv_θ_liq.set_bcs(self.grid)
         self.cv_θ_liq_q_tot.set_bcs(self.grid)
-
-        if self.EnvThermo_scheme == 'sommeria_deardorff':
-            self.THVvar.set_bcs(self.grid)
-
         self.zero_tendencies()
         return
 

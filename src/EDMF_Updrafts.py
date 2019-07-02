@@ -42,40 +42,19 @@ class UpdraftVariables:
         self.B     = UpdraftVariable(Gr, nu, Center(), Neumann(), 'buoyancy','m^2/s^3' )
         self.H     = UpdraftVariable(Gr, nu, Center(), Neumann(), 'thetal','K' )
 
-        if namelist['turbulence']['scheme'] == 'EDMF_PrognosticTKE':
-            try:
-                use_steady_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['use_steady_updrafts']
-            except:
-                use_steady_updrafts = False
-            if use_steady_updrafts:
-                self.prognostic = False
-            else:
-                self.prognostic = True
-            self.updraft_fraction = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
-        else:
-            self.prognostic = False
-            self.updraft_fraction = paramlist['turbulence']['EDMF_BulkSteady']['surface_area']
+        self.updraft_fraction = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
 
         self.cloud_base = np.zeros((nu,), dtype=np.double, order='c')
         self.cloud_top = np.zeros((nu,), dtype=np.double, order='c')
         self.cloud_cover = np.zeros((nu,), dtype=np.double, order='c')
-
-
         return
 
     def initialize(self, GMV, tmp, q):
         k_1 = self.grid.first_interior(Zmin())
-
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
-
                 self.W.values[i][k] = 0.0
-                # Simple treatment for now, revise when multiple updraft closures
-                # become more well defined
-                if self.prognostic:
-                    self.Area.values[i][k] = 0.0 #self.updraft_fraction/self.n_updrafts
-                else:
-                    self.Area.values[i][k] = self.updraft_fraction/self.n_updrafts
+                self.Area.values[i][k] = 0.0
                 self.q_tot.values[i][k] = GMV.q_tot.values[k]
                 self.q_liq.values[i][k] = GMV.q_liq.values[k]
                 self.q_rai.values[i][k] = GMV.q_rai.values[k]
@@ -83,7 +62,6 @@ class UpdraftVariables:
                 self.T.values[i][k] = GMV.T.values[k]
                 self.B.values[i][k] = 0.0
             self.Area.values[i][k_1] = self.updraft_fraction/self.n_updrafts
-
         self.q_tot.set_bcs(self.grid)
         self.q_rai.set_bcs(self.grid)
         self.H.set_bcs(self.grid)
@@ -99,11 +77,9 @@ class UpdraftVariables:
         Stats.add_profile('updraft_thetal')
         Stats.add_profile('updraft_temperature')
         Stats.add_profile('updraft_buoyancy')
-
         Stats.add_ts('updraft_cloud_cover')
         Stats.add_ts('updraft_cloud_base')
         Stats.add_ts('updraft_cloud_top')
-
         return
 
     def set_means(self, GMV):
@@ -137,7 +113,7 @@ class UpdraftVariables:
                 self.W.bulkvalues[k] = 0.0
 
         return
-    # quick utility to set "new" arrays with values in the "values" arrays
+
     def set_new_with_values(self):
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
@@ -152,7 +128,6 @@ class UpdraftVariables:
                 self.B.new[i][k] = self.B.values[i][k]
         return
 
-    # quick utility to set "new" arrays with values in the "values" arrays
     def set_old_with_values(self):
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
@@ -166,7 +141,7 @@ class UpdraftVariables:
                 self.T.old[i][k] = self.T.values[i][k]
                 self.B.old[i][k] = self.B.values[i][k]
         return
-    # quick utility to set "tmp" arrays with values in the "new" arrays
+
     def set_values_with_new(self):
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
@@ -181,9 +156,8 @@ class UpdraftVariables:
                 self.B.values[i][k] = self.B.new[i][k]
         return
 
-
     def io(self, Stats):
-
+        self.get_cloud_base_top_cover()
         Stats.write_profile_new('updraft_area'       , self.grid, self.Area.bulkvalues)
         Stats.write_profile_new('updraft_w'          , self.grid, self.W.bulkvalues)
         Stats.write_profile_new('updraft_qt'         , self.grid, self.q_tot.bulkvalues)
@@ -192,20 +166,13 @@ class UpdraftVariables:
         Stats.write_profile_new('updraft_thetal' , self.grid, self.H.bulkvalues)
         Stats.write_profile_new('updraft_temperature', self.grid, self.T.bulkvalues)
         Stats.write_profile_new('updraft_buoyancy'   , self.grid, self.B.bulkvalues)
-        self.get_cloud_base_top_cover()
-        # Note definition of cloud cover : each updraft is associated with a cloud cover equal to the maximum
-        # area fraction of the updraft where ql > 0. Each updraft is assumed to have maximum overlap with respect to
-        # itself (i.e. no consideration of tilting due to shear) while the updraft classes are assumed to have no overlap
-        # at all. Thus total updraft cover is the sum of each updraft's cover
         Stats.write_ts('updraft_cloud_cover', np.sum(self.cloud_cover))
         Stats.write_ts('updraft_cloud_base', np.amin(self.cloud_base))
         Stats.write_ts('updraft_cloud_top', np.amax(self.cloud_top))
-
         return
 
     def get_cloud_base_top_cover(self):
         for i in range(self.n_updrafts):
-            # Todo check the setting of ghost point z_half
             self.cloud_base[i] = self.grid.z_half[self.grid.nzg-self.grid.gw-1]
             self.cloud_top[i] = 0.0
             self.cloud_cover[i] = 0.0
@@ -255,7 +222,6 @@ class UpdraftThermodynamics:
             EnvVar.B.values[k] -= GMV.B.values[k]
         return
 
-#Implements a simple "microphysics" that clips excess humidity above a user-specified level
 class UpdraftMicrophysics:
     def __init__(self, paramlist, n_updrafts, Gr, Ref):
         self.grid = Gr
@@ -269,9 +235,6 @@ class UpdraftMicrophysics:
         return
 
     def compute_sources(self, UpdVar, tmp):
-        """
-        Compute precipitation source terms for q_tot, q_rai and H
-        """
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
                 tmp_qr = acnv_instant(UpdVar.q_liq.values[i][k], UpdVar.q_tot.values[i][k], self.max_supersaturation,\
@@ -286,9 +249,6 @@ class UpdraftMicrophysics:
         return
 
     def update_updraftvars(self, UpdVar):
-        """
-        Apply precipitation source terms to q_liq, q_rai and H
-        """
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
                 UpdVar.q_tot.values[i][k] += self.prec_source_qt[i][k]
