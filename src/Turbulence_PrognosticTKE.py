@@ -337,7 +337,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         self.compute_prognostic_updrafts(q, tmp, GMV, Case, TS)
 
-        self.update_GMV_ED(q, GMV, Case, TS, tmp)
+        self.update_GMV_ED(self.grid, q, GMV, Case, TS, tmp)
 
         ParameterizationBase.update(self, q, tmp, GMV, Case, TS)
         GMV.H.set_bcs(self.grid)
@@ -771,60 +771,60 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.massflux_tendency_qt[k] = -tmp['α_0_half'][k]*grad(self.massflux_qt.Dual(k), self.grid)
         return
 
-    def update_GMV_ED(self, q, GMV, Case, TS, tmp):
+    def update_GMV_ED(self, grid, q, GMV, Case, TS, tmp):
         i_gm, i_env, i_bulk, i_uds, i_sd = q.domain_idx()
-        k_1 = self.grid.first_interior(Zmin())
-        dzi = self.grid.dzi
-        a = Half(self.grid)
-        b = Half(self.grid)
-        c = Half(self.grid)
-        x = Half(self.grid)
-        f = Half(self.grid)
-        rho_ae_K = Full(self.grid)
+        k_1 = grid.first_interior(Zmin())
+        dzi = grid.dzi
+        a = Half(grid)
+        b = Half(grid)
+        c = Half(grid)
+        f = Half(grid)
+        rho_ae_K = Full(grid)
         α_1 = tmp['α_0_half'][k_1]
+        ρ_0_half = tmp['ρ_0_half']
         ae = q['a', i_env]
 
         ae_1 = ae[k_1]
 
-        for k in self.grid.over_elems_real(Node()):
-            rho_ae_K[k] = ae.Mid(k)*self.KH.values.Mid(k)*self.Ref.rho0_half.Mid(k)
+        for k in grid.over_elems_real(Node()):
+            rho_ae_K[k] = ae.Mid(k)*self.KH.values.Mid(k)*ρ_0_half.Mid(k)
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
-        construct_tridiag_diffusion_new_new(self.grid, TS.dt, rho_ae_K, self.Ref.rho0_half, ae, a, b, c)
+        construct_tridiag_diffusion_new_new(grid, TS.dt, rho_ae_K, ρ_0_half, ae, a, b, c)
 
         # Solve q_tot
-        for k in self.grid.over_elems(Center()):
+        for k in grid.over_elems(Center()):
             f[k] = GMV.q_tot.values[k] + TS.dt * self.massflux_tendency_qt[k] + self.UpdMicro.prec_source_qt_tot[k]
         f[k_1] = f[k_1] + TS.dt * Case.Sur.rho_qtflux * dzi * α_1/ae_1
 
-        tridiag_solve_wrapper_new(self.grid, GMV.q_tot.new, f, a, b, c)
+        tridiag_solve_wrapper_new(grid, GMV.q_tot.new, f, a, b, c)
 
         # Solve H
-        for k in self.grid.over_elems(Center()):
+        for k in grid.over_elems(Center()):
             f[k] = GMV.H.values[k] + TS.dt * self.massflux_tendency_h[k] + self.UpdMicro.prec_source_h_tot[k]
         f[k_1] = f[k_1] + TS.dt * Case.Sur.rho_hflux * dzi * α_1/ae_1
 
-        tridiag_solve_wrapper_new(self.grid, GMV.H.new, f, a, b, c)
+        tridiag_solve_wrapper_new(grid, GMV.H.new, f, a, b, c)
 
         # Solve U
-        for k in self.grid.over_elems_real(Node()):
-            rho_ae_K[k] = ae.Mid(k)*self.KM.values.Mid(k)*self.Ref.rho0_half.Mid(k)
+        for k in grid.over_elems_real(Node()):
+            rho_ae_K[k] = ae.Mid(k)*self.KM.values.Mid(k)*ρ_0_half.Mid(k)
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
-        construct_tridiag_diffusion_new_new(self.grid, TS.dt, rho_ae_K, self.Ref.rho0_half, ae, a, b, c)
+        construct_tridiag_diffusion_new_new(grid, TS.dt, rho_ae_K, ρ_0_half, ae, a, b, c)
 
-        for k in self.grid.over_elems(Center()):
+        for k in grid.over_elems(Center()):
             f[k] = GMV.U.values[k]
         f[k_1] = f[k_1] + TS.dt * Case.Sur.rho_uflux * dzi * α_1/ae_1
 
-        tridiag_solve_wrapper_new(self.grid, GMV.U.new, f, a, b, c)
+        tridiag_solve_wrapper_new(grid, GMV.U.new, f, a, b, c)
 
         # Solve V
-        for k in self.grid.over_elems(Center()):
+        for k in grid.over_elems(Center()):
             f[k] = GMV.V.values[k]
         f[k_1] = f[k_1] + TS.dt * Case.Sur.rho_vflux * dzi * α_1/ae_1
 
-        tridiag_solve_wrapper_new(self.grid, GMV.V.new, f, a, b, c)
+        tridiag_solve_wrapper_new(grid, GMV.V.new, f, a, b, c)
 
         return
 
