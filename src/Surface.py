@@ -22,8 +22,8 @@ class SurfaceBase:
     def free_convection_windspeed(self, GMV, tmp):
         theta_rho = Half(self.grid)
         for k in self.grid.over_elems(Center()):
-            qv = GMV.QT.values[k] - GMV.QL.values[k]
-            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.QT.values[k], qv)
+            qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
+            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], qv)
         zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, self.grid, self.Ri_bulk_crit)
         wstar = get_wstar(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
@@ -53,7 +53,7 @@ class SurfaceFixedFlux(SurfaceBase):
         α_0_surf = tmp.surface(self.grid, 'α_0_half')
         T_1 = GMV.T.values[k_1]
         H_1 = GMV.H.values[k_1]
-        QT_1 = GMV.QT.values[k_1]
+        QT_1 = GMV.q_tot.values[k_1]
         V_1 = GMV.V.values[k_1]
         U_1 = GMV.U.values[k_1]
 
@@ -108,7 +108,7 @@ class SurfaceFixedCoeffs(SurfaceBase):
         α_0_surf = tmp.surface(self.grid, 'α_0_half')
         T_1 = GMV.T.values[k_1]
         H_1 = GMV.H.values[k_1]
-        QT_1 = GMV.QT.values[k_1]
+        QT_1 = GMV.q_tot.values[k_1]
         V_1 = GMV.V.values[k_1]
         U_1 = GMV.U.values[k_1]
 
@@ -146,7 +146,7 @@ class SurfaceMoninObukhov(SurfaceBase):
         p_1 = tmp['p_0_half'][k_1]
         T_1 = GMV.T.values[k_1]
         H_1 = GMV.H.values[k_1]
-        QT_1 = GMV.QT.values[k_1]
+        QT_1 = GMV.q_tot.values[k_1]
         V_1 = GMV.V.values[k_1]
         U_1 = GMV.U.values[k_1]
 
@@ -196,7 +196,7 @@ class SurfaceSullivanPatton(SurfaceBase):
         ρ_0_surf = tmp.surface(self.grid, 'ρ_0_half')
         T_1 = GMV.T.values[k_1]
         H_1 = GMV.H.values[k_1]
-        QT_1 = GMV.QT.values[k_1]
+        QT_1 = GMV.q_tot.values[k_1]
         V_1 = GMV.V.values[k_1]
         U_1 = GMV.U.values[k_1]
 

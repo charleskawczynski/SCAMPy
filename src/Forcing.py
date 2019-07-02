@@ -58,15 +58,15 @@ class ForcingStandard(ForcingBase):
 
         for k in self.grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
-            qv = GMV.QT.values[k] - GMV.QL.values[k]
-            GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k], GMV.QT.values[k],
+            qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
+            GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k], GMV.q_tot.values[k],
                                                                 qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
-            GMV.QT.tendencies[k] += self.dqtdt[k]
+            GMV.q_tot.tendencies[k] += self.dqtdt[k]
         if self.apply_subsidence:
             for k in self.grid.over_elems_real(Center()):
                 # Apply large-scale subsidence tendencies
                 GMV.H.tendencies[k] -= grad(GMV.H.values.Dual(k), self.grid) * self.subsidence[k]
-                GMV.QT.tendencies[k] -= grad(GMV.QT.values.Dual(k), self.grid) * self.subsidence[k]
+                GMV.q_tot.tendencies[k] -= grad(GMV.q_tot.values.Dual(k), self.grid) * self.subsidence[k]
 
         if self.apply_coriolis:
             self.coriolis_force(GMV.U, GMV.V)
@@ -88,10 +88,10 @@ class ForcingStandard(ForcingBase):
 #
 #         for k in self.grid.over_elems_real(Center()):
 #             # Apply large-scale horizontal advection tendencies
-#             qv = GMV.QT.values[k] - GMV.QL.values[k]
-#             GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.QT.values[k], qv,
+#             qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
+#             GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.q_tot.values[k], qv,
 #                                                                 GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
-#             GMV.QT.tendencies[k] += self.dqtdt[k]
+#             GMV.q_tot.tendencies[k] += self.dqtdt[k]
 #
 #
 #         return
@@ -133,7 +133,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         k_1 = self.grid.first_interior(Zmin())
         zi     = self.grid.z[k_1]
         for k in self.grid.over_elems_real(Center()):
-            if (GMV.QT.values[k] < 8.0 / 1000):
+            if (GMV.q_tot.values[k] < 8.0 / 1000):
                 idx_zi = k
                 # will be used at cell edges
                 zi     = self.grid.z[idx_zi]
@@ -150,14 +150,14 @@ class ForcingDYCOMS_RF01(ForcingBase):
 
         self.f_rad[k_2] = self.F0 * np.exp(-q_0)
         for k in range(k_2 - 1, -1, -1):
-            q_0           += self.kappa * self.Ref.rho0_half[k] * GMV.QL.values[k] * self.grid.dz
+            q_0           += self.kappa * self.Ref.rho0_half[k] * GMV.q_liq.values[k] * self.grid.dz
             self.f_rad[k]  = self.F0 * np.exp(-q_0)
 
         # cloud-base warming
         q_1 = 0.0
         self.f_rad[k_1] += self.F1 * np.exp(-q_1)
         for k in range(1, k_2 + 1):
-            q_1           += self.kappa * self.Ref.rho0_half[k - 1] * GMV.QL.values[k - 1] * self.grid.dz
+            q_1           += self.kappa * self.Ref.rho0_half[k - 1] * GMV.q_liq.values[k - 1] * self.grid.dz
             self.f_rad[k] += self.F1 * np.exp(-q_1)
 
         # cooling in free troposphere
@@ -183,12 +183,12 @@ class ForcingDYCOMS_RF01(ForcingBase):
 
         for k in self.grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
-            qv = GMV.QT.values[k] - GMV.QL.values[k]
-            GMV.H.tendencies[k]  += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.QT.values[k], qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
-            GMV.QT.tendencies[k] += self.dqtdt[k]
+            qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
+            GMV.H.tendencies[k]  += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.q_tot.values[k], qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
+            GMV.q_tot.tendencies[k] += self.dqtdt[k]
             # Apply large-scale subsidence tendencies
             GMV.H.tendencies[k]  -= grad_pos(GMV.H.values.Cut(k), self.grid) * self.subsidence[k]
-            GMV.QT.tendencies[k] -= grad_pos(GMV.QT.values.Cut(k), self.grid) * self.subsidence[k]
+            GMV.q_tot.tendencies[k] -= grad_pos(GMV.q_tot.values.Cut(k), self.grid) * self.subsidence[k]
 
         if self.apply_coriolis:
             self.coriolis_force(GMV.U, GMV.V)

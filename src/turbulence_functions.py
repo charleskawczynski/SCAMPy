@@ -88,7 +88,7 @@ def entr_detr_tke2(entr_in):
     _ret.entr_sc = (0.05 * np.sqrt(entr_in.tke) / np.fmax(entr_in.w, 0.01) / np.fmax(entr_in.af, 0.001) / np.fmax(entr_in.z, 1.0))
     return  _ret
 
-# yair - this is a new entr-detr function that takes entr as proportional to TKE/w and detr ~ b/w2
+# yair - this is a new entr-detr function that takes entr as proportional to tke/w and detr ~ b/w2
 def entr_detr_tke(entr_in):
     _ret.detr_sc = np.fabs(entr_in.b)/ np.fmax(entr_in.w * entr_in.w, 1e-3)
     _ret.entr_sc = np.sqrt(entr_in.tke) / np.fmax(entr_in.w, 0.01) / np.fmax(np.sqrt(entr_in.af), 0.001) / 50000.0

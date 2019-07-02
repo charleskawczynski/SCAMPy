@@ -22,7 +22,7 @@ class Simulation1d:
         n_elems_real = namelist['grid']['nz']
         z_max        = namelist['grid']['dz']*namelist['grid']['nz']
         n_ghost      = namelist['grid']['gw']
-        N_subdomains = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']+2
+        N_subdomains = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']+2+1
 
         N_sd = N_subdomains
 
@@ -53,7 +53,7 @@ class Simulation1d:
                      ('B_bulkvalues', Center() , Neumann(), 1),
                      )
 
-        moment_2_vars = (
+        q_2MO = (
                      ('values'     , Center(), Neumann(), 1),
                      ('dissipation', Center(), Neumann(), 1),
                      ('entr_gain'  , Center(), Neumann(), 1),
@@ -71,16 +71,15 @@ class Simulation1d:
         self.q_new = copy.deepcopy(self.q)
         self.q_old = copy.deepcopy(self.q)
         self.q_tendencies = copy.deepcopy(self.q)
-        self.q_bulkvalues = copy.deepcopy(self.q)
 
         self.tmp = StateVec(temp_vars, self.grid)
 
         self.tmp_O2 = {}
-        self.tmp_O2['TKE']    = StateVec(moment_2_vars, self.grid)
-        self.tmp_O2['QTvar']  = StateVec(moment_2_vars, self.grid)
-        self.tmp_O2['Hvar']   = StateVec(moment_2_vars, self.grid)
-        self.tmp_O2['HQTcov'] = StateVec(moment_2_vars, self.grid)
-        self.tmp_O2['TKE']    = StateVec(moment_2_vars, self.grid)
+        self.tmp_O2['tke']            = StateVec(q_2MO, self.grid)
+        self.tmp_O2['cv_q_tot']       = StateVec(q_2MO, self.grid)
+        self.tmp_O2['cv_θ_liq']       = StateVec(q_2MO, self.grid)
+        self.tmp_O2['cv_θ_liq_q_tot'] = StateVec(q_2MO, self.grid)
+        self.tmp_O2['tke']            = StateVec(q_2MO, self.grid)
 
 
         self.Ref = ReferenceState(self.grid)
@@ -107,10 +106,10 @@ class Simulation1d:
         self.Case.update_forcing(self.GMV, self.TS, self.tmp)
         self.Turb.initialize_covariance(self.GMV, self.Case, self.tmp)
         for k in self.grid.over_elems(Center()):
-            self.Turb.EnvVar.TKE.values[k] = self.GMV.TKE.values[k]
-            self.Turb.EnvVar.Hvar.values[k] = self.GMV.Hvar.values[k]
-            self.Turb.EnvVar.QTvar.values[k] = self.GMV.QTvar.values[k]
-            self.Turb.EnvVar.HQTcov.values[k] = self.GMV.HQTcov.values[k]
+            self.Turb.EnvVar.tke.values[k] = self.GMV.tke.values[k]
+            self.Turb.EnvVar.cv_θ_liq.values[k] = self.GMV.cv_θ_liq.values[k]
+            self.Turb.EnvVar.cv_q_tot.values[k] = self.GMV.cv_q_tot.values[k]
+            self.Turb.EnvVar.cv_θ_liq_q_tot.values[k] = self.GMV.cv_θ_liq_q_tot.values[k]
 
         while self.TS.t <= self.TS.t_max:
             print('Percent complete: ', self.TS.t/self.TS.t_max*100)
@@ -132,38 +131,38 @@ class Simulation1d:
         sol.z = self.grid.z
         sol.z_half = self.grid.z_half
 
-        i_gm, i_env, i_uds = self.q.domain_idx()
+        i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
 
         sol.e_W = self.q['w', i_env].values
-        sol.e_QT = self.Turb.EnvVar.QT.values
-        sol.e_QL = self.Turb.EnvVar.QL.values
-        sol.e_QR = self.Turb.EnvVar.QR.values
+        sol.e_QT = self.Turb.EnvVar.q_tot.values
+        sol.e_QL = self.Turb.EnvVar.q_liq.values
+        sol.e_QR = self.Turb.EnvVar.q_rai.values
         sol.e_H = self.Turb.EnvVar.H.values
-        sol.e_THL = self.Turb.EnvVar.THL.values
+        sol.e_THL = self.Turb.EnvVar.θ_liq.values
         sol.e_T = self.Turb.EnvVar.T.values
         sol.e_B = self.Turb.EnvVar.B.values
         sol.e_CF = self.Turb.EnvVar.CF.values
-        sol.e_TKE = self.Turb.EnvVar.TKE.values
-        sol.e_Hvar = self.Turb.EnvVar.Hvar.values
-        sol.e_QTvar = self.Turb.EnvVar.QTvar.values
-        sol.e_HQTcov = self.Turb.EnvVar.HQTcov.values
+        sol.e_TKE = self.Turb.EnvVar.tke.values
+        sol.e_Hvar = self.Turb.EnvVar.cv_θ_liq.values
+        sol.e_QTvar = self.Turb.EnvVar.cv_q_tot.values
+        sol.e_HQTcov = self.Turb.EnvVar.cv_θ_liq_q_tot.values
 
         sol.ud_W = self.Turb.UpdVar.W.values[0]
         sol.ud_Area = self.Turb.UpdVar.Area.values[0]
-        sol.ud_QT = self.Turb.UpdVar.QT.values[0]
-        sol.ud_QL = self.Turb.UpdVar.QL.values[0]
-        sol.ud_QR = self.Turb.UpdVar.QR.values[0]
-        sol.ud_THL = self.Turb.UpdVar.THL.values[0]
+        sol.ud_QT = self.Turb.UpdVar.q_tot.values[0]
+        sol.ud_QL = self.Turb.UpdVar.q_liq.values[0]
+        sol.ud_QR = self.Turb.UpdVar.q_rai.values[0]
+        sol.ud_THL = self.Turb.UpdVar.θ_liq.values[0]
         sol.ud_T = self.Turb.UpdVar.T.values[0]
         sol.ud_B = self.Turb.UpdVar.B.values[0]
 
-        sol.gm_QT = self.GMV.QT.values
+        sol.gm_QT = self.GMV.q_tot.values
         sol.gm_U = self.GMV.U.values
         sol.gm_H = self.GMV.H.values
         sol.gm_T = self.GMV.T.values
-        sol.gm_THL = self.GMV.THL.values
+        sol.gm_THL = self.GMV.θ_liq.values
         sol.gm_V = self.GMV.V.values
-        sol.gm_QL = self.GMV.QL.values
+        sol.gm_QL = self.GMV.q_liq.values
         sol.gm_B = self.GMV.B.values
 
         plt.plot(sol.ud_W   , sol.z); plt.savefig(self.Stats.figpath+'ud_W.png'); plt.close()
