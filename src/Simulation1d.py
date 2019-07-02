@@ -104,7 +104,7 @@ class Simulation1d:
         self.GMV.zero_tendencies()
         self.Case.update_surface(self.GMV, self.TS, self.tmp)
         self.Case.update_forcing(self.GMV, self.TS, self.tmp)
-        self.Turb.initialize_covariance(self.GMV, self.Case, self.tmp)
+        self.Turb.initialize_covariance(self.q, self.tmp, self.GMV, self.Case)
         for k in self.grid.over_elems(Center()):
             self.Turb.EnvVar.tke.values[k] = self.GMV.tke.values[k]
             self.Turb.EnvVar.cv_θ_liq.values[k] = self.GMV.cv_θ_liq.values[k]
@@ -116,11 +116,11 @@ class Simulation1d:
             self.GMV.zero_tendencies()
             self.Case.update_surface(self.GMV, self.TS, self.tmp)
             self.Case.update_forcing(self.GMV, self.TS, self.tmp)
-            self.Turb.update(self.GMV, self.Case, self.TS, self.tmp, self.q)
+            self.Turb.update(self.q, self.tmp, self.GMV, self.Case, self.TS)
 
             self.TS.update()
             self.GMV.update(self.TS)
-            self.Turb.update_GMV_diagnostics(self.q, self.GMV, self.tmp)
+            self.Turb.update_GMV_diagnostics(self.q, self.tmp, self.GMV)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
         sol = self.package_sol()
@@ -207,7 +207,7 @@ class Simulation1d:
         self.Stats.write_simulation_time(self.TS.t)
         self.GMV.io(self.Stats, self.tmp)
         self.Case.io(self.Stats)
-        self.Turb.io(self.Stats, self.tmp)
+        self.Turb.io(self.q, self.tmp, self.Stats)
         self.Stats.close_files()
         return
 
