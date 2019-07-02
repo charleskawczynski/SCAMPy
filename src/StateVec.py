@@ -64,7 +64,7 @@ class StateVec:
         return s
 
     def domain_idx(self):
-        return self.i_gm, self.i_env, self.i_uds, self.i_sd
+        return self.i_gm, self.i_env, self.i_bulk, self.i_uds, self.i_sd
 
     def over_sub_domains(self, i=None):
         if i==None:

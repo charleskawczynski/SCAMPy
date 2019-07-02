@@ -131,7 +131,7 @@ class Simulation1d:
         sol.z = self.grid.z
         sol.z_half = self.grid.z_half
 
-        i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
+        i_gm, i_env, i_bulk, i_uds, i_sd = self.q.domain_idx()
 
         sol.e_W = self.q['w', i_env].values
         sol.e_QT = self.Turb.EnvVar.q_tot.values
