@@ -52,8 +52,8 @@ class ParameterizationBase:
         self.turbulence_tendency = Half(grid)
         self.grid = grid
         self.Ref = Ref
-        self.KM = VariableDiagnostic(grid, Center(), Neumann(), 'diffusivity', 'm^2/s') # eddy viscosity
-        self.KH = VariableDiagnostic(grid, Center(), Neumann(), 'viscosity', 'm^2/s') # eddy diffusivity
+        self.KM = VariableDiagnostic(grid, Center(), Neumann(), 'KM') # eddy viscosity
+        self.KH = VariableDiagnostic(grid, Center(), Neumann(), 'KH') # eddy diffusivity
         self.prandtl_number = paramlist['turbulence']['prandtl_number']
         self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']
         return
@@ -489,13 +489,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         alpha0LL  = tmp['α_0_half'][k_1]
         ustar = Case.Sur.ustar
         oblength = Case.Sur.obukhov_length
-        qt_var = get_surface_variance(Case.Sur.rho_qtflux*alpha0LL, Case.Sur.rho_qtflux*alpha0LL, ustar, zLL, oblength)
+        cv_q_tot = get_surface_variance(Case.Sur.rho_qtflux*alpha0LL, Case.Sur.rho_qtflux*alpha0LL, ustar, zLL, oblength)
         h_var  = get_surface_variance(Case.Sur.rho_hflux*alpha0LL,  Case.Sur.rho_hflux*alpha0LL,  ustar, zLL, oblength)
         for i in range(self.n_updrafts):
             self.area_surface_bc[i] = self.surface_area/self.n_updrafts
             self.w_surface_bc[i] = 0.0
             self.h_surface_bc[i] = (H_1 + self.surface_scalar_coeff[i] * np.sqrt(h_var))
-            self.qt_surface_bc[i] = (QT_1 + self.surface_scalar_coeff[i] * np.sqrt(qt_var))
+            self.qt_surface_bc[i] = (QT_1 + self.surface_scalar_coeff[i] * np.sqrt(cv_q_tot))
         return
 
     def reset_surface_covariance(self, GMV, Case, tmp):
@@ -1184,11 +1184,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         if GmvCovar.name=='tke':
             GmvCovar.values[k_1] = get_surface_tke(Case.Sur.ustar, self.wstar, zLL, Case.Sur.obukhov_length)
-        elif GmvCovar.name=='thetal_var':
+        elif GmvCovar.name=='cv_θ_liq':
             GmvCovar.values[k_1] = get_surface_variance(Case.Sur.rho_hflux * alpha0LL, Case.Sur.rho_hflux * alpha0LL, Case.Sur.ustar, zLL, Case.Sur.obukhov_length)
-        elif GmvCovar.name=='qt_var':
+        elif GmvCovar.name=='cv_q_tot':
             GmvCovar.values[k_1] = get_surface_variance(Case.Sur.rho_qtflux * alpha0LL, Case.Sur.rho_qtflux * alpha0LL, Case.Sur.ustar, zLL, Case.Sur.obukhov_length)
-        elif GmvCovar.name=='thetal_qt_covar':
+        elif GmvCovar.name=='cv_θ_liq_q_tot':
             GmvCovar.values[k_1] = get_surface_variance(Case.Sur.rho_hflux * alpha0LL, Case.Sur.rho_qtflux * alpha0LL, Case.Sur.ustar, zLL, Case.Sur.obukhov_length)
 
         self.get_env_covar_from_GMV(self.UpdVar.Area, UpdVar1, UpdVar2, EnvVar1, EnvVar2, Covar, GmvVar1, GmvVar2, GmvCovar, GmvCovar.name)
@@ -1237,7 +1237,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         tridiag_solve_wrapper_new(self.grid, x, f, a, b, c)
 
         for k in self.grid.over_elems_real(Center()):
-            if Covar.name == 'thetal_qt_covar':
+            if Covar.name == 'cv_θ_liq_q_tot':
                 Covar.values[k] = np.fmax(x[k], - np.sqrt(self.EnvVar.cv_θ_liq.values[k]*self.EnvVar.cv_q_tot.values[k]))
                 Covar.values[k] = np.fmin(x[k],   np.sqrt(self.EnvVar.cv_θ_liq.values[k]*self.EnvVar.cv_q_tot.values[k]))
             else:

@@ -46,7 +46,6 @@ def entr_detr_buoyancy_sorting(entr_in):
             # limit sd_q to prevent negative qt_hat
             sd_q_lim = (1e-10 - entr_in.qt_env)/(sqrt2 * abscissas[0])
             sd_q = np.fmin(sd_q, sd_q_lim)
-            qt_var = sd_q * sd_q
             sigma_h_star = np.sqrt(np.fmax(1.0-corr*corr,0.0)) * sd_h
 
             for m_q in range(entr_in.quadrature_order):

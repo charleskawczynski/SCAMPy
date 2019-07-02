@@ -12,14 +12,13 @@ import pylab as plt
 
 
 class UpdraftVariable:
-    def __init__(self, grid, nu, loc, bc, name, units):
+    def __init__(self, grid, nu, loc, bc, name):
         self.values     = [Field.field(grid, loc, bc) for i in range(nu)]
         self.old        = [Field.field(grid, loc, bc) for i in range(nu)]
         self.new        = [Field.field(grid, loc, bc) for i in range(nu)]
         self.tendencies = [Field.field(grid, loc, bc) for i in range(nu)]
         self.bulkvalues = Field.field(grid, loc, bc)
         self.name = name
-        self.units = units
 
     def set_bcs(self, grid):
         n_updrafts = np.shape(self.values)[0]
@@ -32,15 +31,15 @@ class UpdraftVariables:
         self.grid = grid
         self.n_updrafts = nu
 
-        self.W     = UpdraftVariable(grid, nu, Node(), Dirichlet(), 'w','m/s' )
-        self.Area  = UpdraftVariable(grid, nu, Center(), Neumann(), 'area_fraction','[-]' )
-        self.q_tot = UpdraftVariable(grid, nu, Center(), Neumann(), 'qt','kg/kg' )
-        self.q_liq = UpdraftVariable(grid, nu, Center(), Neumann(), 'ql','kg/kg' )
-        self.q_rai = UpdraftVariable(grid, nu, Center(), Neumann(), 'qr','kg/kg' )
-        self.θ_liq = UpdraftVariable(grid, nu, Center(), Neumann(), 'thetal', 'K')
-        self.T     = UpdraftVariable(grid, nu, Center(), Neumann(), 'temperature','K' )
-        self.B     = UpdraftVariable(grid, nu, Center(), Neumann(), 'buoyancy','m^2/s^3' )
-        self.H     = UpdraftVariable(grid, nu, Center(), Neumann(), 'thetal','K' )
+        self.W     = UpdraftVariable(grid, nu, Node()  , Dirichlet(), 'W')
+        self.Area  = UpdraftVariable(grid, nu, Center(), Neumann()  , 'Area')
+        self.q_tot = UpdraftVariable(grid, nu, Center(), Neumann()  , 'q_tot')
+        self.q_liq = UpdraftVariable(grid, nu, Center(), Neumann()  , 'q_liq')
+        self.q_rai = UpdraftVariable(grid, nu, Center(), Neumann()  , 'q_rai')
+        self.θ_liq = UpdraftVariable(grid, nu, Center(), Neumann()  , 'θ_liq')
+        self.T     = UpdraftVariable(grid, nu, Center(), Neumann()  , 'T')
+        self.B     = UpdraftVariable(grid, nu, Center(), Neumann()  , 'B')
+        self.H     = UpdraftVariable(grid, nu, Center(), Neumann()  , 'H')
 
         self.updraft_fraction = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
 
