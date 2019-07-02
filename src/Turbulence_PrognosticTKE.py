@@ -899,11 +899,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         i_gm, i_env, i_bulk, i_uds, i_sd = q.domain_idx()
         ae = q['a', i_env]
         for k in self.grid.over_elems_real(Center()):
-            GMV.q_liq.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.q_liq.bulkvalues[k] + ae[k] * self.EnvVar.q_liq.values[k])
-            GMV.q_rai.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.q_rai.bulkvalues[k] + ae[k] * self.EnvVar.q_rai.values[k])
-            GMV.T.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.T.bulkvalues[k] + ae[k] * self.EnvVar.T.values[k])
+            GMV.q_liq.values[k] = ae[k] * self.EnvVar.q_liq.values[k] + sum([ self.UpdVar.Area.values[i][k] * self.UpdVar.q_liq.values[i][k] for i in i_uds])
+            GMV.q_rai.values[k] = ae[k] * self.EnvVar.q_rai.values[k] + sum([ self.UpdVar.Area.values[i][k] * self.UpdVar.q_rai.values[i][k] for i in i_uds])
+            GMV.T.values[k]     = ae[k] * self.EnvVar.T.values[k]     + sum([ self.UpdVar.Area.values[i][k] * self.UpdVar.T.values[i][k] for i in i_uds])
+            GMV.B.values[k]     = ae[k] * self.EnvVar.B.values[k]     + sum([ self.UpdVar.Area.values[i][k] * self.UpdVar.B.values[i][k] for i in i_uds])
             GMV.θ_liq.values[k] = t_to_thetali_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], GMV.q_liq.values[k], 0.0)
-            GMV.B.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.B.bulkvalues[k] + ae[k] * self.EnvVar.B.values[k])
         return
 
 
