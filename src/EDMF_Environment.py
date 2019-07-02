@@ -10,50 +10,49 @@ from thermodynamic_functions import  *
 from microphysics_functions import *
 
 class EnvironmentVariable:
-    def __init__(self, Gr, loc, bc, name, units):
-        self.values = Field.field(Gr, loc, bc)
+    def __init__(self, grid, loc, bc, name, units):
+        self.values = Field.field(grid, loc, bc)
         self.name = name
         self.units = units
 
-    def set_bcs(self, Gr):
-        self.values.apply_bc(Gr, 0.0)
+    def set_bcs(self, grid):
+        self.values.apply_bc(grid, 0.0)
         return
 
 class EnvironmentVariable_2m:
-    def __init__(self, Gr, loc, bc, name, units):
-        self.values      = Field.field(Gr, loc, bc)
-        self.dissipation = Field.field(Gr, loc, bc)
-        self.entr_gain   = Field.field(Gr, loc, bc)
-        self.detr_loss   = Field.field(Gr, loc, bc)
-        self.buoy        = Field.field(Gr, loc, bc)
-        self.press       = Field.field(Gr, loc, bc)
-        self.shear       = Field.field(Gr, loc, bc)
-        self.interdomain = Field.field(Gr, loc, bc)
-        self.rain_src    = Field.field(Gr, loc, bc)
+    def __init__(self, grid, loc, bc, name, units):
+        self.values      = Field.field(grid, loc, bc)
+        self.dissipation = Field.field(grid, loc, bc)
+        self.entr_gain   = Field.field(grid, loc, bc)
+        self.detr_loss   = Field.field(grid, loc, bc)
+        self.buoy        = Field.field(grid, loc, bc)
+        self.press       = Field.field(grid, loc, bc)
+        self.shear       = Field.field(grid, loc, bc)
+        self.interdomain = Field.field(grid, loc, bc)
+        self.rain_src    = Field.field(grid, loc, bc)
         self.name = name
         self.units = units
 
-    def set_bcs(self, Gr):
-        self.values.apply_bc(Gr, 0.0)
+    def set_bcs(self, grid):
+        self.values.apply_bc(grid, 0.0)
         return
 
 class EnvironmentVariables:
-    def __init__(self,  namelist, Gr  ):
-        self.grid = Gr
-        self.EnvThermo_scheme = str(namelist['thermodynamics']['saturation'])
-        self.W              = EnvironmentVariable(Gr, Node(), Dirichlet(), 'w','m/s' )
-        self.q_tot          = EnvironmentVariable(Gr, Center(), Neumann(), 'qt','kg/kg' )
-        self.q_liq          = EnvironmentVariable(Gr, Center(), Neumann(), 'ql','kg/kg' )
-        self.q_rai          = EnvironmentVariable(Gr, Center(), Neumann(), 'qr','kg/kg' )
-        self.θ_liq          = EnvironmentVariable(Gr, Center(), Neumann(), 'thetal', 'K')
-        self.T              = EnvironmentVariable(Gr, Center(), Neumann(), 'temperature','K' )
-        self.B              = EnvironmentVariable(Gr, Center(), Neumann(), 'buoyancy','m^2/s^3' )
-        self.CF             = EnvironmentVariable(Gr, Center(), Neumann(),'cloud_fraction', '-')
-        self.H              = EnvironmentVariable(Gr, Center(), Neumann(), 'thetal','K' )
-        self.tke            = EnvironmentVariable_2m(Gr, Center(), Neumann(), 'tke','m^2/s^2' )
-        self.cv_q_tot       = EnvironmentVariable_2m(Gr, Center(), Neumann(), 'qt_var','kg^2/kg^2' )
-        self.cv_θ_liq       = EnvironmentVariable_2m(Gr, Center(), Neumann(), 'thetal_var', 'K^2')
-        self.cv_θ_liq_q_tot = EnvironmentVariable_2m(Gr, Center(), Neumann(), 'thetal_qt_covar', 'K(kg/kg)' )
+    def __init__(self,  namelist, grid  ):
+        self.grid = grid
+        self.W              = EnvironmentVariable(grid, Node(), Dirichlet(), 'w','m/s' )
+        self.q_tot          = EnvironmentVariable(grid, Center(), Neumann(), 'qt','kg/kg' )
+        self.q_liq          = EnvironmentVariable(grid, Center(), Neumann(), 'ql','kg/kg' )
+        self.q_rai          = EnvironmentVariable(grid, Center(), Neumann(), 'qr','kg/kg' )
+        self.θ_liq          = EnvironmentVariable(grid, Center(), Neumann(), 'thetal', 'K')
+        self.T              = EnvironmentVariable(grid, Center(), Neumann(), 'temperature','K' )
+        self.B              = EnvironmentVariable(grid, Center(), Neumann(), 'buoyancy','m^2/s^3' )
+        self.CF             = EnvironmentVariable(grid, Center(), Neumann(),'cloud_fraction', '-')
+        self.H              = EnvironmentVariable(grid, Center(), Neumann(), 'thetal','K' )
+        self.tke            = EnvironmentVariable_2m(grid, Center(), Neumann(), 'tke','m^2/s^2' )
+        self.cv_q_tot       = EnvironmentVariable_2m(grid, Center(), Neumann(), 'qt_var','kg^2/kg^2' )
+        self.cv_θ_liq       = EnvironmentVariable_2m(grid, Center(), Neumann(), 'thetal_var', 'K^2')
+        self.cv_θ_liq_q_tot = EnvironmentVariable_2m(grid, Center(), Neumann(), 'thetal_qt_covar', 'K(kg/kg)' )
         return
 
     def initialize_io(self, Stats):
@@ -83,20 +82,18 @@ class EnvironmentVariables:
         return
 
 class EnvironmentThermodynamics:
-    def __init__(self, namelist, paramlist, Gr, Ref, EnvVar):
-        self.grid = Gr
+    def __init__(self, namelist, paramlist, grid, Ref, EnvVar):
+        self.grid = grid
         self.Ref = Ref
-        self.t_to_prog_fp = t_to_thetali_c
-        self.prog_to_t_fp = eos_first_guess_thetal
-        self.qt_dry         = Half(Gr)
-        self.th_dry         = Half(Gr)
-        self.t_cloudy       = Half(Gr)
-        self.qv_cloudy      = Half(Gr)
-        self.qt_cloudy      = Half(Gr)
-        self.th_cloudy      = Half(Gr)
-        self.Hvar_rain_dt   = Half(Gr)
-        self.QTvar_rain_dt  = Half(Gr)
-        self.HQTcov_rain_dt = Half(Gr)
+        self.qt_dry         = Half(grid)
+        self.th_dry         = Half(grid)
+        self.t_cloudy       = Half(grid)
+        self.qv_cloudy      = Half(grid)
+        self.qt_cloudy      = Half(grid)
+        self.th_cloudy      = Half(grid)
+        self.Hvar_rain_dt   = Half(grid)
+        self.QTvar_rain_dt  = Half(grid)
+        self.HQTcov_rain_dt = Half(grid)
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
         return
 
@@ -126,12 +123,8 @@ class EnvironmentThermodynamics:
     def eos_update_SA_mean(self, EnvVar, in_Env, tmp):
         for k in self.grid.over_elems_real(Center()):
             p_0_k = tmp['p_0_half'][k]
-            T, ql  = eos(self.t_to_prog_fp, self.prog_to_t_fp, p_0_k, EnvVar.q_tot.values[k], EnvVar.H.values[k])
+            T, ql  = eos(p_0_k, EnvVar.q_tot.values[k], EnvVar.H.values[k])
             mph = microphysics(T, ql, p_0_k, EnvVar.q_tot.values[k], self.max_supersaturation, in_Env)
             self.update_EnvVar(tmp,   k, EnvVar, mph.T, mph.thl, mph.qt, mph.ql, mph.qr, mph.alpha)
             self.update_cloud_dry(k, EnvVar, mph.T, mph.th,  mph.qt, mph.ql, mph.qv)
-        return
-
-    def satadjust(self, EnvVar, in_Env, tmp):
-        self.eos_update_SA_mean(EnvVar, in_Env, tmp)
         return

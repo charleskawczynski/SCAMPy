@@ -5,22 +5,6 @@ from sys import exit
 import uuid
 import ast
 
-# See Table 1 of Tan et al, 2018
-#paramlist['turbulence']['EDMF_PrognosticTKE']['tke_ed_coeff'] ==> c_k (scaling constant for eddy diffusivity/viscosity
-#paramlist['turbulence']['EDMF_PrognosticTKE']['tke_diss_coeff'] == > c_e (scaling constant for tke dissipation)
-#paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_buoy_coeff'] ==> alpha_b (scaling constant for virtual mass term)
-#paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_drag_coeff'] ==> alpha_d (scaling constant for drag term)
-# paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_plume_spacing'] ==> r_d (horizontal length scale of plume spacing)
-
-# Parameters below can be used to multiply any entrainment rate for quick tuning/experimentation
-# (NOTE: these are not c_epsilon, c_delta,0 defined in Tan et al 2018)
-# paramlist['turbulence']['EDMF_PrognosticTKE']['entrainment_factor'] = 1.0
-# paramlist['turbulence']['EDMF_PrognosticTKE']['detrainment_factor'] = 1.0
-
-
-#NB: except for Bomex and life_cycle_Tan2018 cases, the parameters listed have not been thoroughly tuned/tested
-# and should be regarded as placeholders only. Optimal parameters may also depend on namelist options, such as
-# entrainment/detrainment rate formulation, diagnostic vs. prognostic updrafts, and vertical resolution
 def main():
     parser = argparse.ArgumentParser(prog='Paramlist Generator')
     parser.add_argument('case_name')
@@ -344,11 +328,8 @@ def SP():
 
     return  paramlist
 
-
-
 def write_file(paramlist):
     fh = open('paramlist_'+paramlist['meta']['casename']+ '.in', 'w')
-    #pprint.pprint(paramlist)
     json.dump(paramlist, fh, sort_keys=True, indent=4)
     fh.close()
     return

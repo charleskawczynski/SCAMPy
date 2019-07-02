@@ -8,65 +8,57 @@ from NetCDFIO import NetCDFIO_Stats
 from ReferenceState import ReferenceState
 
 from thermodynamic_functions import eos, t_to_entropy_c, t_to_thetali_c, \
-    eos_first_guess_thetal, eos_first_guess_entropy, alpha_c, buoyancy_c
+    alpha_c, buoyancy_c
 
 class VariablePrognostic:
-    def __init__(self, Gr, loc, bc, name, units):
-        self.values     = Field.field(Gr, loc, bc)
-        self.new        = Field.field(Gr, loc, bc)
-        self.tendencies = Field.field(Gr, loc, bc)
+    def __init__(self, grid, loc, bc, name, units):
+        self.values     = Field.field(grid, loc, bc)
+        self.new        = Field.field(grid, loc, bc)
+        self.tendencies = Field.field(grid, loc, bc)
         self.name = name
         self.units = units
         return
 
-    def zero_tendencies(self, Gr):
-        for k in Gr.over_elems(Center()):
+    def zero_tendencies(self, grid):
+        for k in grid.over_elems(Center()):
             self.tendencies[k] = 0.0
         return
 
-    def set_bcs(self, Gr):
-        self.values.apply_bc(Gr, 0.0)
-        self.new.apply_bc(Gr, 0.0)
+    def set_bcs(self, grid):
+        self.values.apply_bc(grid, 0.0)
+        self.new.apply_bc(grid, 0.0)
         return
 
 class VariableDiagnostic:
 
-    def __init__(self, Gr, loc, bc, name, units):
-        self.values = Field.field(Gr, loc, bc)
+    def __init__(self, grid, loc, bc, name, units):
+        self.values = Field.field(grid, loc, bc)
         self.name = name
         self.units = units
         return
-    def set_bcs(self, Gr):
-        self.values.apply_bc(Gr, 0.0)
+    def set_bcs(self, grid):
+        self.values.apply_bc(grid, 0.0)
         return
 
 class GridMeanVariables:
-    def __init__(self, namelist, Gr, Ref):
-        self.grid = Gr
+    def __init__(self, namelist, grid, Ref):
+        self.grid = grid
         self.Ref = Ref
 
-        self.U = VariablePrognostic(Gr, Center(), Neumann(),'u', 'm/s' )
-        self.V = VariablePrognostic(Gr, Center(), Neumann(), 'v', 'm/s' )
-        self.W = VariablePrognostic(Gr, Node(), Neumann(), 'v', 'm/s' )
-        self.q_tot = VariablePrognostic(Gr, Center(), Neumann(), 'qt', 'kg/kg')
-        self.q_rai = VariablePrognostic(Gr, Center(), Neumann(), 'qr', 'kg/kg')
-
-        self.H = VariablePrognostic(Gr, Center(), Neumann(),'thetal', 'K')
-        self.t_to_prog_fp = t_to_thetali_c
-        self.prog_to_t_fp = eos_first_guess_thetal
-
-        # Diagnostic Variables--same class as the prognostic variables, but we append to diagnostics list
-        # self.diagnostics_list  = []
-        self.q_liq  = VariableDiagnostic(Gr, Center(), Neumann(), 'ql', 'kg/kg')
-        self.T   = VariableDiagnostic(Gr, Center(), Neumann(), 'temperature', 'K')
-        self.B   = VariableDiagnostic(Gr, Center(), Neumann(), 'buoyancy', 'm^2/s^3')
-        self.θ_liq = VariableDiagnostic(Gr, Center(), Neumann(), 'thetal','K')
-
-        self.EnvThermo_scheme = str(namelist['thermodynamics']['saturation'])
-        self.tke = VariableDiagnostic(Gr, Center(), Neumann(), 'tke','m^2/s^2' )
-        self.cv_q_tot = VariableDiagnostic(Gr, Center(), Neumann(), 'qt_var','kg^2/kg^2' )
-        self.cv_θ_liq = VariableDiagnostic(Gr, Center(), Neumann() ,'thetal_var', 'K^2')
-        self.cv_θ_liq_q_tot = VariableDiagnostic(Gr, Center(), Neumann() ,'thetal_qt_covar', 'K(kg/kg)' )
+        self.U              = VariablePrognostic(grid, Center(), Neumann(),'u', 'm/s' )
+        self.V              = VariablePrognostic(grid, Center(), Neumann(), 'v', 'm/s' )
+        self.W              = VariablePrognostic(grid, Node(), Neumann(), 'v', 'm/s' )
+        self.q_tot          = VariablePrognostic(grid, Center(), Neumann(), 'qt', 'kg/kg')
+        self.q_rai          = VariablePrognostic(grid, Center(), Neumann(), 'qr', 'kg/kg')
+        self.H              = VariablePrognostic(grid, Center(), Neumann(),'thetal', 'K')
+        self.q_liq          = VariableDiagnostic(grid, Center(), Neumann(), 'ql', 'kg/kg')
+        self.T              = VariableDiagnostic(grid, Center(), Neumann(), 'temperature', 'K')
+        self.B              = VariableDiagnostic(grid, Center(), Neumann(), 'buoyancy', 'm^2/s^3')
+        self.θ_liq          = VariableDiagnostic(grid, Center(), Neumann(), 'thetal','K')
+        self.tke            = VariableDiagnostic(grid, Center(), Neumann(), 'tke','m^2/s^2' )
+        self.cv_q_tot       = VariableDiagnostic(grid, Center(), Neumann(), 'qt_var','kg^2/kg^2' )
+        self.cv_θ_liq       = VariableDiagnostic(grid, Center(), Neumann() ,'thetal_var', 'K^2')
+        self.cv_θ_liq_q_tot = VariableDiagnostic(grid, Center(), Neumann() ,'thetal_qt_covar', 'K(kg/kg)' )
 
         return
 
@@ -141,7 +133,7 @@ class GridMeanVariables:
             h = self.H.values[k]
             qt = self.q_tot.values[k]
             p0 = tmp['p_0_half'][k]
-            T, ql = eos(self.t_to_prog_fp, self.prog_to_t_fp, p0, qt, h )
+            T, ql = eos(p0, qt, h)
             self.q_liq.values[k] = ql
             self.T.values[k] = T
             qv = qt - ql

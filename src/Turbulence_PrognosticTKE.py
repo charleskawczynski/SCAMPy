@@ -44,38 +44,21 @@ def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit):
     return zi
 
 
-def ParameterizationFactory(namelist, paramlist, Gr, Ref):
-    scheme = namelist['turbulence']['scheme']
-    if scheme == 'EDMF_PrognosticTKE':
-        return EDMF_PrognosticTKE(namelist, paramlist, Gr, Ref)
-    elif scheme == 'SimilarityED':
-        return SimilarityED(namelist, paramlist, Gr, Ref)
-    else:
-        print('Did not recognize parameterization ' + scheme)
-        return
+def ParameterizationFactory(namelist, paramlist, grid, Ref):
+    return EDMF_PrognosticTKE(namelist, paramlist, grid, Ref)
 
-# A base class common to all turbulence parameterizations
 class ParameterizationBase:
-    def __init__(self, paramlist, Gr, Ref):
-        self.turbulence_tendency = Half(Gr)
-        self.grid = Gr # grid class
-        self.Ref = Ref # reference state class
-        self.KM = VariableDiagnostic(Gr, Center(), Neumann(), 'diffusivity', 'm^2/s') # eddy viscosity
-        self.KH = VariableDiagnostic(Gr, Center(), Neumann(), 'viscosity', 'm^2/s') # eddy diffusivity
+    def __init__(self, paramlist, grid, Ref):
+        self.turbulence_tendency = Half(grid)
+        self.grid = grid
+        self.Ref = Ref
+        self.KM = VariableDiagnostic(grid, Center(), Neumann(), 'diffusivity', 'm^2/s') # eddy viscosity
+        self.KH = VariableDiagnostic(grid, Center(), Neumann(), 'viscosity', 'm^2/s') # eddy diffusivity
         self.prandtl_number = paramlist['turbulence']['prandtl_number']
         self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']
-
-        return
-    def initialize(self, GMV):
         return
 
-    def initialize_io(self, Stats):
-        return
-
-    def io(self, Stats):
-        return
-
-    def update(self,GMV, Case, TS):
+    def update(self, GMV, Case, TS):
         for k in self.grid.over_elems_real(Center()):
             GMV.H.tendencies[k] += (GMV.H.new[k] - GMV.H.values[k]) * TS.dti
             GMV.q_tot.tendencies[k] += (GMV.q_tot.new[k] - GMV.q_tot.values[k]) * TS.dti
@@ -97,15 +80,10 @@ class ParameterizationBase:
                 self.KM.values[k] = self.KH.values[k] * self.prandtl_number
         return
 
-    def update_GMV_diagnostics(self, GMV):
-        return
-
 class SimilarityED(ParameterizationBase):
-    def __init__(self, namelist, paramlist, Gr, Ref):
+    def __init__(self, namelist, paramlist, grid, Ref):
         self.extrapolate_buoyancy = False
-        ParameterizationBase.__init__(self, paramlist, Gr, Ref)
-        return
-    def initialize(self, GMV):
+        ParameterizationBase.__init__(self, paramlist, grid, Ref)
         return
 
     def initialize_io(self, Stats):
@@ -170,23 +148,17 @@ class SimilarityED(ParameterizationBase):
 
         self.update_GMV_diagnostics(GMV)
         ParameterizationBase.update(self, GMV,Case, TS)
-
         return
 
     def update_GMV_diagnostics(self, GMV):
-        # Ideally would write this to be able to use an SGS condensation closure, but unless the need arises,
-        # we will just do an all-or-nothing treatment as a placeholder
         GMV.satadjust()
         return
 
 
 class EDMF_PrognosticTKE(ParameterizationBase):
-    # Initialize the class
-    def __init__(self, namelist, paramlist, Gr, Ref):
-        # Initialize the base parameterization class
-        ParameterizationBase.__init__(self, paramlist,  Gr, Ref)
+    def __init__(self, namelist, paramlist, grid, Ref):
+        ParameterizationBase.__init__(self, paramlist,  grid, Ref)
 
-        # Set the number of updrafts (1)
         try:
             self.n_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
         except:
@@ -261,15 +233,15 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.minimum_area = 1e-3
 
         # Create the updraft variable class (major diagnostic and prognostic variables)
-        self.UpdVar = UpdraftVariables(self.n_updrafts, namelist,paramlist, Gr)
+        self.UpdVar = UpdraftVariables(self.n_updrafts, namelist,paramlist, grid)
         # Create the class for updraft thermodynamics
-        self.UpdThermo = UpdraftThermodynamics(self.n_updrafts, Gr, Ref, self.UpdVar)
+        self.UpdThermo = UpdraftThermodynamics(self.n_updrafts, grid, Ref, self.UpdVar)
         # Create the class for updraft microphysics
-        self.UpdMicro = UpdraftMicrophysics(paramlist, self.n_updrafts, Gr, Ref)
+        self.UpdMicro = UpdraftMicrophysics(paramlist, self.n_updrafts, grid, Ref)
         # Create the environment variable class (major diagnostic and prognostic variables)
-        self.EnvVar = EnvironmentVariables(namelist,Gr)
+        self.EnvVar = EnvironmentVariables(namelist,grid)
         # Create the class for environment thermodynamics
-        self.EnvThermo = EnvironmentThermodynamics(namelist, paramlist, Gr, Ref, self.EnvVar)
+        self.EnvThermo = EnvironmentThermodynamics(namelist, paramlist, grid, Ref, self.EnvVar)
 
         a_ = self.surface_area/self.n_updrafts
         self.surface_scalar_coeff = np.zeros((self.n_updrafts,), dtype=np.double, order='c')
@@ -279,12 +251,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                                                                        1.0-self.surface_area + (i+1)*a_ , 1000)
 
         # Entrainment/Detrainment rates
-        self.entr_sc = [Half(Gr) for i in range(self.n_updrafts)]
-        self.detr_sc = [Half(Gr) for i in range(self.n_updrafts)]
+        self.entr_sc = [Half(grid) for i in range(self.n_updrafts)]
+        self.detr_sc = [Half(grid) for i in range(self.n_updrafts)]
 
         # Mass flux
-        self.m = [Full(Gr) for i in range(self.n_updrafts)]
-        self.mixing_length = Half(Gr)
+        self.m = [Full(grid) for i in range(self.n_updrafts)]
+        self.mixing_length = Half(grid)
 
         # Near-surface BC of updraft area fraction
         self.area_surface_bc = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
@@ -293,15 +265,15 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.qt_surface_bc = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
 
         # Mass flux tendencies of mean scalars (for output)
-        self.massflux_tendency_h = Half(Gr)
-        self.massflux_tendency_qt = Half(Gr)
+        self.massflux_tendency_h = Half(grid)
+        self.massflux_tendency_qt = Half(grid)
 
         # Vertical fluxes for output
-        self.massflux_h = Full(Gr)
-        self.massflux_qt = Full(Gr)
+        self.massflux_h = Full(grid)
+        self.massflux_qt = Full(grid)
 
-        self.mls = Half(Gr)
-        self.ml_ratio = Half(Gr)
+        self.mls = Half(grid)
+        self.ml_ratio = Half(grid)
         return
 
     def initialize(self, GMV, tmp, q):
@@ -475,6 +447,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.UpdVar.set_values_with_new()
             time_elapsed += self.dt_upd
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * self.grid.dz/np.fmax(np.max(self.UpdVar.W.values),1e-10))
+            self.UpdVar.set_means(GMV)
             self.decompose_environment(GMV, q)
         self.EnvThermo.eos_update_SA_mean(self.EnvVar, True, tmp)
         self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
@@ -833,9 +806,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         if self.use_local_micro:
             for i in range(self.n_updrafts):
                 for k in self.grid.over_elems_real(Center()):
-                    T, q_liq = eos(self.UpdThermo.t_to_prog_fp,
-                                self.UpdThermo.prog_to_t_fp,
-                                tmp['p_0_half'][k],
+                    T, q_liq = eos(tmp['p_0_half'][k],
                                 self.UpdVar.q_tot.new[i][k],
                                 self.UpdVar.H.new[i][k])
                     self.UpdVar.T.new[i][k], self.UpdVar.q_liq.new[i][k] = T, q_liq

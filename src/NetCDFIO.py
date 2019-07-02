@@ -8,11 +8,11 @@ from Grid import Grid, Zmin, Zmax, Center, Node
 import numpy as np
 
 class NetCDFIO_Stats:
-    def __init__(self, namelist, paramlist, Gr, root_dir):
+    def __init__(self, namelist, paramlist, grid, root_dir):
         self.root_grp = None
         self.profiles_grp = None
         self.ts_grp = None
-        self.grid = Gr
+        self.grid = grid
 
         self.last_output_time = 0.0
         self.uuid = str(namelist['meta']['uuid'])

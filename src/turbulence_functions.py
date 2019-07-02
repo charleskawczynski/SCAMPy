@@ -56,7 +56,7 @@ def entr_detr_buoyancy_sorting(entr_in):
                 for m_h in range(entr_in.quadrature_order):
                     h_hat = (sqrt2 * sigma_h_star * abscissas[m_h] + mu_h_star + entr_in.H_up)/2.0
                     # condensation
-                    T, ql  = eos(t_to_thetali_c, eos_first_guess_thetal, entr_in.p0, qt_hat, h_hat)
+                    T, ql  = eos(entr_in.p0, qt_hat, h_hat)
                     # calcualte buoyancy
                     qv_ = qt_hat - ql
                     alpha_mix = alpha_c(entr_in.p0, T, qt_hat, qv_)
@@ -71,7 +71,7 @@ def entr_detr_buoyancy_sorting(entr_in):
             qt_hat = ( entr_in.qt_env + entr_in.qt_up)/2.0
 
             # condensation
-            T, ql  = eos(t_to_thetali_c, eos_first_guess_thetal, entr_in.p0, qt_hat, h_hat)
+            T, ql  = eos(entr_in.p0, qt_hat, h_hat)
             # calcualte buoyancy
             alpha_mix = alpha_c(entr_in.p0, T, qt_hat, qt_hat - ql)
             bmix = buoyancy_c(entr_in.alpha0, alpha_mix) - entr_in.b_mean
