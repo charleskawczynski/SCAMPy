@@ -120,7 +120,7 @@ class Simulation1d:
 
             self.TS.update()
             self.GMV.update(self.TS)
-            self.Turb.update_GMV_diagnostics(self.GMV, self.tmp)
+            self.Turb.update_GMV_diagnostics(self.q, self.GMV, self.tmp)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
         sol = self.package_sol()

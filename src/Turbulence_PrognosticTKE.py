@@ -146,11 +146,11 @@ class SimilarityED(ParameterizationBase):
 
         tridiag_solve_wrapper_new(self.grid, GMV.V.new, f, a, b, c)
 
-        self.update_GMV_diagnostics(GMV)
+        self.update_GMV_diagnostics(q, GMV)
         ParameterizationBase.update(self, GMV,Case, TS)
         return
 
-    def update_GMV_diagnostics(self, GMV):
+    def update_GMV_diagnostics(self, q, GMV):
         GMV.satadjust()
         return
 
@@ -714,6 +714,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.detr_sc[i][k_1] = 0.0
             self.UpdVar.Area.new[i][k_1] = self.area_surface_bc[i]
 
+
+        for k in self.grid.over_elems(Center()):
+            for i in i_uds:
+                q['a', i][k] = self.UpdVar.Area.new[i][k]
+            q['a', i_env][k] = 1.0 - sum([self.UpdVar.Area.new[i][k] for i in i_uds])
+
         # Solve for updraft velocity
         for i in range(self.n_updrafts):
             self.UpdVar.W.new[i][kb_1] = self.w_surface_bc[i]
@@ -844,58 +850,56 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def update_GMV_ED(self, GMV, Case, TS, tmp, q):
-        ki = self.grid.first_interior(Zmin())
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        k_1 = self.grid.first_interior(Zmin())
         dzi = self.grid.dzi
         a = Half(self.grid)
         b = Half(self.grid)
         c = Half(self.grid)
         x = Half(self.grid)
         f = Half(self.grid)
-        ae = Half(self.grid)
         rho_ae_K = Full(self.grid)
-        α_1 = tmp['α_0_half'][ki]
+        α_1 = tmp['α_0_half'][k_1]
 
-        for k in self.grid.over_elems(Center()):
-            ae[k] = 1.0 - self.UpdVar.Area.bulkvalues[k]
-        ae_1 = ae[ki]
+        ae_1 = q['a', i_env][k_1]
 
         for k in self.grid.over_elems_real(Node()):
-            rho_ae_K[k] = ae.Mid(k)*self.KH.values.Mid(k)*self.Ref.rho0_half.Mid(k)
+            rho_ae_K[k] = q['a', i_env].Mid(k)*self.KH.values.Mid(k)*self.Ref.rho0_half.Mid(k)
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
-        construct_tridiag_diffusion_new_new(self.grid, TS.dt, rho_ae_K, self.Ref.rho0_half, ae, a, b, c)
+        construct_tridiag_diffusion_new_new(self.grid, TS.dt, rho_ae_K, self.Ref.rho0_half, q['a', i_env], a, b, c)
 
         # Solve q_tot
         for k in self.grid.over_elems(Center()):
             f[k] = GMV.q_tot.values[k] + TS.dt * self.massflux_tendency_qt[k] + self.UpdMicro.prec_source_qt_tot[k]
-        f[ki] = f[ki] + TS.dt * Case.Sur.rho_qtflux * dzi * α_1/ae_1
+        f[k_1] = f[k_1] + TS.dt * Case.Sur.rho_qtflux * dzi * α_1/ae_1
 
         tridiag_solve_wrapper_new(self.grid, GMV.q_tot.new, f, a, b, c)
 
         # Solve H
         for k in self.grid.over_elems(Center()):
             f[k] = GMV.H.values[k] + TS.dt * self.massflux_tendency_h[k] + self.UpdMicro.prec_source_h_tot[k]
-        f[ki] = f[ki] + TS.dt * Case.Sur.rho_hflux * dzi * α_1/ae_1
+        f[k_1] = f[k_1] + TS.dt * Case.Sur.rho_hflux * dzi * α_1/ae_1
 
         tridiag_solve_wrapper_new(self.grid, GMV.H.new, f, a, b, c)
 
         # Solve U
         for k in self.grid.over_elems_real(Node()):
-            rho_ae_K[k] = ae.Mid(k)*self.KM.values.Mid(k)*self.Ref.rho0_half.Mid(k)
+            rho_ae_K[k] = q['a', i_env].Mid(k)*self.KM.values.Mid(k)*self.Ref.rho0_half.Mid(k)
 
         # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
-        construct_tridiag_diffusion_new_new(self.grid, TS.dt, rho_ae_K, self.Ref.rho0_half, ae, a, b, c)
+        construct_tridiag_diffusion_new_new(self.grid, TS.dt, rho_ae_K, self.Ref.rho0_half, q['a', i_env], a, b, c)
 
         for k in self.grid.over_elems(Center()):
             f[k] = GMV.U.values[k]
-        f[ki] = f[ki] + TS.dt * Case.Sur.rho_uflux * dzi * α_1/ae_1
+        f[k_1] = f[k_1] + TS.dt * Case.Sur.rho_uflux * dzi * α_1/ae_1
 
         tridiag_solve_wrapper_new(self.grid, GMV.U.new, f, a, b, c)
 
         # Solve V
         for k in self.grid.over_elems(Center()):
             f[k] = GMV.V.values[k]
-        f[ki] = f[ki] + TS.dt * Case.Sur.rho_vflux * dzi * α_1/ae_1
+        f[k_1] = f[k_1] + TS.dt * Case.Sur.rho_vflux * dzi * α_1/ae_1
 
         tridiag_solve_wrapper_new(self.grid, GMV.V.new, f, a, b, c)
 
@@ -969,7 +973,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
 
-    def update_GMV_diagnostics(self, GMV, tmp):
+    def update_GMV_diagnostics(self, q, GMV, tmp):
         for k in self.grid.over_elems_real(Center()):
             GMV.q_liq.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.q_liq.bulkvalues[k] + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.q_liq.values[k])
             GMV.q_rai.values[k] = (self.UpdVar.Area.bulkvalues[k] * self.UpdVar.q_rai.bulkvalues[k] + (1.0 - self.UpdVar.Area.bulkvalues[k]) * self.EnvVar.q_rai.values[k])

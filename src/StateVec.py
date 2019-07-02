@@ -30,11 +30,13 @@ def get_var_mapper(var_tuple):
 class StateVec:
     def __init__(self, var_tuple, grid):
         self.n_subdomains = max([nsd for var_name, loc, bc, nsd in var_tuple])
-        self.i_gm = 0
-        self.i_env = 1
-        self.i_bulk = 2
+
+        self.i_gm = self.n_subdomains-1
+        self.i_env = self.n_subdomains-2
+        self.i_bulk = self.n_subdomains-3
         self.i_uds = [i for i in range(self.n_subdomains) if not any([i==j for j in [self.i_env, self.i_gm, self.i_bulk]])]
         self.i_sd = self.i_uds+[self.i_env]
+
         self.n_vars = sum([nsd for var_name, loc, bc, nsd in var_tuple])
         self.var_names, self.var_mapper = get_var_mapper(var_tuple)
         n = len(list(grid.over_elems(Center())))
