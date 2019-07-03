@@ -27,7 +27,7 @@ class ForcingBase:
         return
     def initialize_io(self, Stats):
         return
-    def io(self, Stats):
+    def io(self, grid, Stats):
         return
 
 
@@ -44,7 +44,7 @@ class ForcingNone(ForcingBase):
         return
     def initialize_io(self, Stats):
         return
-    def io(self, Stats):
+    def io(self, grid, Stats):
         return
 
 class ForcingStandard(ForcingBase):
@@ -74,7 +74,7 @@ class ForcingStandard(ForcingBase):
         return
     def initialize_io(self, Stats):
         return
-    def io(self, Stats):
+    def io(self, grid, Stats):
         return
 
 # class ForcingRadiative(ForcingBase): # yair - added to avoid zero subsidence
@@ -101,7 +101,7 @@ class ForcingStandard(ForcingBase):
 #         return
 #     def initialize_io(self, Stats):
 #         return
-#     def io(self, Stats):
+#     def io(self, grid, Stats):
 #         return
 
 
@@ -183,8 +183,14 @@ class ForcingDYCOMS_RF01(ForcingBase):
 
         for k in self.grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
-            qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
-            GMV.H.tendencies[k]  += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.q_tot.values[k], qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
+            q_tot = GMV.q_tot.values[k]
+            qv = q_tot - GMV.q_liq.values[k]
+            GMV.H.tendencies[k]  += self.convert_forcing_prog_fp(tmp['p_0_half'][k],
+                                                                 q_tot,
+                                                                 qv,
+                                                                 GMV.T.values[k],
+                                                                 self.dqtdt[k],
+                                                                 self.dTdt[k])
             GMV.q_tot.tendencies[k] += self.dqtdt[k]
             # Apply large-scale subsidence tendencies
             GMV.H.tendencies[k]  -= grad_pos(GMV.H.values.Cut(k), self.grid) * self.subsidence[k]
@@ -200,9 +206,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         Stats.add_profile('rad_flux')
         return
 
-    def io(self, Stats):
-        k_1 = self.grid.boundary(Zmin())
-        k_2 = self.grid.boundary(Zmax())
-        Stats.write_profile('rad_dTdt', self.dTdt[k_1:k_2])
-        Stats.write_profile('rad_flux', self.f_rad[k_1:k_2])
+    def io(self, grid, Stats):
+        Stats.write_profile_new('rad_dTdt', grid, self.dTdt.values)
+        Stats.write_profile_new('rad_flux', grid, self.f_rad.values)
         return

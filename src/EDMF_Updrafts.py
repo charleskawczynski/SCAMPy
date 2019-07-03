@@ -170,7 +170,7 @@ class UpdraftThermodynamics:
             for k in self.grid.over_elems_real(Center()):
                 if UpdVar.Area.values[i][k] > 1e-3:
                     q_tot = UpdVar.q_tot.values[i][k]
-                    q_vap = UpdVar.q_tot.values[i][k] - UpdVar.q_liq.values[i][k]
+                    q_vap = q_tot - UpdVar.q_liq.values[i][k]
                     T = UpdVar.T.values[i][k]
                     α_i = alpha_c(tmp['p_0_half'][k], T, q_tot, q_vap)
                     UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0_half'][k], α_i)
@@ -215,9 +215,10 @@ class UpdraftMicrophysics:
     def update_updraftvars(self, UpdVar):
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
-                UpdVar.q_tot.values[i][k] += self.prec_source_qt[i][k]
-                UpdVar.q_liq.values[i][k] += self.prec_source_qt[i][k]
-                UpdVar.q_rai.values[i][k] -= self.prec_source_qt[i][k]
+                s = self.prec_source_qt[i][k]
+                UpdVar.q_tot.values[i][k] += s
+                UpdVar.q_liq.values[i][k] += s
+                UpdVar.q_rai.values[i][k] -= s
                 UpdVar.H.values[i][k] += self.prec_source_h[i][k]
         return
 
@@ -226,9 +227,10 @@ class UpdraftMicrophysics:
         tmp_qr = acnv_instant(ql[i][k], qt[i][k], self.max_supersaturation, T[i][k], p0[k])
         self.prec_source_qt[i][k] = -tmp_qr
         self.prec_source_h[i][k]  = rain_source_to_thetal(p0[k], T[i][k], qt[i][k], ql[i][k], 0.0, tmp_qr)
-        qt[i][k] += self.prec_source_qt[i][k]
-        ql[i][k] += self.prec_source_qt[i][k]
-        qr[i][k] -= self.prec_source_qt[i][k]
+        s = self.prec_source_qt[i][k]
+        qt[i][k] += s
+        ql[i][k] += s
+        qr[i][k] -= s
         h[i][k]  += self.prec_source_h[i][k]
 
         return
