@@ -12,7 +12,6 @@
 build/
 *.txt
 src/.pytest_cache/*
-.pytest_cache/*
 figs/
 _static/
 _templates/
