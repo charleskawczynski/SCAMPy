@@ -50,7 +50,7 @@ class UpdraftVariables:
     def initialize(self, GMV, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         k_1 = self.grid.first_interior(Zmin())
-        for i in range(self.n_updrafts):
+        for i in i_uds:
             for k in self.grid.over_elems(Center()):
                 self.W.values[i][k] = 0.0
                 self.Area.values[i][k] = 0.0
@@ -83,9 +83,6 @@ class UpdraftVariables:
         Stats.add_ts('updraft_cloud_cover')
         Stats.add_ts('updraft_cloud_base')
         Stats.add_ts('updraft_cloud_top')
-        return
-
-    def set_means(self, GMV):
         return
 
     def set_new_with_values(self):
@@ -157,7 +154,8 @@ class UpdraftThermodynamics:
         return
 
     def satadjust(self, UpdVar, tmp):
-        for i in range(self.n_updrafts):
+        i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
+        for i in i_uds:
             for k in self.grid.over_elems(Center()):
                 T, ql = eos(tmp['p_0_half'][k], UpdVar.q_tot.values[i][k], UpdVar.H.values[i][k])
                 UpdVar.q_liq.values[i][k] = ql
@@ -166,7 +164,7 @@ class UpdraftThermodynamics:
 
     def buoyancy(self, q, tmp, UpdVar, EnvVar, GMV, extrap):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        for i in range(self.n_updrafts):
+        for i in i_uds:
             for k in self.grid.over_elems_real(Center()):
                 if UpdVar.Area.values[i][k] > 1e-3:
                     q_tot = UpdVar.q_tot.values[i][k]
@@ -179,9 +177,9 @@ class UpdraftThermodynamics:
         # Subtract grid mean buoyancy
         for k in self.grid.over_elems_real(Center()):
             GMV.B.values[k] = q['a', i_env][k] * EnvVar.B.values[k]
-            for i in range(self.n_updrafts):
+            for i in i_uds:
                 GMV.B.values[k] += UpdVar.Area.values[i][k] * UpdVar.B.values[i][k]
-            for i in range(self.n_updrafts):
+            for i in i_uds:
                 UpdVar.B.values[i][k] -= GMV.B.values[k]
             EnvVar.B.values[k] -= GMV.B.values[k]
         return
@@ -199,7 +197,8 @@ class UpdraftMicrophysics:
         return
 
     def compute_sources(self, UpdVar, tmp):
-        for i in range(self.n_updrafts):
+        i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
+        for i in i_uds:
             for k in self.grid.over_elems(Center()):
                 tmp_qr = acnv_instant(UpdVar.q_liq.values[i][k], UpdVar.q_tot.values[i][k], self.max_supersaturation,\
                                       UpdVar.T.values[i][k], tmp['p_0_half'][k])
@@ -207,8 +206,8 @@ class UpdraftMicrophysics:
                 self.prec_source_h[i][k]  = rain_source_to_thetal(tmp['p_0_half'][k], UpdVar.T.values[i][k],\
                                              UpdVar.q_tot.values[i][k], UpdVar.q_liq.values[i][k], 0.0, tmp_qr)
         for k in self.grid.over_elems(Center()):
-            self.prec_source_h_tot[k]  = np.sum([self.prec_source_h[i][k] * UpdVar.Area.values[i][k] for i in range(self.n_updrafts)])
-            self.prec_source_qt_tot[k] = np.sum([self.prec_source_qt[i][k]* UpdVar.Area.values[i][k] for i in range(self.n_updrafts)])
+            self.prec_source_h_tot[k]  = np.sum([self.prec_source_h[i][k] * UpdVar.Area.values[i][k] for i in i_uds])
+            self.prec_source_qt_tot[k] = np.sum([self.prec_source_qt[i][k]* UpdVar.Area.values[i][k] for i in i_uds])
 
         return
 

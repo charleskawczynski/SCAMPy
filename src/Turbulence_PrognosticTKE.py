@@ -327,7 +327,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         self.zi = compute_inversion(self.grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
-        self.UpdVar.set_means(GMV)
         self.decompose_environment(q, GMV)
         self.get_GMV_CoVar(q, self.UpdVar.Area.values, self.UpdVar.W.values,  self.UpdVar.W.values,  q['w', i_env],  q['w', i_env],  self.EnvVar.tke.values,    GMV.W.values,  GMV.W.values,  GMV.tke.values, 'tke')
         self.get_GMV_CoVar(q, self.UpdVar.Area.values, self.UpdVar.H.values,  self.UpdVar.H.values,  self.EnvVar.H.values,  self.EnvVar.H.values,  self.EnvVar.cv_θ_liq.values,   GMV.H.values,  GMV.H.values,  GMV.cv_θ_liq.values, '')
@@ -374,7 +373,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.UpdVar.set_values_with_new()
             time_elapsed += self.dt_upd
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * self.grid.dz/np.fmax(np.max(self.UpdVar.W.values),1e-10))
-            self.UpdVar.set_means(GMV)
             self.decompose_environment(q, GMV)
         self.EnvThermo.eos_update_SA_mean(self.EnvVar, True, tmp)
         self.UpdThermo.buoyancy(q, tmp, self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy)
@@ -1098,7 +1096,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         whalf = Half(self.grid)
 
         for k in self.grid.over_elems(Center()):
-            ae_old[k] = 1.0 - np.sum([self.UpdVar.Area.old[i][k] for i in range(self.n_updrafts)])
+            ae_old[k] = 1.0 - np.sum([self.UpdVar.Area.old[i][k] for i in i_uds])
             whalf[k] = q['w', i_env].Mid(k)
         D_env = 0.0
 
