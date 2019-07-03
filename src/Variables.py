@@ -11,11 +11,10 @@ from thermodynamic_functions import eos, t_to_entropy_c, t_to_thetali_c, \
     alpha_c, buoyancy_c
 
 class VariablePrognostic:
-    def __init__(self, grid, loc, bc, name):
+    def __init__(self, grid, loc, bc):
         self.values     = Field.field(grid, loc, bc)
         self.new        = Field.field(grid, loc, bc)
         self.tendencies = Field.field(grid, loc, bc)
-        self.name = name
         return
 
     def zero_tendencies(self, grid):
@@ -30,9 +29,8 @@ class VariablePrognostic:
 
 class VariableDiagnostic:
 
-    def __init__(self, grid, loc, bc, name):
+    def __init__(self, grid, loc, bc):
         self.values = Field.field(grid, loc, bc)
-        self.name = name
         return
     def set_bcs(self, grid):
         self.values.apply_bc(grid, 0.0)
@@ -43,20 +41,20 @@ class GridMeanVariables:
         self.grid = grid
         self.Ref = Ref
 
-        self.U              = VariablePrognostic(grid, Center(), Neumann(), 'U')
-        self.V              = VariablePrognostic(grid, Center(), Neumann(), 'V')
-        self.W              = VariablePrognostic(grid, Node()  , Neumann(), 'W')
-        self.q_tot          = VariablePrognostic(grid, Center(), Neumann(), 'q_tot')
-        self.q_rai          = VariablePrognostic(grid, Center(), Neumann(), 'q_rai')
-        self.H              = VariablePrognostic(grid, Center(), Neumann(), 'H')
-        self.q_liq          = VariableDiagnostic(grid, Center(), Neumann(), 'q_liq')
-        self.T              = VariableDiagnostic(grid, Center(), Neumann(), 'T')
-        self.B              = VariableDiagnostic(grid, Center(), Neumann(), 'B')
-        self.θ_liq          = VariableDiagnostic(grid, Center(), Neumann(), 'θ_liq')
-        self.tke            = VariableDiagnostic(grid, Center(), Neumann(), 'tke')
-        self.cv_q_tot       = VariableDiagnostic(grid, Center(), Neumann(), 'cv_q_tot')
-        self.cv_θ_liq       = VariableDiagnostic(grid, Center(), Neumann(), 'cv_θ_liq')
-        self.cv_θ_liq_q_tot = VariableDiagnostic(grid, Center(), Neumann(), 'cv_θ_liq_q_tot')
+        self.U              = VariablePrognostic(grid, Center(), Neumann())
+        self.V              = VariablePrognostic(grid, Center(), Neumann())
+        self.W              = VariablePrognostic(grid, Node()  , Neumann())
+        self.q_tot          = VariablePrognostic(grid, Center(), Neumann())
+        self.q_rai          = VariablePrognostic(grid, Center(), Neumann())
+        self.H              = VariablePrognostic(grid, Center(), Neumann())
+        self.q_liq          = VariableDiagnostic(grid, Center(), Neumann())
+        self.T              = VariableDiagnostic(grid, Center(), Neumann())
+        self.B              = VariableDiagnostic(grid, Center(), Neumann())
+        self.θ_liq          = VariableDiagnostic(grid, Center(), Neumann())
+        self.tke            = VariableDiagnostic(grid, Center(), Neumann())
+        self.cv_q_tot       = VariableDiagnostic(grid, Center(), Neumann())
+        self.cv_θ_liq       = VariableDiagnostic(grid, Center(), Neumann())
+        self.cv_θ_liq_q_tot = VariableDiagnostic(grid, Center(), Neumann())
 
         return
 

@@ -10,16 +10,15 @@ from thermodynamic_functions import  *
 from microphysics_functions import *
 
 class EnvironmentVariable:
-    def __init__(self, grid, loc, bc, name):
+    def __init__(self, grid, loc, bc):
         self.values = Field.field(grid, loc, bc)
-        self.name = name
 
     def set_bcs(self, grid):
         self.values.apply_bc(grid, 0.0)
         return
 
 class EnvironmentVariable_2m:
-    def __init__(self, grid, loc, bc, name):
+    def __init__(self, grid, loc, bc):
         self.values      = Field.field(grid, loc, bc)
         self.dissipation = Field.field(grid, loc, bc)
         self.entr_gain   = Field.field(grid, loc, bc)
@@ -29,28 +28,27 @@ class EnvironmentVariable_2m:
         self.shear       = Field.field(grid, loc, bc)
         self.interdomain = Field.field(grid, loc, bc)
         self.rain_src    = Field.field(grid, loc, bc)
-        self.name = name
 
     def set_bcs(self, grid):
         self.values.apply_bc(grid, 0.0)
         return
 
 class EnvironmentVariables:
-    def __init__(self,  namelist, grid  ):
+    def __init__(self,  namelist, grid):
         self.grid = grid
-        self.W              = EnvironmentVariable(grid   , Node()   , Dirichlet() , 'w')
-        self.q_tot          = EnvironmentVariable(grid   , Center() , Neumann()   , 'qt')
-        self.q_liq          = EnvironmentVariable(grid   , Center() , Neumann()   , 'ql')
-        self.q_rai          = EnvironmentVariable(grid   , Center() , Neumann()   , 'qr')
-        self.θ_liq          = EnvironmentVariable(grid   , Center() , Neumann()   , 'thetal')
-        self.T              = EnvironmentVariable(grid   , Center() , Neumann()   , 'temperature')
-        self.B              = EnvironmentVariable(grid   , Center() , Neumann()   , 'buoyancy')
-        self.CF             = EnvironmentVariable(grid   , Center() , Neumann()   , 'cloud_fraction')
-        self.H              = EnvironmentVariable(grid   , Center() , Neumann()   , 'thetal')
-        self.tke            = EnvironmentVariable_2m(grid, Center() , Neumann()   , 'tke')
-        self.cv_q_tot       = EnvironmentVariable_2m(grid, Center() , Neumann()   , 'cv_q_tot')
-        self.cv_θ_liq       = EnvironmentVariable_2m(grid, Center() , Neumann()   , 'cv_θ_liq')
-        self.cv_θ_liq_q_tot = EnvironmentVariable_2m(grid, Center() , Neumann()   , 'cv_θ_liq_q_tot')
+        self.W              = EnvironmentVariable(grid   , Node()   , Dirichlet())
+        self.q_tot          = EnvironmentVariable(grid   , Center() , Neumann())
+        self.q_liq          = EnvironmentVariable(grid   , Center() , Neumann())
+        self.q_rai          = EnvironmentVariable(grid   , Center() , Neumann())
+        self.θ_liq          = EnvironmentVariable(grid   , Center() , Neumann())
+        self.T              = EnvironmentVariable(grid   , Center() , Neumann())
+        self.B              = EnvironmentVariable(grid   , Center() , Neumann())
+        self.CF             = EnvironmentVariable(grid   , Center() , Neumann())
+        self.H              = EnvironmentVariable(grid   , Center() , Neumann())
+        self.tke            = EnvironmentVariable_2m(grid, Center() , Neumann())
+        self.cv_q_tot       = EnvironmentVariable_2m(grid, Center() , Neumann())
+        self.cv_θ_liq       = EnvironmentVariable_2m(grid, Center() , Neumann())
+        self.cv_θ_liq_q_tot = EnvironmentVariable_2m(grid, Center() , Neumann())
         return
 
     def initialize_io(self, Stats):
