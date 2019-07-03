@@ -17,7 +17,6 @@ class UpdraftVariable:
         self.old        = [Field.field(grid, loc, bc) for i in range(nu)]
         self.new        = [Field.field(grid, loc, bc) for i in range(nu)]
         self.tendencies = [Field.field(grid, loc, bc) for i in range(nu)]
-        self.bulkvalues = Field.field(grid, loc, bc)
         self.name = name
 
     def set_bcs(self, grid):
@@ -49,6 +48,7 @@ class UpdraftVariables:
         return
 
     def initialize(self, GMV, tmp, q):
+        i_gm, i_env, i_bulk, i_uds, i_sd = q.domain_idx()
         k_1 = self.grid.first_interior(Zmin())
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
@@ -64,6 +64,10 @@ class UpdraftVariables:
         self.q_tot.set_bcs(self.grid)
         self.q_rai.set_bcs(self.grid)
         self.H.set_bcs(self.grid)
+        for k in self.grid.over_elems(Center()):
+            for i in i_uds:
+                q['a', i][k] = self.Area.values[i][k]
+            q['a', i_env][k] = 1.0 - sum([self.Area.values[i][k] for i in i_uds])
 
         return
 
@@ -82,35 +86,6 @@ class UpdraftVariables:
         return
 
     def set_means(self, GMV):
-
-        self.Area.bulkvalues[:] = np.sum(self.Area.values,axis=0)
-        self.W.bulkvalues[:] = 0.0
-        self.q_tot.bulkvalues[:] = 0.0
-        self.q_liq.bulkvalues[:] = 0.0
-        self.q_rai.bulkvalues[:] = 0.0
-        self.H.bulkvalues[:] = 0.0
-        self.T.bulkvalues[:] = 0.0
-        self.B.bulkvalues[:] = 0.0
-
-        for k in self.grid.over_elems_real(Center()):
-            if self.Area.bulkvalues[k] > 1.0e-20:
-                for i in range(self.n_updrafts):
-                    self.q_tot.bulkvalues[k] += self.Area.values[i][k] * self.q_tot.values[i][k]/self.Area.bulkvalues[k]
-                    self.q_liq.bulkvalues[k] += self.Area.values[i][k] * self.q_liq.values[i][k]/self.Area.bulkvalues[k]
-                    self.q_rai.bulkvalues[k] += self.Area.values[i][k] * self.q_rai.values[i][k]/self.Area.bulkvalues[k]
-                    self.H.bulkvalues[k] += self.Area.values[i][k] * self.H.values[i][k]/self.Area.bulkvalues[k]
-                    self.T.bulkvalues[k] += self.Area.values[i][k] * self.T.values[i][k]/self.Area.bulkvalues[k]
-                    self.B.bulkvalues[k] += self.Area.values[i][k] * self.B.values[i][k]/self.Area.bulkvalues[k]
-                    self.W.bulkvalues[k] += self.Area.values[i].Mid(k) * self.W.values[i][k]/self.Area.bulkvalues.Mid(k)
-            else:
-                self.q_tot.bulkvalues[k] = GMV.q_tot.values[k]
-                self.q_rai.bulkvalues[k] = GMV.q_rai.values[k]
-                self.q_liq.bulkvalues[k] = 0.0
-                self.H.bulkvalues[k] = GMV.H.values[k]
-                self.T.bulkvalues[k] = GMV.T.values[k]
-                self.B.bulkvalues[k] = 0.0
-                self.W.bulkvalues[k] = 0.0
-
         return
 
     def set_new_with_values(self):
@@ -157,14 +132,6 @@ class UpdraftVariables:
 
     def io(self, Stats):
         self.get_cloud_base_top_cover()
-        Stats.write_profile_new('updraft_area'       , self.grid, self.Area.bulkvalues)
-        Stats.write_profile_new('updraft_w'          , self.grid, self.W.bulkvalues)
-        Stats.write_profile_new('updraft_qt'         , self.grid, self.q_tot.bulkvalues)
-        Stats.write_profile_new('updraft_ql'         , self.grid, self.q_liq.bulkvalues)
-        Stats.write_profile_new('updraft_qr'         , self.grid, self.q_rai.bulkvalues)
-        Stats.write_profile_new('updraft_thetal' , self.grid, self.H.bulkvalues)
-        Stats.write_profile_new('updraft_temperature', self.grid, self.T.bulkvalues)
-        Stats.write_profile_new('updraft_buoyancy'   , self.grid, self.B.bulkvalues)
         Stats.write_ts('updraft_cloud_cover', np.sum(self.cloud_cover))
         Stats.write_ts('updraft_cloud_base', np.amin(self.cloud_base))
         Stats.write_ts('updraft_cloud_top', np.amax(self.cloud_top))
@@ -197,8 +164,8 @@ class UpdraftThermodynamics:
                 UpdVar.T.values[i][k] = T
         return
 
-    def buoyancy(self,  UpdVar, EnvVar, GMV, extrap, tmp):
-        UpdVar.Area.bulkvalues[:] = np.sum(UpdVar.Area.values,axis=0)
+    def buoyancy(self, q, tmp, UpdVar, EnvVar, GMV, extrap):
+        i_gm, i_env, i_bulk, i_uds, i_sd = q.domain_idx()
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems_real(Center()):
                 if UpdVar.Area.values[i][k] > 1e-3:
@@ -211,7 +178,7 @@ class UpdraftThermodynamics:
                     UpdVar.B.values[i][k] = EnvVar.B.values[k]
         # Subtract grid mean buoyancy
         for k in self.grid.over_elems_real(Center()):
-            GMV.B.values[k] = (1.0 - UpdVar.Area.bulkvalues[k]) * EnvVar.B.values[k]
+            GMV.B.values[k] = q['a', i_env][k] * EnvVar.B.values[k]
             for i in range(self.n_updrafts):
                 GMV.B.values[k] += UpdVar.Area.values[i][k] * UpdVar.B.values[i][k]
             for i in range(self.n_updrafts):

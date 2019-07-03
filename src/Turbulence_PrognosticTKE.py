@@ -253,6 +253,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def io(self, q, tmp, Stats):
+        i_gm, i_env, i_bulk, i_uds, i_sd = q.domain_idx()
         mean_entr_sc = Half(self.grid)
         mean_detr_sc = Half(self.grid)
         massflux     = Half(self.grid)
@@ -268,10 +269,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             mf_h[k] = self.massflux_h.Mid(k)
             mf_qt[k] = self.massflux_qt.Mid(k)
             massflux[k] = self.m[0].Mid(k)
-            if self.UpdVar.Area.bulkvalues[k] > 0.0:
-                for i in range(self.n_updrafts):
-                    mean_entr_sc[k] += self.UpdVar.Area.values[i][k] * self.entr_sc[i][k]/self.UpdVar.Area.bulkvalues[k]
-                    mean_detr_sc[k] += self.UpdVar.Area.values[i][k] * self.detr_sc[i][k]/self.UpdVar.Area.bulkvalues[k]
+            a_bulk = sum([q['a', i][k] for i in i_uds])
+            if a_bulk > 0.0:
+                for i in i_uds:
+                    mean_entr_sc[k] += q['a', i][k] * self.entr_sc[i][k]/a_bulk
+                    mean_detr_sc[k] += q['a', i][k] * self.detr_sc[i][k]/a_bulk
 
         Stats.write_profile_new('entrainment_sc', self.grid, mean_entr_sc)
         Stats.write_profile_new('detrainment_sc', self.grid, mean_detr_sc)
@@ -358,7 +360,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         while time_elapsed < TS.dt:
             self.compute_entrainment_detrainment(GMV, Case, tmp, q)
             self.EnvThermo.eos_update_SA_mean(self.EnvVar, False, tmp)
-            self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
+            self.UpdThermo.buoyancy(q, tmp, self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy)
             self.update_micro_phys(tmp)
 
             self.solve_updraft_velocity_area(q, tmp, GMV, TS)
@@ -375,7 +377,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.UpdVar.set_means(GMV)
             self.decompose_environment(q, GMV)
         self.EnvThermo.eos_update_SA_mean(self.EnvVar, True, tmp)
-        self.UpdThermo.buoyancy(self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy, tmp)
+        self.UpdThermo.buoyancy(q, tmp, self.UpdVar, self.EnvVar, GMV, self.extrapolate_buoyancy)
         return
 
     def compute_mixing_length(self, obukhov_length):
@@ -441,13 +443,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     def decompose_environment(self, q, GMV):
         i_gm, i_env, i_bulk, i_uds, i_sd = q.domain_idx()
         for k in self.grid.over_elems(Center()):
-            a_env = 1.0-self.UpdVar.Area.bulkvalues[k]
-            a_bulk = self.UpdVar.Area.bulkvalues[k]
-            self.EnvVar.q_tot.values[k] = GMV.q_tot.values[k]/a_env - a_bulk * self.UpdVar.q_tot.bulkvalues[k]/a_env
-            self.EnvVar.H.values[k]  = GMV.H.values[k]/a_env  - a_bulk * self.UpdVar.H.bulkvalues[k]/a_env
+            a_env = q['a', i_env][k]
+            self.EnvVar.q_tot.values[k] = (GMV.q_tot.values[k] - sum([q['a', i][k]*self.UpdVar.q_tot.values[i][k] for i in i_uds]))/a_env
+            self.EnvVar.H.values[k]     = (GMV.H.values[k]     - sum([q['a', i][k]*self.UpdVar.H.values[i][k] for i in i_uds]))/a_env
             # Assuming GMV.W = 0!
-            a_bulk = self.UpdVar.Area.bulkvalues.Mid(k)
-            q['w', i_env][k] = -a_bulk/(1.0-a_bulk) * self.UpdVar.W.bulkvalues[k]
+            a_env = q['a', i_env].Mid(k)
+            q['w', i_env][k] = (0.0 - sum([q['a', i][k]*self.UpdVar.W.values[i][k] for i in i_uds]))/a_env
         return
 
     def get_GMV_CoVar(self, q, au, phi_u, psi_u, phi_e,  psi_e, covar_e, gmv_phi, gmv_psi, gmv_covar, name):
@@ -550,10 +551,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
                 input_st.L = 20000.0 # need to define the scale of the GCM grid resolution
                 input_st.n_up = self.n_updrafts
-                input_st.thv_e = theta_virt_c(tmp['p_0_half'][k], self.EnvVar.T.values[k], self.EnvVar.q_tot.values[k],
-                     self.EnvVar.q_liq.values[k], self.EnvVar.q_rai.values[k])
-                input_st.thv_u = theta_virt_c(tmp['p_0_half'][k], self.UpdVar.T.bulkvalues[k], self.UpdVar.q_tot.bulkvalues[k],
-                     self.UpdVar.q_liq.bulkvalues[k], self.UpdVar.q_rai.bulkvalues[k])
 
                 w_cut = self.UpdVar.W.values[i].DualCut(k)
                 w_env_cut = q['w', i_env].DualCut(k)

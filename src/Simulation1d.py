@@ -49,8 +49,6 @@ class Simulation1d:
                      ('K_h'         , Center() , Neumann(), N_sd),
                      ('ρaK_m'       , Node()   , Neumann(), N_sd),
                      ('ρaK_h'       , Node()   , Neumann(), N_sd),
-                     ('T_bulkvalues', Center() , Neumann(), 1),
-                     ('B_bulkvalues', Center() , Neumann(), 1),
                      )
 
         q_2MO = (
