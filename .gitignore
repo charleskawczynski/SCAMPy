@@ -7,6 +7,7 @@
 *.c
 *.idea
 *.in
+RefactoringTasks.md
 *.nc
 *.idea/workspace.xml
 build/
