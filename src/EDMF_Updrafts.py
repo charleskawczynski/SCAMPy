@@ -48,7 +48,7 @@ class UpdraftVariables:
         return
 
     def initialize(self, GMV, tmp, q):
-        i_gm, i_env, i_bulk, i_uds, i_sd = q.domain_idx()
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         k_1 = self.grid.first_interior(Zmin())
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems(Center()):
@@ -165,7 +165,7 @@ class UpdraftThermodynamics:
         return
 
     def buoyancy(self, q, tmp, UpdVar, EnvVar, GMV, extrap):
-        i_gm, i_env, i_bulk, i_uds, i_sd = q.domain_idx()
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         for i in range(self.n_updrafts):
             for k in self.grid.over_elems_real(Center()):
                 if UpdVar.Area.values[i][k] > 1e-3:

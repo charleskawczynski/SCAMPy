@@ -22,7 +22,7 @@ class Simulation1d:
         n_elems_real = namelist['grid']['nz']
         z_max        = namelist['grid']['dz']*namelist['grid']['nz']
         n_ghost      = namelist['grid']['gw']
-        N_subdomains = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']+2+1
+        N_subdomains = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']+2
 
         N_sd = N_subdomains
 
@@ -74,10 +74,10 @@ class Simulation1d:
 
         self.tmp_O2 = {}
         self.tmp_O2['tke']            = StateVec(q_2MO, self.grid)
-        self.tmp_O2['cv_q_tot']       = StateVec(q_2MO, self.grid)
-        self.tmp_O2['cv_θ_liq']       = StateVec(q_2MO, self.grid)
-        self.tmp_O2['cv_θ_liq_q_tot'] = StateVec(q_2MO, self.grid)
-        self.tmp_O2['tke']            = StateVec(q_2MO, self.grid)
+        self.tmp_O2['cv_q_tot']       = copy.deepcopy(self.tmp_O2['tke'])
+        self.tmp_O2['cv_θ_liq']       = copy.deepcopy(self.tmp_O2['tke'])
+        self.tmp_O2['cv_θ_liq_q_tot'] = copy.deepcopy(self.tmp_O2['tke'])
+        self.tmp_O2['tke']            = copy.deepcopy(self.tmp_O2['tke'])
 
 
         self.Ref = ReferenceState(self.grid)
@@ -129,7 +129,7 @@ class Simulation1d:
         sol.z = self.grid.z
         sol.z_half = self.grid.z_half
 
-        i_gm, i_env, i_bulk, i_uds, i_sd = self.q.domain_idx()
+        i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
 
         sol.e_W = self.q['w', i_env].values
         sol.e_QT = self.Turb.EnvVar.q_tot.values

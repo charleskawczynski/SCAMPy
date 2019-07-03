@@ -33,8 +33,7 @@ class StateVec:
 
         self.i_gm = self.n_subdomains-1
         self.i_env = self.n_subdomains-2
-        self.i_bulk = self.n_subdomains-3
-        self.i_uds = [i for i in range(self.n_subdomains) if not any([i==j for j in [self.i_env, self.i_gm, self.i_bulk]])]
+        self.i_uds = [i for i in range(self.n_subdomains) if not any([i==j for j in [self.i_env, self.i_gm]])]
         self.i_sd = self.i_uds+[self.i_env]
 
         self.n_vars = sum([nsd for var_name, loc, bc, nsd in var_tuple])
@@ -64,7 +63,7 @@ class StateVec:
         return s
 
     def domain_idx(self):
-        return self.i_gm, self.i_env, self.i_bulk, self.i_uds, self.i_sd
+        return self.i_gm, self.i_env, self.i_uds, self.i_sd
 
     def over_sub_domains(self, i=None):
         if i==None:
