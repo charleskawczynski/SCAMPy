@@ -169,18 +169,19 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.EnvThermo = EnvironmentThermodynamics(namelist, paramlist, grid, Ref, self.EnvVar)
 
         a_ = self.surface_area/self.n_updrafts
+        i_uds = range(self.n_updrafts)
         self.surface_scalar_coeff = np.zeros((self.n_updrafts,), dtype=np.double, order='c')
         # i_gm, i_env, i_ud = tmp.domain_idx()
-        for i in range(self.n_updrafts):
+        for i in i_uds:
             self.surface_scalar_coeff[i] = percentile_bounds_mean_norm(1.0-self.surface_area+i*a_,
                                                                        1.0-self.surface_area + (i+1)*a_ , 1000)
 
         # Entrainment/Detrainment rates
-        self.entr_sc = [Half(grid) for i in range(self.n_updrafts)]
-        self.detr_sc = [Half(grid) for i in range(self.n_updrafts)]
+        self.entr_sc = [Half(grid) for i in i_uds]
+        self.detr_sc = [Half(grid) for i in i_uds]
 
         # Mass flux
-        self.m = [Full(grid) for i in range(self.n_updrafts)]
+        self.m = [Full(grid) for i in i_uds]
         self.mixing_length = Half(grid)
 
         # Near-surface BC of updraft area fraction
@@ -405,6 +406,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def set_updraft_surface_bc(self, GMV, Case, tmp):
+        i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         self.zi = compute_inversion(self.grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         k_1 = self.grid.first_interior(Zmin())
@@ -416,7 +418,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         oblength = Case.Sur.obukhov_length
         cv_q_tot = get_surface_variance(Case.Sur.rho_qtflux*alpha0LL, Case.Sur.rho_qtflux*alpha0LL, ustar, zLL, oblength)
         h_var  = get_surface_variance(Case.Sur.rho_hflux*alpha0LL,  Case.Sur.rho_hflux*alpha0LL,  ustar, zLL, oblength)
-        for i in range(self.n_updrafts):
+        for i in i_uds:
             self.area_surface_bc[i] = self.surface_area/self.n_updrafts
             self.w_surface_bc[i] = 0.0
             self.h_surface_bc[i] = (H_1 + self.surface_scalar_coeff[i] * np.sqrt(h_var))
@@ -431,9 +433,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         alpha0LL  = self.Ref.alpha0_half[k_1]
         ustar = Case.Sur.ustar
         oblength = Case.Sur.obukhov_length
-        GMV.tke.values[k_1] = get_surface_tke(Case.Sur.ustar, self.wstar, zLL, Case.Sur.obukhov_length)
-        GMV.cv_θ_liq.values[k_1]   = get_surface_variance(flux1*alpha0LL,flux1*alpha0LL, ustar, zLL, oblength)
-        GMV.cv_q_tot.values[k_1]  = get_surface_variance(flux2*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
+        GMV.tke.values[k_1]            = get_surface_tke(Case.Sur.ustar, self.wstar, zLL, Case.Sur.obukhov_length)
+        GMV.cv_θ_liq.values[k_1]       = get_surface_variance(flux1*alpha0LL,flux1*alpha0LL, ustar, zLL, oblength)
+        GMV.cv_q_tot.values[k_1]       = get_surface_variance(flux2*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
         GMV.cv_θ_liq_q_tot.values[k_1] = get_surface_variance(flux1*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
         return
 
@@ -464,7 +466,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 psi_diff = psi_e[k]-gmv_psi[k]
 
             gmv_covar[k] = tke_factor * ae[k] * phi_diff * psi_diff + ae[k] * covar_e[k]
-            for i in range(self.n_updrafts):
+            for i in i_uds:
                 if name == 'tke':
                     phi_diff = phi_u[i].Mid(k) - gmv_phi.Mid(k)
                     psi_diff = psi_u[i].Mid(k) - gmv_psi.Mid(k)
@@ -492,7 +494,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     psi_diff = psi_e[k] - gmv_psi.values[k]
 
                 covar_e.values[k] = gmv_covar.values[k] - tke_factor * ae[k] * phi_diff * psi_diff
-                for i in range(self.n_updrafts):
+                for i in i_uds:
                     if name == 'tke':
                         phi_diff = phi_u.values[i].Mid(k) - gmv_phi.values.Mid(k)
                         psi_diff = psi_u.values[i].Mid(k) - gmv_psi.values.Mid(k)
@@ -521,7 +523,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         input_st.b_mean = 0
         input_st.dz = self.grid.dz
         input_st.zbl = self.compute_zbl_qt_grad(GMV)
-        for i in range(self.n_updrafts):
+        for i in i_uds:
             input_st.zi = self.UpdVar.cloud_base[i]
             for k in self.grid.over_elems_real(Center()):
                 input_st.quadrature_order = quadrature_order
@@ -588,7 +590,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         dt_ = 1.0/dti_
 
         # Solve for area fraction
-        for i in range(self.n_updrafts):
+        for i in i_uds:
             au_lim = self.area_surface_bc[i] * self.max_area_factor
             for k in self.grid.over_elems_real(Center()):
 
@@ -638,7 +640,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             q['a', i_env][k] = 1.0 - sum([self.UpdVar.Area.new[i][k] for i in i_uds])
 
         # Solve for updraft velocity
-        for i in range(self.n_updrafts):
+        for i in i_uds:
             self.UpdVar.W.new[i][kb_1] = self.w_surface_bc[i]
             for k in self.grid.over_elems_real(Center()):
                 a_new_k = self.UpdVar.Area.new[i].Mid(k)
@@ -671,7 +673,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     self.UpdVar.W.new[i][k] = ρaw_k/ρa_new_k + dt_/ρa_new_k*(adv + exch + buoy + nh_press)
 
         # Filter results
-        for i in range(self.n_updrafts):
+        for i in i_uds:
             for k in self.grid.over_elems_real(Center()):
                 if self.UpdVar.Area.new[i].Mid(k) >= self.minimum_area:
                     if self.UpdVar.W.new[i][k] <= 0.0:
@@ -686,11 +688,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def solve_updraft_scalars(self, q, tmp, GMV, TS):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         dzi = self.grid.dzi
         dti_ = 1.0/self.dt_upd
         k_1 = self.grid.first_interior(Zmin())
 
-        for i in range(self.n_updrafts):
+        for i in i_uds:
             self.UpdVar.H.new[i][k_1] = self.h_surface_bc[i]
             self.UpdVar.q_tot.new[i][k_1] = self.qt_surface_bc[i]
 
@@ -727,7 +730,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     self.UpdVar.q_tot.new[i][k] = GMV.q_tot.values[k]
 
         if self.use_local_micro:
-            for i in range(self.n_updrafts):
+            for i in i_uds:
                 for k in self.grid.over_elems_real(Center()):
                     T, q_liq = eos(tmp['p_0_half'][k],
                                 self.UpdVar.q_tot.new[i][k],
@@ -748,7 +751,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.massflux_h[:] = 0.0
         self.massflux_qt[:] = 0.0
 
-        for i in range(self.n_updrafts):
+        for i in i_uds:
             self.m[i][kb_1] = 0.0
             for k in self.grid.over_elems_real(Center()):
                 self.m[i][k] = ((self.UpdVar.W.values[i][k] - q['w', i_env].values[k] )* self.Ref.rho0[k]
@@ -757,7 +760,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for k in self.grid.over_elems_real(Center()):
             self.massflux_h[k] = 0.0
             self.massflux_qt[k] = 0.0
-            for i in range(self.n_updrafts):
+            for i in i_uds:
                 self.massflux_h[k] += self.m[i][k] * (self.UpdVar.H.values[i].Mid(k) - self.EnvVar.H.values.Mid(k))
                 self.massflux_qt[k] += self.m[i][k] * (self.UpdVar.q_tot.values[i].Mid(k) - self.EnvVar.q_tot.values.Mid(k))
 
@@ -880,7 +883,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         for k in self.grid.over_elems_real(Center()):
             self.EnvVar.tke.press[k] = 0.0
-            for i in range(self.n_updrafts):
+            for i in i_uds:
                 wu_half = self.UpdVar.W.values[i].Mid(k)
                 we_half = q['w', i_env].Mid(k)
                 a_i = self.UpdVar.Area.values[i][k]
@@ -1002,9 +1005,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def compute_covariance_interdomain_src(self, q, tmp, au, phi_u, psi_u, phi_e, psi_e, Covar, name):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         for k in self.grid.over_elems(Center()):
             Covar.interdomain[k] = 0.0
-            for i in range(self.n_updrafts):
+            for i in i_uds:
                 if name == 'tke':
                     tke_factor = 0.5
                     phi_diff = phi_u.values[i].Mid(k) - phi_e.Mid(k)
@@ -1018,9 +1022,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def compute_covariance_entr(self, q, tmp, Covar, UpdVar1, UpdVar2, EnvVar1, EnvVar2, name):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         for k in self.grid.over_elems_real(Center()):
             Covar.entr_gain[k] = 0.0
-            for i in range(self.n_updrafts):
+            for i in i_uds:
                 if name =='tke':
                     updvar1 = UpdVar1.values[i].Mid(k)
                     updvar2 = UpdVar2.values[i].Mid(k)
@@ -1045,7 +1050,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         for k in self.grid.over_elems_real(Center()):
             Covar.detr_loss[k] = 0.0
-            for i in range(self.n_updrafts):
+            for i in i_uds:
                 w_u = self.UpdVar.W.values[i].Mid(k)
                 Covar.detr_loss[k] += self.UpdVar.Area.values[i][k] * np.fabs(w_u) * self.entr_sc[i][k]
             Covar.detr_loss[k] *= tmp['ρ_0_half'][k] * Covar.values[k]
@@ -1126,7 +1131,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             w_kp = whalf[k+1]
             rho_ae_K_k = rho_ae_K_m[k]
             rho_ae_K_km = rho_ae_K_m[k-1]
-            for i in range(self.n_updrafts):
+            for i in i_uds:
                 wu_half = self.UpdVar.W.values[i].Mid(k)
                 D_env += ρ_0_k * self.UpdVar.Area.values[i][k] * wu_half * self.entr_sc[i][k]
 
