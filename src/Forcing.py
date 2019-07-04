@@ -150,14 +150,14 @@ class ForcingDYCOMS_RF01(ForcingBase):
 
         self.f_rad[k_2] = self.F0 * np.exp(-q_0)
         for k in range(k_2 - 1, -1, -1):
-            q_0           += self.kappa * self.Ref.rho0_half[k] * GMV.q_liq.values[k] * grid.dz
+            q_0           += self.kappa * tmp['ρ_0_half'][k] * GMV.q_liq.values[k] * grid.dz
             self.f_rad[k]  = self.F0 * np.exp(-q_0)
 
         # cloud-base warming
         q_1 = 0.0
         self.f_rad[k_1] += self.F1 * np.exp(-q_1)
         for k in range(1, k_2 + 1):
-            q_1           += self.kappa * self.Ref.rho0_half[k - 1] * GMV.q_liq.values[k - 1] * grid.dz
+            q_1           += self.kappa * tmp['ρ_0_half'][k - 1] * GMV.q_liq.values[k - 1] * grid.dz
             self.f_rad[k] += self.F1 * np.exp(-q_1)
 
         # cooling in free troposphere
@@ -170,7 +170,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         self.f_rad[k_2] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + zi * cbrt_z)
 
         for k in grid.over_elems_real(Center()):
-            self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / grid.dz / self.Ref.rho0_half[k] / dycoms_cp
+            self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / grid.dz / tmp['ρ_0_half'][k] / dycoms_cp
 
         return
 
