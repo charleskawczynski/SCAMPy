@@ -105,7 +105,7 @@ class Simulation1d:
         self.Case.initialize_profiles(self.grid, self.GMV, self.Ref, self.tmp, self.q)
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.GMV, self.tmp)
-        self.UpdVar.initialize(self.GMV, self.tmp, self.q)
+        self.UpdVar.initialize(self.grid, self.GMV, self.tmp, self.q)
         self.initialize_io()
         self.io()
         return
@@ -132,7 +132,7 @@ class Simulation1d:
 
             self.TS.update()
             self.GMV.update(self.TS)
-            self.Turb.update_GMV_diagnostics(self.q, self.tmp, self.GMV, self.EnvVar, self.UpdVar)
+            self.Turb.update_GMV_diagnostics(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.UpdVar)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
         sol = self.package_sol()

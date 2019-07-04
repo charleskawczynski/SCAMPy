@@ -35,7 +35,6 @@ class EnvironmentVariable_2m:
 
 class EnvironmentVariables:
     def __init__(self,  namelist, grid):
-        self.grid = grid
         self.W              = EnvironmentVariable(grid   , Node()   , Dirichlet())
         self.q_tot          = EnvironmentVariable(grid   , Center() , Neumann())
         self.q_liq          = EnvironmentVariable(grid   , Center() , Neumann())
@@ -64,22 +63,21 @@ class EnvironmentVariables:
         Stats.add_profile('env_HQTcov')
         return
 
-    def io(self, Stats):
-        Stats.write_profile_new('env_w'           , self.grid, self.W.values)
-        Stats.write_profile_new('env_qt'          , self.grid, self.q_tot.values)
-        Stats.write_profile_new('env_ql'          , self.grid, self.q_liq.values)
-        Stats.write_profile_new('env_qr'          , self.grid, self.q_rai.values)
-        Stats.write_profile_new('env_thetal'      , self.grid, self.H.values)
-        Stats.write_profile_new('env_temperature' , self.grid, self.T.values)
-        Stats.write_profile_new('env_tke'         , self.grid, self.tke.values)
-        Stats.write_profile_new('env_Hvar'        , self.grid, self.cv_θ_liq.values)
-        Stats.write_profile_new('env_QTvar'       , self.grid, self.cv_q_tot.values)
-        Stats.write_profile_new('env_HQTcov'      , self.grid, self.cv_θ_liq_q_tot.values)
+    def io(self, grid, Stats):
+        Stats.write_profile_new('env_w'           , grid, self.W.values)
+        Stats.write_profile_new('env_qt'          , grid, self.q_tot.values)
+        Stats.write_profile_new('env_ql'          , grid, self.q_liq.values)
+        Stats.write_profile_new('env_qr'          , grid, self.q_rai.values)
+        Stats.write_profile_new('env_thetal'      , grid, self.H.values)
+        Stats.write_profile_new('env_temperature' , grid, self.T.values)
+        Stats.write_profile_new('env_tke'         , grid, self.tke.values)
+        Stats.write_profile_new('env_Hvar'        , grid, self.cv_θ_liq.values)
+        Stats.write_profile_new('env_QTvar'       , grid, self.cv_q_tot.values)
+        Stats.write_profile_new('env_HQTcov'      , grid, self.cv_θ_liq_q_tot.values)
         return
 
 class EnvironmentThermodynamics:
     def __init__(self, namelist, paramlist, grid, Ref, EnvVar):
-        self.grid = grid
         self.Ref = Ref
         self.qt_dry         = Half(grid)
         self.th_dry         = Half(grid)
@@ -116,8 +114,8 @@ class EnvironmentThermodynamics:
             self.qt_dry[k]      = qt
         return
 
-    def eos_update_SA_mean(self, EnvVar, in_Env, tmp):
-        for k in self.grid.over_elems_real(Center()):
+    def eos_update_SA_mean(self, grid, EnvVar, in_Env, tmp):
+        for k in grid.over_elems_real(Center()):
             p_0_k = tmp['p_0_half'][k]
             T, ql  = eos(p_0_k, EnvVar.q_tot.values[k], EnvVar.H.values[k])
             mph = microphysics(T, ql, p_0_k, EnvVar.q_tot.values[k], self.max_supersaturation, in_Env)

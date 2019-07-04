@@ -26,7 +26,6 @@ class UpdraftVariable:
 
 class UpdraftVariables:
     def __init__(self, nu, namelist, paramlist, grid):
-        self.grid = grid
         self.n_updrafts = nu
 
         self.W     = UpdraftVariable(grid, nu, Node()  , Dirichlet())
@@ -46,11 +45,11 @@ class UpdraftVariables:
         self.cloud_cover = np.zeros((nu,), dtype=np.double, order='c')
         return
 
-    def initialize(self, GMV, tmp, q):
+    def initialize(self, grid, GMV, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        k_1 = self.grid.first_interior(Zmin())
+        k_1 = grid.first_interior(Zmin())
         for i in i_uds:
-            for k in self.grid.over_elems(Center()):
+            for k in grid.over_elems(Center()):
                 self.W.values[i][k] = 0.0
                 self.Area.values[i][k] = 0.0
                 self.q_tot.values[i][k] = GMV.q_tot.values[k]
@@ -60,10 +59,10 @@ class UpdraftVariables:
                 self.T.values[i][k] = GMV.T.values[k]
                 self.B.values[i][k] = 0.0
             self.Area.values[i][k_1] = self.updraft_fraction/self.n_updrafts
-        self.q_tot.set_bcs(self.grid)
-        self.q_rai.set_bcs(self.grid)
-        self.H.set_bcs(self.grid)
-        for k in self.grid.over_elems(Center()):
+        self.q_tot.set_bcs(grid)
+        self.q_rai.set_bcs(grid)
+        self.H.set_bcs(grid)
+        for k in grid.over_elems(Center()):
             for i in i_uds:
                 q['a', i][k] = self.Area.values[i][k]
             q['a', i_env][k] = 1.0 - sum([self.Area.values[i][k] for i in i_uds])
@@ -84,9 +83,9 @@ class UpdraftVariables:
         Stats.add_ts('updraft_cloud_top')
         return
 
-    def set_new_with_values(self):
+    def set_new_with_values(self, grid):
         for i in range(self.n_updrafts):
-            for k in self.grid.over_elems(Center()):
+            for k in grid.over_elems(Center()):
                 self.W.new[i][k] = self.W.values[i][k]
                 self.Area.new[i][k] = self.Area.values[i][k]
                 self.q_tot.new[i][k] = self.q_tot.values[i][k]
@@ -98,9 +97,9 @@ class UpdraftVariables:
                 self.B.new[i][k] = self.B.values[i][k]
         return
 
-    def set_old_with_values(self):
+    def set_old_with_values(self, grid):
         for i in range(self.n_updrafts):
-            for k in self.grid.over_elems(Center()):
+            for k in grid.over_elems(Center()):
                 self.W.old[i][k] = self.W.values[i][k]
                 self.Area.old[i][k] = self.Area.values[i][k]
                 self.q_tot.old[i][k] = self.q_tot.values[i][k]
@@ -112,9 +111,9 @@ class UpdraftVariables:
                 self.B.old[i][k] = self.B.values[i][k]
         return
 
-    def set_values_with_new(self):
+    def set_values_with_new(self, grid):
         for i in range(self.n_updrafts):
-            for k in self.grid.over_elems(Center()):
+            for k in grid.over_elems(Center()):
                 self.W.values[i][k] = self.W.new[i][k]
                 self.Area.values[i][k] = self.Area.new[i][k]
                 self.q_tot.values[i][k] = self.q_tot.new[i][k]
@@ -126,45 +125,44 @@ class UpdraftVariables:
                 self.B.values[i][k] = self.B.new[i][k]
         return
 
-    def io(self, Stats):
-        self.get_cloud_base_top_cover()
+    def io(self, grid, Stats):
+        self.get_cloud_base_top_cover(grid)
         Stats.write_ts('updraft_cloud_cover', np.sum(self.cloud_cover))
         Stats.write_ts('updraft_cloud_base', np.amin(self.cloud_base))
         Stats.write_ts('updraft_cloud_top', np.amax(self.cloud_top))
         return
 
-    def get_cloud_base_top_cover(self):
+    def get_cloud_base_top_cover(self, grid):
         for i in range(self.n_updrafts):
-            self.cloud_base[i] = self.grid.z_half[self.grid.nzg-self.grid.gw-1]
+            self.cloud_base[i] = grid.z_half[grid.nzg-grid.gw-1]
             self.cloud_top[i] = 0.0
             self.cloud_cover[i] = 0.0
-            for k in self.grid.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 if self.q_liq.values[i][k] > 1e-8 and self.Area.values[i][k] > 1e-3:
-                    self.cloud_base[i] = np.fmin(self.cloud_base[i], self.grid.z_half[k])
-                    self.cloud_top[i] = np.fmax(self.cloud_top[i], self.grid.z_half[k])
+                    self.cloud_base[i] = np.fmin(self.cloud_base[i], grid.z_half[k])
+                    self.cloud_top[i] = np.fmax(self.cloud_top[i], grid.z_half[k])
                     self.cloud_cover[i] = np.fmax(self.cloud_cover[i], self.Area.values[i][k])
         return
 
 class UpdraftThermodynamics:
     def __init__(self, n_updrafts, grid, Ref, UpdVar):
-        self.grid = grid
         self.Ref = Ref
         self.n_updrafts = n_updrafts
         return
 
-    def satadjust(self, UpdVar, tmp):
+    def satadjust(self, grid, UpdVar, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         for i in i_uds:
-            for k in self.grid.over_elems(Center()):
+            for k in grid.over_elems(Center()):
                 T, ql = eos(tmp['p_0_half'][k], UpdVar.q_tot.values[i][k], UpdVar.H.values[i][k])
                 UpdVar.q_liq.values[i][k] = ql
                 UpdVar.T.values[i][k] = T
         return
 
-    def buoyancy(self, q, tmp, UpdVar, EnvVar, GMV, extrap):
+    def buoyancy(self, grid, q, tmp, UpdVar, EnvVar, GMV, extrap):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         for i in i_uds:
-            for k in self.grid.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 if UpdVar.Area.values[i][k] > 1e-3:
                     q_tot = UpdVar.q_tot.values[i][k]
                     q_vap = q_tot - UpdVar.q_liq.values[i][k]
@@ -174,7 +172,7 @@ class UpdraftThermodynamics:
                 else:
                     UpdVar.B.values[i][k] = EnvVar.B.values[k]
         # Subtract grid mean buoyancy
-        for k in self.grid.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             GMV.B.values[k] = q['a', i_env][k] * EnvVar.B.values[k]
             for i in i_uds:
                 GMV.B.values[k] += UpdVar.Area.values[i][k] * UpdVar.B.values[i][k]
@@ -185,7 +183,6 @@ class UpdraftThermodynamics:
 
 class UpdraftMicrophysics:
     def __init__(self, paramlist, n_updrafts, grid, Ref):
-        self.grid = grid
         self.Ref = Ref
         self.n_updrafts = n_updrafts
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
@@ -195,24 +192,24 @@ class UpdraftMicrophysics:
         self.prec_source_qt_tot = Half(grid)
         return
 
-    def compute_sources(self, UpdVar, tmp):
+    def compute_sources(self, grid, UpdVar, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         for i in i_uds:
-            for k in self.grid.over_elems(Center()):
+            for k in grid.over_elems(Center()):
                 tmp_qr = acnv_instant(UpdVar.q_liq.values[i][k], UpdVar.q_tot.values[i][k], self.max_supersaturation,\
                                       UpdVar.T.values[i][k], tmp['p_0_half'][k])
                 self.prec_source_qt[i][k] = -tmp_qr
                 self.prec_source_h[i][k]  = rain_source_to_thetal(tmp['p_0_half'][k], UpdVar.T.values[i][k],\
                                              UpdVar.q_tot.values[i][k], UpdVar.q_liq.values[i][k], 0.0, tmp_qr)
-        for k in self.grid.over_elems(Center()):
+        for k in grid.over_elems(Center()):
             self.prec_source_h_tot[k]  = np.sum([self.prec_source_h[i][k] * UpdVar.Area.values[i][k] for i in i_uds])
             self.prec_source_qt_tot[k] = np.sum([self.prec_source_qt[i][k]* UpdVar.Area.values[i][k] for i in i_uds])
 
         return
 
-    def update_updraftvars(self, UpdVar):
+    def update_updraftvars(self, grid, UpdVar):
         for i in range(self.n_updrafts):
-            for k in self.grid.over_elems(Center()):
+            for k in grid.over_elems(Center()):
                 s = self.prec_source_qt[i][k]
                 UpdVar.q_tot.values[i][k] += s
                 UpdVar.q_liq.values[i][k] += s
