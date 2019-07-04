@@ -14,9 +14,9 @@ from Cases import  CasesBase
 from ReferenceState import  ReferenceState
 from TimeStepping import TimeStepping
 from NetCDFIO import NetCDFIO_Stats
-from thermodynamic_functions import  *
-from turbulence_functions import *
-from utility_functions import *
+from funcs_thermo import  *
+from funcs_turbulence import *
+from funcs_utility import *
 
 def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit):
     theta_rho = Half(grid)

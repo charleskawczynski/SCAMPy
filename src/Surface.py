@@ -1,9 +1,9 @@
 import numpy as np
 from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node
-from thermodynamic_functions import *
-from surface_functions import entropy_flux, compute_ustar, buoyancy_flux, exchange_coefficients_byun
-from turbulence_functions import get_wstar, get_inversion
+from funcs_thermo import *
+from funcs_surface import entropy_flux, compute_ustar, buoyancy_flux, exchange_coefficients_byun
+from funcs_turbulence import get_wstar, get_inversion
 from Variables import GridMeanVariables
 from Field import Field, Full, Half, Dirichlet, Neumann
 

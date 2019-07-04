@@ -9,7 +9,7 @@ from TimeStepping import  TimeStepping
 import Surface
 import Forcing
 from NetCDFIO import NetCDFIO_Stats
-from thermodynamic_functions import *
+from funcs_thermo import *
 import math as mt
 
 def CasesFactory(namelist, paramlist):

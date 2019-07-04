@@ -1,7 +1,7 @@
 import numpy as np
 from parameters import *
-from thermodynamic_functions import  *
-from microphysics_functions import  *
+from funcs_thermo import  *
+from funcs_micro import  *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
 import ReferenceState
@@ -40,8 +40,8 @@ class UpdraftVariables:
 
         self.updraft_fraction = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
 
-        self.cloud_base = np.zeros((nu,), dtype=np.double, order='c')
-        self.cloud_top = np.zeros((nu,), dtype=np.double, order='c')
+        self.cloud_base  = np.zeros((nu,), dtype=np.double, order='c')
+        self.cloud_top   = np.zeros((nu,), dtype=np.double, order='c')
         self.cloud_cover = np.zeros((nu,), dtype=np.double, order='c')
         return
 

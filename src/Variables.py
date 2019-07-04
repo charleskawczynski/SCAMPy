@@ -7,7 +7,7 @@ from TimeStepping import TimeStepping
 from NetCDFIO import NetCDFIO_Stats
 from ReferenceState import ReferenceState
 
-from thermodynamic_functions import eos, t_to_entropy_c, t_to_thetali_c, \
+from funcs_thermo import eos, t_to_entropy_c, t_to_thetali_c, \
     alpha_c, buoyancy_c
 
 class VariablePrognostic:

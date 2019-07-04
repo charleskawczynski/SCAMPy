@@ -1,5 +1,5 @@
 import numpy as np
-from thermodynamic_functions import pv_c, pd_c, sv_c, sd_c, cpm_c, exner_c
+from funcs_thermo import pv_c, pd_c, sv_c, sd_c, cpm_c, exner_c
 
 def convert_forcing_entropy(p0, qt, qv, T, qt_tendency, T_tendency):
     pv = pv_c(p0, qt, qv)

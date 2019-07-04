@@ -4,7 +4,7 @@ from NetCDFIO import NetCDFIO_Stats
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
-from thermodynamic_functions import t_to_entropy_c, eos, eos_entropy, alpha_c
+from funcs_thermo import t_to_entropy_c, eos, eos_entropy, alpha_c
 from parameters import *
 
 class ReferenceState:

@@ -1,6 +1,6 @@
 import numpy as np
 
-from thermodynamic_functions import *
+from funcs_thermo import *
 from parameters import *
 
 def r2q(r_, qt):

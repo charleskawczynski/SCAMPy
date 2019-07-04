@@ -6,8 +6,8 @@ from Field import Field, Full, Half, Dirichlet, Neumann
 from TimeStepping import TimeStepping
 from ReferenceState import ReferenceState
 from Variables import VariableDiagnostic, GridMeanVariables
-from thermodynamic_functions import  *
-from microphysics_functions import *
+from funcs_thermo import  *
+from funcs_micro import *
 
 class EnvironmentVariable:
     def __init__(self, grid, loc, bc):

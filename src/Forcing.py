@@ -5,7 +5,7 @@ from Field import Field, Full, Half, Dirichlet, Neumann
 from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 
 from Variables import GridMeanVariables, VariablePrognostic
-from forcing_functions import  convert_forcing_entropy, convert_forcing_thetal
+from funcs_forcing import  convert_forcing_entropy, convert_forcing_thetal
 
 class ForcingBase:
     def __init__(self):

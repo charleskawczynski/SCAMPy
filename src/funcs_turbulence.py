@@ -2,7 +2,7 @@ import numpy as np
 import copy
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from parameters import *
-from thermodynamic_functions import *
+from funcs_thermo import *
 
 # Entrainment Rates
 def entr_detr_dry(entr_in):

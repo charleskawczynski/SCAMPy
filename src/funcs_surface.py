@@ -1,5 +1,5 @@
 import numpy as np
-from thermodynamic_functions import latent_heat, pd_c, pv_c, sd_c, sv_c, cpm_c, theta_rho_c
+from funcs_thermo import latent_heat, pd_c, pv_c, sd_c, sv_c, cpm_c, theta_rho_c
 from parameters import *
 
 def buoyancy_flux(shf, lhf, T_b, qt_b, alpha0_0):

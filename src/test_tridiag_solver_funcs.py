@@ -2,7 +2,7 @@
 from scipy.sparse import diags
 import numpy as np
 import random
-import TriDiagSolverFuncs as TDMA
+import funcs_tridiagsolver as TDMA
 import TriDiagSolver as TDS
 
 def test_tridiag_solver():
