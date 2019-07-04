@@ -97,6 +97,12 @@ class Simulation1d:
         self.Turb = ParameterizationFactory(namelist, paramlist, self.grid, self.Ref)
         self.TS = TimeStepping(namelist)
         self.Stats = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
+        self.tri_diag = type('', (), {})()
+        self.tri_diag.a = Half(self.grid)
+        self.tri_diag.b = Half(self.grid)
+        self.tri_diag.c = Half(self.grid)
+        self.tri_diag.f = Half(self.grid)
+        self.tri_diag.ρaK = Full(self.grid)
         return
 
     def initialize(self, namelist):
@@ -127,7 +133,7 @@ class Simulation1d:
             self.Case.update_forcing(self.grid, self.GMV, self.TS, self.tmp)
             self.Turb.update(self.grid, self.q, self.tmp, self.GMV, self.EnvVar,
                              self.UpdVar, self.UpdMicro, self.EnvThermo,
-                             self.UpdThermo, self.Ref, self.Case, self.TS)
+                             self.UpdThermo, self.Ref, self.Case, self.TS, self.tri_diag)
 
             self.TS.update()
             self.GMV.update(self.grid, self.TS)
