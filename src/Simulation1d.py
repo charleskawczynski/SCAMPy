@@ -81,7 +81,6 @@ class Simulation1d:
         self.tmp_O2['cv_θ_liq_q_tot'] = copy.deepcopy(self.tmp_O2['tke'])
         self.tmp_O2['tke']            = copy.deepcopy(self.tmp_O2['tke'])
 
-
         self.n_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
 
         self.Ref = ReferenceState(self.grid)
@@ -112,7 +111,7 @@ class Simulation1d:
 
     def run(self):
         self.GMV.zero_tendencies()
-        self.Case.update_surface(self.GMV, self.TS, self.tmp)
+        self.Case.update_surface(self.grid, self.GMV, self.TS, self.tmp)
         self.Case.update_forcing(self.GMV, self.TS, self.tmp)
         self.Turb.initialize_covariance(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.Ref, self.Case)
         for k in self.grid.over_elems(Center()):
@@ -124,7 +123,7 @@ class Simulation1d:
         while self.TS.t <= self.TS.t_max:
             print('Percent complete: ', self.TS.t/self.TS.t_max*100)
             self.GMV.zero_tendencies()
-            self.Case.update_surface(self.GMV, self.TS, self.tmp)
+            self.Case.update_surface(self.grid, self.GMV, self.TS, self.tmp)
             self.Case.update_forcing(self.GMV, self.TS, self.tmp)
             self.Turb.update(self.grid, self.q, self.tmp, self.GMV, self.EnvVar,
                              self.UpdVar, self.UpdMicro, self.EnvThermo,

@@ -62,7 +62,7 @@ class CasesBase:
         Stats.write_ts('lhf', self.Sur.lhf)
         Stats.write_ts('ustar', self.Sur.ustar)
         return
-    def update_surface(self, GMV, TS, tmp):
+    def update_surface(self, grid, GMV, TS, tmp):
         return
     def update_forcing(self, GMV, TS, tmp):
         return
@@ -139,8 +139,8 @@ class Soares(CasesBase):
         CasesBase.io(self, Stats)
         return
 
-    def update_surface(self, GMV, TS, tmp):
-        self.Sur.update(GMV, tmp)
+    def update_surface(self, grid, GMV, TS, tmp):
+        self.Sur.update(grid, GMV, tmp)
         return
     def update_forcing(self, GMV, TS, tmp):
         self.Fo.update(GMV, tmp)
@@ -253,8 +253,8 @@ class Bomex(CasesBase):
     def io(self, Stats):
         CasesBase.io(self,Stats)
         return
-    def update_surface(self, GMV, TS, tmp):
-        self.Sur.update(GMV, tmp)
+    def update_surface(self, grid, GMV, TS, tmp):
+        self.Sur.update(grid, GMV, tmp)
         return
     def update_forcing(self, GMV, TS, tmp):
         self.Fo.update(GMV, tmp)
@@ -374,14 +374,14 @@ class life_cycle_Tan2018(CasesBase):
     def io(self, Stats):
         CasesBase.io(self,Stats)
         return
-    def update_surface(self, GMV, TS, tmp):
+    def update_surface(self, grid, GMV, TS, tmp):
         weight = 1.0
         weight_factor = 0.01 + 0.99 *(np.cos(2.0*pi * TS.t /3600.0) + 1.0)/2.0
         weight = weight * weight_factor
         self.Sur.lhf = self.lhf0*weight
         self.Sur.shf = self.shf0*weight
         self.Sur.bflux = (g * ((8.0e-3*weight + (eps_vi-1.0)*(299.1 * 5.2e-5*weight  + 22.45e-3 * 8.0e-3*weight)) /(299.1 * (1.0 + (eps_vi-1) * 22.45e-3))))
-        self.Sur.update(GMV, tmp)
+        self.Sur.update(grid, GMV, tmp)
         return
     def update_forcing(self, GMV, TS, tmp):
         self.Fo.update(GMV, tmp)
@@ -491,8 +491,8 @@ class Rico(CasesBase):
     def io(self, Stats):
         CasesBase.io(self,Stats)
         return
-    def update_surface(self, GMV, TS, tmp):
-        self.Sur.update(GMV, tmp)
+    def update_surface(self, grid, GMV, TS, tmp):
+        self.Sur.update(grid, GMV, tmp)
         return
 
     def update_forcing(self, GMV, TS, tmp):
@@ -763,10 +763,10 @@ class TRMM_LBA(CasesBase):
         CasesBase.io(self,Stats)
         return
 
-    def update_surface(self, GMV, TS, tmp):
+    def update_surface(self, grid, GMV, TS, tmp):
         self.Sur.lhf = 554.0 * mt.pow(np.maximum(0, np.cos(np.pi/2*((5.25*3600.0 - TS.t)/5.25/3600.0))),1.3)
         self.Sur.shf = 270.0 * mt.pow(np.maximum(0, np.cos(np.pi/2*((5.25*3600.0 - TS.t)/5.25/3600.0))),1.5)
-        self.Sur.update(GMV, tmp)
+        self.Sur.update(grid, GMV, tmp)
         # fix momentum fluxes to zero as they are not used in the paper
         self.Sur.rho_uflux = 0.0
         self.Sur.rho_vflux = 0.0
@@ -882,7 +882,7 @@ class ARM_SGP(CasesBase):
         CasesBase.io(self,Stats)
         return
 
-    def update_surface(self, GMV, TS, tmp):
+    def update_surface(self, grid, GMV, TS, tmp):
         t_Sur_in = np.array([0.0, 4.0, 6.5, 7.5, 10.0, 12.5, 14.5]) * 3600 #LES time is in sec
         SH = np.array([-30.0, 90.0, 140.0, 140.0, 100.0, -10, -10]) # W/m^2
         LH = np.array([5.0, 250.0, 450.0, 500.0, 420.0, 180.0, 0.0]) # W/m^2
@@ -895,7 +895,7 @@ class ARM_SGP(CasesBase):
         # if self.Sur.lhf < 1.0:
         #     self.Sur.lhf = 1.0
         #+++++++++
-        self.Sur.update(GMV, tmp)
+        self.Sur.update(grid, GMV, tmp)
         # fix momentum fluxes to zero as they are not used in the paper
         self.Sur.rho_uflux = 0.0
         self.Sur.rho_vflux = 0.0
@@ -1036,8 +1036,8 @@ class GATE_III(CasesBase):
         CasesBase.io(self,Stats)
         return
 
-    def update_surface(self, GMV, TS, tmp):
-        self.Sur.update(GMV, tmp) # here lhf and shf are needed for calcualtion of bflux in surface and thus u_star
+    def update_surface(self, grid, GMV, TS, tmp):
+        self.Sur.update(grid, GMV, tmp) # here lhf and shf are needed for calcualtion of bflux in surface and thus u_star
         return
 
     def update_forcing(self, GMV, TS, tmp):
@@ -1230,8 +1230,8 @@ class DYCOMS_RF01(CasesBase):
         self.Fo.io(Stats)
         return
 
-    def update_surface(self, GMV, TS, tmp):
-        self.Sur.update(GMV, tmp)
+    def update_surface(self, grid, GMV, TS, tmp):
+        self.Sur.update(grid, GMV, tmp)
         return
 
     def update_forcing(self, GMV, TS, tmp):
@@ -1315,9 +1315,9 @@ class GABLS(CasesBase):
         CasesBase.io(self,Stats)
         return
 
-    def update_surface(self, GMV, TS, tmp):
+    def update_surface(self, grid, GMV, TS, tmp):
         self.Sur.Tsurface = 265.0 - (0.25/3600.0)*TS.t
-        self.Sur.update(GMV, tmp)
+        self.Sur.update(grid, GMV, tmp)
         return
 
     def update_forcing(self, GMV, TS, tmp):
@@ -1409,8 +1409,8 @@ class SP(CasesBase):
         CasesBase.io(self,Stats)
         return
 
-    def update_surface(self, GMV, TS, tmp):
-        self.Sur.update(GMV, tmp)
+    def update_surface(self, grid, GMV, TS, tmp):
+        self.Sur.update(grid, GMV, tmp)
         return
 
     def update_forcing(self, GMV, TS, tmp):
