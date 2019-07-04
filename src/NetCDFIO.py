@@ -12,7 +12,6 @@ class NetCDFIO_Stats:
         self.root_grp = None
         self.profiles_grp = None
         self.ts_grp = None
-        self.grid = grid
 
         self.last_output_time = 0.0
         self.uuid = str(namelist['meta']['uuid'])
@@ -52,7 +51,7 @@ class NetCDFIO_Stats:
 
         shutil.move(os.path.join( './paramlist_'+paramlist['meta']['casename']+ '.in'),
                     os.path.join( self.outpath, 'paramlist_'+paramlist['meta']['casename']+ '.in'))
-        self.setup_stats_file()
+        self.setup_stats_file(grid)
         return
 
     def open_files(self):
@@ -65,34 +64,34 @@ class NetCDFIO_Stats:
         self.root_grp.close()
         return
 
-    def setup_stats_file(self):
-        k_b_1 = self.grid.boundary(Zmin())
-        k_b_2 = self.grid.boundary(Zmax())
+    def setup_stats_file(self, grid):
+        k_b_1 = grid.boundary(Zmin())
+        k_b_2 = grid.boundary(Zmax())
         k_1 = k_b_1
         k_2 = k_b_2
-        # k_1 = self.grid.first_interior(Zmin()) # IO assumes full and half fields are equal sizes
-        # k_2 = self.grid.first_interior(Zmax()) # IO assumes full and half fields are equal sizes
+        # k_1 = grid.first_interior(Zmin()) # IO assumes full and half fields are equal sizes
+        # k_2 = grid.first_interior(Zmax()) # IO assumes full and half fields are equal sizes
 
         root_grp = nc.Dataset(self.path_plus_file, 'w', format='NETCDF4')
 
         # Set profile dimensions
         profile_grp = root_grp.createGroup('profiles')
-        profile_grp.createDimension('z', self.grid.nz)
+        profile_grp.createDimension('z', grid.nz)
         profile_grp.createDimension('t', None)
         z = profile_grp.createVariable('z', 'f8', ('z'))
-        z[:] = np.array(self.grid.z[k_b_1:k_b_2])
+        z[:] = np.array(grid.z[k_b_1:k_b_2])
         z_half = profile_grp.createVariable('z_half', 'f8', ('z'))
-        z_half[:] = np.array(self.grid.z_half[k_1:k_2])
+        z_half[:] = np.array(grid.z_half[k_1:k_2])
         profile_grp.createVariable('t', 'f8', ('t'))
         del z
         del z_half
 
         reference_grp = root_grp.createGroup('reference')
-        reference_grp.createDimension('z', self.grid.nz)
+        reference_grp.createDimension('z', grid.nz)
         z = reference_grp.createVariable('z', 'f8', ('z'))
-        z[:] = np.array(self.grid.z[k_b_1:k_b_2])
+        z[:] = np.array(grid.z[k_b_1:k_b_2])
         z_half = reference_grp.createVariable('z_half', 'f8', ('z'))
-        z_half[:] = np.array(self.grid.z_half[k_1:k_2])
+        z_half[:] = np.array(grid.z_half[k_1:k_2])
         del z
         del z_half
 

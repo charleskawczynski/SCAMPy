@@ -10,18 +10,18 @@ from forcing_functions import  convert_forcing_entropy, convert_forcing_thetal
 class ForcingBase:
     def __init__(self):
         return
-    def initialize(self, GMV):
-        self.subsidence = Half(self.grid)
-        self.dTdt       = Half(self.grid)
-        self.dqtdt      = Half(self.grid)
-        self.ug         = Half(self.grid)
-        self.vg         = Half(self.grid)
+    def initialize(self, grid, GMV):
+        self.subsidence = Half(grid)
+        self.dTdt       = Half(grid)
+        self.dqtdt      = Half(grid)
+        self.ug         = Half(grid)
+        self.vg         = Half(grid)
         self.convert_forcing_prog_fp = convert_forcing_thetal
         return
-    def update(self, GMV, tmp):
+    def update(self, grid, GMV, tmp):
         return
-    def coriolis_force(self, U, V):
-        for k in self.grid.over_elems_real(Center()):
+    def coriolis_force(self, grid, U, V):
+        for k in grid.over_elems_real(Center()):
             U.tendencies[k] -= self.coriolis_param * (self.vg[k] - V.values[k])
             V.tendencies[k] += self.coriolis_param * (self.ug[k] - U.values[k])
         return
@@ -35,12 +35,12 @@ class ForcingNone(ForcingBase):
     def __init__(self):
         ForcingBase.__init__(self)
         return
-    def initialize(self, GMV):
-        ForcingBase.initialize(self, GMV)
+    def initialize(self, grid, GMV):
+        ForcingBase.initialize(self, grid, GMV)
         return
-    def update(self, GMV, tmp):
+    def update(self, grid, GMV, tmp):
         return
-    def coriolis_force(self, U, V):
+    def coriolis_force(self, grid, U, V):
         return
     def initialize_io(self, Stats):
         return
@@ -51,25 +51,25 @@ class ForcingStandard(ForcingBase):
     def __init__(self):
         ForcingBase.__init__(self)
         return
-    def initialize(self, GMV):
-        ForcingBase.initialize(self, GMV)
+    def initialize(self, grid, GMV):
+        ForcingBase.initialize(self, grid, GMV)
         return
-    def update(self, GMV, tmp):
+    def update(self, grid, GMV, tmp):
 
-        for k in self.grid.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
             qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
             GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k], GMV.q_tot.values[k],
                                                                 qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
             GMV.q_tot.tendencies[k] += self.dqtdt[k]
         if self.apply_subsidence:
-            for k in self.grid.over_elems_real(Center()):
+            for k in grid.over_elems_real(Center()):
                 # Apply large-scale subsidence tendencies
-                GMV.H.tendencies[k] -= grad(GMV.H.values.Dual(k), self.grid) * self.subsidence[k]
-                GMV.q_tot.tendencies[k] -= grad(GMV.q_tot.values.Dual(k), self.grid) * self.subsidence[k]
+                GMV.H.tendencies[k] -= grad(GMV.H.values.Dual(k), grid) * self.subsidence[k]
+                GMV.q_tot.tendencies[k] -= grad(GMV.q_tot.values.Dual(k), grid) * self.subsidence[k]
 
         if self.apply_coriolis:
-            self.coriolis_force(GMV.U, GMV.V)
+            self.coriolis_force(grid, GMV.U, GMV.V)
 
         return
     def initialize_io(self, Stats):
@@ -81,12 +81,12 @@ class ForcingStandard(ForcingBase):
 #     def __init__(self):
 #         ForcingBase.__init__(self)
 #         return
-#     def initialize(self, GMV):
-#         ForcingBase.initialize(self, GMV)
+#     def initialize(self, grid, GMV):
+#         ForcingBase.initialize(self, grid, GMV)
 #         return
 #     def update(self, GMV):
 #
-#         for k in self.grid.over_elems_real(Center()):
+#         for k in grid.over_elems_real(Center()):
 #             # Apply large-scale horizontal advection tendencies
 #             qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
 #             GMV.H.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.q_tot.values[k], qv,
@@ -96,8 +96,8 @@ class ForcingStandard(ForcingBase):
 #
 #         return
 #
-#     def coriolis_force(self, U, V):
-#         ForcingBase.coriolis_force(self, U, V)
+#     def coriolis_force(self, grid, U, V):
+#         ForcingBase.coriolis_force(self, grid, U, V)
 #         return
 #     def initialize_io(self, Stats):
 #         return
@@ -111,8 +111,8 @@ class ForcingDYCOMS_RF01(ForcingBase):
         ForcingBase.__init__(self)
         return
 
-    def initialize(self, GMV):
-        ForcingBase.initialize(self, GMV)
+    def initialize(self, grid, GMV):
+        ForcingBase.initialize(self, grid, GMV)
 
         self.alpha_z    = 1.
         self.kappa      = 85.
@@ -121,7 +121,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         self.divergence = 3.75e-6  # divergence is defined twice: here and in initialize_forcing method of DYCOMS_RF01 case class
                                    # where it is used to initialize large scale subsidence
 
-        self.f_rad = Full(self.grid)
+        self.f_rad = Full(grid)
         return
 
     def calculate_radiation(self, GMV, tmp):
@@ -130,58 +130,58 @@ class ForcingDYCOMS_RF01(ForcingBase):
         """
 
         # find zi (level of 8.0 g/kg isoline of qt)
-        k_1 = self.grid.first_interior(Zmin())
-        zi     = self.grid.z[k_1]
-        for k in self.grid.over_elems_real(Center()):
+        k_1 = grid.first_interior(Zmin())
+        zi     = grid.z[k_1]
+        for k in grid.over_elems_real(Center()):
             if (GMV.q_tot.values[k] < 8.0 / 1000):
                 idx_zi = k
                 # will be used at cell edges
-                zi     = self.grid.z[idx_zi]
+                zi     = grid.z[idx_zi]
                 rhoi   = tmp['ρ_0_half'][idx_zi]
                 break
 
-        self.f_rad = Full(self.grid)
-        k_2 = self.grid.boundary(Zmax())
+        self.f_rad = Full(grid)
+        k_2 = grid.boundary(Zmax())
         k_1 = 0
-        k_2 = self.grid.nzg-1
+        k_2 = grid.nzg-1
 
         # cloud-top cooling
         q_0 = 0.0
 
         self.f_rad[k_2] = self.F0 * np.exp(-q_0)
         for k in range(k_2 - 1, -1, -1):
-            q_0           += self.kappa * self.Ref.rho0_half[k] * GMV.q_liq.values[k] * self.grid.dz
+            q_0           += self.kappa * self.Ref.rho0_half[k] * GMV.q_liq.values[k] * grid.dz
             self.f_rad[k]  = self.F0 * np.exp(-q_0)
 
         # cloud-base warming
         q_1 = 0.0
         self.f_rad[k_1] += self.F1 * np.exp(-q_1)
         for k in range(1, k_2 + 1):
-            q_1           += self.kappa * self.Ref.rho0_half[k - 1] * GMV.q_liq.values[k - 1] * self.grid.dz
+            q_1           += self.kappa * self.Ref.rho0_half[k - 1] * GMV.q_liq.values[k - 1] * grid.dz
             self.f_rad[k] += self.F1 * np.exp(-q_1)
 
         # cooling in free troposphere
         for k in range(k_1, k_2):
-            if self.grid.z[k] > zi:
-                cbrt_z         = np.cbrt(self.grid.z[k] - zi)
+            if grid.z[k] > zi:
+                cbrt_z         = np.cbrt(grid.z[k] - zi)
                 self.f_rad[k] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + zi * cbrt_z)
         # condition at the top
-        cbrt_z                   = np.cbrt(self.grid.z[k] + self.grid.dz - zi)
+        cbrt_z                   = np.cbrt(grid.z[k] + grid.dz - zi)
         self.f_rad[k_2] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + zi * cbrt_z)
 
-        for k in self.grid.over_elems_real(Center()):
-            self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / self.grid.dz / self.Ref.rho0_half[k] / dycoms_cp
+        for k in grid.over_elems_real(Center()):
+            self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / grid.dz / self.Ref.rho0_half[k] / dycoms_cp
 
         return
 
-    def coriolis_force(self, U, V):
-        ForcingBase.coriolis_force(self, U, V)
+    def coriolis_force(self, grid, U, V):
+        ForcingBase.coriolis_force(self, grid, U, V)
         return
 
-    def update(self, GMV, tmp):
+    def update(self, grid, GMV, tmp):
         self.calculate_radiation(GMV, tmp)
 
-        for k in self.grid.over_elems_real(Center()):
+        for k in grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
             q_tot = GMV.q_tot.values[k]
             qv = q_tot - GMV.q_liq.values[k]
@@ -193,11 +193,11 @@ class ForcingDYCOMS_RF01(ForcingBase):
                                                                  self.dTdt[k])
             GMV.q_tot.tendencies[k] += self.dqtdt[k]
             # Apply large-scale subsidence tendencies
-            GMV.H.tendencies[k]  -= grad_pos(GMV.H.values.Cut(k), self.grid) * self.subsidence[k]
-            GMV.q_tot.tendencies[k] -= grad_pos(GMV.q_tot.values.Cut(k), self.grid) * self.subsidence[k]
+            GMV.H.tendencies[k]  -= grad_pos(GMV.H.values.Cut(k), grid) * self.subsidence[k]
+            GMV.q_tot.tendencies[k] -= grad_pos(GMV.q_tot.values.Cut(k), grid) * self.subsidence[k]
 
         if self.apply_coriolis:
-            self.coriolis_force(GMV.U, GMV.V)
+            self.coriolis_force(grid, GMV.U, GMV.V)
 
         return
 
