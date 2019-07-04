@@ -1058,7 +1058,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def update_covariance_ED(self, grid, q, tmp, GMV, EnvVar, UpdVar, Case,TS, GmvVar1, GmvVar2, GmvCovar, Covar,  EnvVar1,  EnvVar2, UpdVar1,  UpdVar2, name, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        ae = q['a', i_env]
         dzi = grid.dzi
         dzi2 = grid.dzi**2.0
         dti = TS.dti
@@ -1070,15 +1069,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         x = Half(grid)
         ae_old = Half(grid)
-        rho_ae_K_m = Full(grid)
-        whalf = Half(grid)
 
         for k in grid.over_elems(Center()):
             ae_old[k] = 1.0 - np.sum([UpdVar.Area.old[i][k] for i in i_uds])
-            whalf[k] = q['w', i_env].Mid(k)
-
-        for k in grid.over_elems_real(Node()):
-            rho_ae_K_m[k] = ae.Mid(k) * self.KH.values.Mid(k) * self.Ref.rho0_half.Mid(k)
 
         S = Case.Sur
 
@@ -1094,33 +1087,33 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar1, UpdVar2, EnvVar1, EnvVar2, Covar, GmvVar1, GmvVar2, GmvCovar, name)
 
         Covar_surf = Covar.values[k_1]
+        a_env = q['a', i_env]
+        w_env = q['w', i_env]
+        ρ_0_half = tmp['ρ_0_half']
 
         for k in grid.over_elems_real(Center()):
-            D_env = 0.0
-            ρ_0_k = tmp['ρ_0_half'][k]
-            ρ_0_kp = tmp['ρ_0_half'][k+1]
-            ae_k = ae[k]
-            ae_kp = ae[k+1]
-            w_k = whalf[k]
-            w_kp = whalf[k+1]
-            rho_ae_K_k = rho_ae_K_m[k]
-            rho_ae_K_km = rho_ae_K_m[k-1]
-            for i in i_uds:
-                wu_half = UpdVar.W.values[i].Mid(k)
-                D_env += ρ_0_k * UpdVar.Area.values[i][k] * wu_half * self.entr_sc[i][k]
+            ρ_0_cut = ρ_0_half.Cut(k)
+            ae_cut = a_env.Cut(k)
+            w_cut = w_env.DualCut(k)
+            ρa_K_cut = a_env.DualCut(k) * self.KH.values.DualCut(k) * ρ_0_half.DualCut(k)
+
+            D_env = sum([ρ_0_cut[1] *
+                         UpdVar.Area.values[i][k] *
+                         UpdVar.W.values[i].Mid(k) *
+                         self.entr_sc[i][k] for i in i_uds])
 
             l_mix = np.fmax(self.mixing_length[k], 1.0)
             tke_env = np.fmax(EnvVar.tke.values[k], 0.0)
 
-            tri_diag.a[k] = (- rho_ae_K_km * dzi2 )
-            tri_diag.b[k] = (ρ_0_k * ae_k * dti
-                     - ρ_0_k * ae_k * whalf[k] * dzi
-                     + rho_ae_K_k * dzi2 + rho_ae_K_km * dzi2
+            tri_diag.a[k] = (- ρa_K_cut[0] * dzi2 )
+            tri_diag.b[k] = (ρ_0_cut[1] * ae_cut[1] * dti
+                     - ρ_0_cut[1] * ae_cut[1] * w_cut[1] * dzi
+                     + ρa_K_cut[1] * dzi2 + ρa_K_cut[0] * dzi2
                      + D_env
-                     + ρ_0_k * ae_k * self.tke_diss_coeff * np.sqrt(tke_env)/l_mix)
-            tri_diag.c[k] = (ρ_0_kp * ae_kp * w_kp * dzi - rho_ae_K_k * dzi2)
+                     + ρ_0_cut[1] * ae_cut[1] * self.tke_diss_coeff * np.sqrt(tke_env)/l_mix)
+            tri_diag.c[k] = (ρ_0_cut[2] * ae_cut[2] * w_cut[2] * dzi - ρa_K_cut[1] * dzi2)
 
-            tri_diag.f[k] = (ρ_0_k * ae_old[k] * Covar.values[k] * dti
+            tri_diag.f[k] = (ρ_0_cut[1] * ae_old[k] * Covar.values[k] * dti
                      + Covar.press[k]
                      + Covar.buoy[k]
                      + Covar.shear[k]
@@ -1134,6 +1127,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
             tri_diag.b[k_2] += tri_diag.c[k_2]
             tri_diag.c[k_2] = 0.0
+
         tridiag_solve_wrapper_new(grid, x, tri_diag)
 
         for k in grid.over_elems_real(Center()):
