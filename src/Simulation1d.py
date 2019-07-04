@@ -2,6 +2,8 @@ import time
 import copy
 import numpy as np
 from Variables import GridMeanVariables
+from EDMF_Updrafts import *
+from EDMF_Environment import *
 from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
@@ -80,9 +82,19 @@ class Simulation1d:
         self.tmp_O2['tke']            = copy.deepcopy(self.tmp_O2['tke'])
 
 
+        self.n_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
+
         self.Ref = ReferenceState(self.grid)
-        self.GMV = GridMeanVariables(namelist, self.grid, self.Ref)
         self.Case = CasesFactory(namelist, paramlist)
+
+        self.GMV       = GridMeanVariables(namelist, self.grid, self.Ref)
+        self.UpdVar    = UpdraftVariables(self.n_updrafts, namelist, paramlist, self.grid)
+        self.EnvVar    = EnvironmentVariables(namelist, self.grid)
+
+        self.UpdThermo = UpdraftThermodynamics(self.n_updrafts, self.grid, self.Ref, self.UpdVar)
+        self.UpdMicro  = UpdraftMicrophysics(paramlist, self.n_updrafts, self.grid, self.Ref)
+        self.EnvThermo = EnvironmentThermodynamics(namelist, paramlist, self.grid, self.Ref, self.EnvVar)
+
         self.Turb = ParameterizationFactory(namelist, paramlist, self.grid, self.Ref)
         self.TS = TimeStepping(namelist)
         self.Stats = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
@@ -93,7 +105,7 @@ class Simulation1d:
         self.Case.initialize_profiles(self.grid, self.GMV, self.Ref, self.tmp, self.q)
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.GMV, self.tmp)
-        self.Turb.initialize(self.GMV, self.tmp, self.q)
+        self.UpdVar.initialize(self.GMV, self.tmp, self.q)
         self.initialize_io()
         self.io()
         return
@@ -102,23 +114,25 @@ class Simulation1d:
         self.GMV.zero_tendencies()
         self.Case.update_surface(self.GMV, self.TS, self.tmp)
         self.Case.update_forcing(self.GMV, self.TS, self.tmp)
-        self.Turb.initialize_covariance(self.q, self.tmp, self.GMV, self.Case)
+        self.Turb.initialize_covariance(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.Ref, self.Case)
         for k in self.grid.over_elems(Center()):
-            self.Turb.EnvVar.tke.values[k] = self.GMV.tke.values[k]
-            self.Turb.EnvVar.cv_θ_liq.values[k] = self.GMV.cv_θ_liq.values[k]
-            self.Turb.EnvVar.cv_q_tot.values[k] = self.GMV.cv_q_tot.values[k]
-            self.Turb.EnvVar.cv_θ_liq_q_tot.values[k] = self.GMV.cv_θ_liq_q_tot.values[k]
+            self.EnvVar.tke.values[k] = self.GMV.tke.values[k]
+            self.EnvVar.cv_θ_liq.values[k] = self.GMV.cv_θ_liq.values[k]
+            self.EnvVar.cv_q_tot.values[k] = self.GMV.cv_q_tot.values[k]
+            self.EnvVar.cv_θ_liq_q_tot.values[k] = self.GMV.cv_θ_liq_q_tot.values[k]
 
         while self.TS.t <= self.TS.t_max:
             print('Percent complete: ', self.TS.t/self.TS.t_max*100)
             self.GMV.zero_tendencies()
             self.Case.update_surface(self.GMV, self.TS, self.tmp)
             self.Case.update_forcing(self.GMV, self.TS, self.tmp)
-            self.Turb.update(self.q, self.tmp, self.GMV, self.Case, self.TS)
+            self.Turb.update(self.grid, self.q, self.tmp, self.GMV, self.EnvVar,
+                             self.UpdVar, self.UpdMicro, self.EnvThermo,
+                             self.UpdThermo, self.Ref, self.Case, self.TS)
 
             self.TS.update()
             self.GMV.update(self.TS)
-            self.Turb.update_GMV_diagnostics(self.q, self.tmp, self.GMV)
+            self.Turb.update_GMV_diagnostics(self.q, self.tmp, self.GMV, self.EnvVar, self.UpdVar)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
         sol = self.package_sol()
@@ -132,27 +146,27 @@ class Simulation1d:
         i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
 
         sol.e_W = self.q['w', i_env].values
-        sol.e_QT = self.Turb.EnvVar.q_tot.values
-        sol.e_QL = self.Turb.EnvVar.q_liq.values
-        sol.e_QR = self.Turb.EnvVar.q_rai.values
-        sol.e_H = self.Turb.EnvVar.H.values
-        sol.e_THL = self.Turb.EnvVar.θ_liq.values
-        sol.e_T = self.Turb.EnvVar.T.values
-        sol.e_B = self.Turb.EnvVar.B.values
-        sol.e_CF = self.Turb.EnvVar.CF.values
-        sol.e_TKE = self.Turb.EnvVar.tke.values
-        sol.e_Hvar = self.Turb.EnvVar.cv_θ_liq.values
-        sol.e_QTvar = self.Turb.EnvVar.cv_q_tot.values
-        sol.e_HQTcov = self.Turb.EnvVar.cv_θ_liq_q_tot.values
+        sol.e_QT = self.EnvVar.q_tot.values
+        sol.e_QL = self.EnvVar.q_liq.values
+        sol.e_QR = self.EnvVar.q_rai.values
+        sol.e_H = self.EnvVar.H.values
+        sol.e_THL = self.EnvVar.θ_liq.values
+        sol.e_T = self.EnvVar.T.values
+        sol.e_B = self.EnvVar.B.values
+        sol.e_CF = self.EnvVar.CF.values
+        sol.e_TKE = self.EnvVar.tke.values
+        sol.e_Hvar = self.EnvVar.cv_θ_liq.values
+        sol.e_QTvar = self.EnvVar.cv_q_tot.values
+        sol.e_HQTcov = self.EnvVar.cv_θ_liq_q_tot.values
 
-        sol.ud_W = self.Turb.UpdVar.W.values[0]
-        sol.ud_Area = self.Turb.UpdVar.Area.values[0]
-        sol.ud_QT = self.Turb.UpdVar.q_tot.values[0]
-        sol.ud_QL = self.Turb.UpdVar.q_liq.values[0]
-        sol.ud_QR = self.Turb.UpdVar.q_rai.values[0]
-        sol.ud_THL = self.Turb.UpdVar.θ_liq.values[0]
-        sol.ud_T = self.Turb.UpdVar.T.values[0]
-        sol.ud_B = self.Turb.UpdVar.B.values[0]
+        sol.ud_W = self.UpdVar.W.values[0]
+        sol.ud_Area = self.UpdVar.Area.values[0]
+        sol.ud_QT = self.UpdVar.q_tot.values[0]
+        sol.ud_QL = self.UpdVar.q_liq.values[0]
+        sol.ud_QR = self.UpdVar.q_rai.values[0]
+        sol.ud_THL = self.UpdVar.θ_liq.values[0]
+        sol.ud_T = self.UpdVar.T.values[0]
+        sol.ud_B = self.UpdVar.B.values[0]
 
         sol.gm_QT = self.GMV.q_tot.values
         sol.gm_U = self.GMV.U.values
@@ -197,7 +211,7 @@ class Simulation1d:
     def initialize_io(self):
         self.GMV.initialize_io(self.Stats)
         self.Case.initialize_io(self.Stats)
-        self.Turb.initialize_io(self.Stats)
+        self.Turb.initialize_io(self.Stats, self.EnvVar, self.UpdVar)
         return
 
     def io(self):
@@ -205,7 +219,7 @@ class Simulation1d:
         self.Stats.write_simulation_time(self.TS.t)
         self.GMV.io(self.Stats, self.tmp)
         self.Case.io(self.Stats)
-        self.Turb.io(self.q, self.tmp, self.Stats)
+        self.Turb.io(self.grid, self.q, self.tmp, self.Stats, self.EnvVar, self.UpdVar, self.UpdMicro)
         self.Stats.close_files()
         return
 
