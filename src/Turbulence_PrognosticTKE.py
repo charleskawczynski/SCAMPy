@@ -416,7 +416,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         flux2 = Case.Sur.rho_qtflux
         k_1 = grid.first_interior(Zmin())
         zLL = grid.z_half[k_1]
-        alpha0LL  = Ref.alpha0_half[k_1]
+        alpha0LL  = tmp['α_0_half'][k_1]
         ustar = Case.Sur.ustar
         oblength = Case.Sur.obukhov_length
         GMV.tke.values[k_1]            = get_surface_tke(Case.Sur.ustar, self.wstar, zLL, Case.Sur.obukhov_length)
@@ -577,12 +577,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             for k in grid.over_elems_real(Center()):
 
                 a_k = UpdVar.Area.values[i][k]
-                α_0_kp = self.Ref.alpha0_half[k]
+                α_0_kp = tmp['α_0_half'][k]
                 w_k = UpdVar.W.values[i].Mid(k)
 
                 w_cut = UpdVar.W.values[i].DualCut(k)
                 a_cut = UpdVar.Area.values[i].Cut(k)
-                ρ_cut = self.Ref.rho0_half.Cut(k)
+                ρ_cut = tmp['ρ_0_half'].Cut(k)
                 tendencies = 0.0
 
                 ρaw_cut = ρ_cut*a_cut*w_cut
@@ -628,7 +628,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 a_new_k = UpdVar.Area.new[i].Mid(k)
                 if a_new_k >= self.minimum_area:
 
-                    ρ_k = self.Ref.rho0[k]
+                    ρ_k = tmp['ρ_0'][k]
                     w_i = UpdVar.W.values[i][k]
                     w_env = q['w', i_env].values[k]
                     a_k = UpdVar.Area.values[i].Mid(k)
@@ -637,7 +637,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     B_k = UpdVar.B.values[i].Mid(k)
 
                     a_cut = UpdVar.Area.values[i].DualCut(k)
-                    ρ_cut = self.Ref.rho0.Cut(k)
+                    ρ_cut = tmp['ρ_0'].Cut(k)
                     w_cut = UpdVar.W.values[i].Cut(k)
 
                     ρa_k = ρ_k * a_k
@@ -690,8 +690,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     a_k_new = UpdVar.Area.new[i][k]
                     H_cut = UpdVar.H.values[i].Cut(k)
                     QT_cut = UpdVar.q_tot.values[i].Cut(k)
-                    ρ_k = self.Ref.rho0_half[k]
-                    ρ_cut = self.Ref.rho0_half.Cut(k)
+                    ρ_k = tmp['ρ_0_half'][k]
+                    ρ_cut = tmp['ρ_0_half'].Cut(k)
                     w_cut = UpdVar.W.values[i].DualCut(k)
                     ε_sc = self.entr_sc[i][k]
                     δ_sc = self.detr_sc[i][k]
@@ -718,10 +718,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                                 UpdVar.q_tot.new[i][k],
                                 UpdVar.H.new[i][k])
                     UpdVar.T.new[i][k], UpdVar.q_liq.new[i][k] = T, q_liq
-                    UpdMicro.compute_update_combined_local_thetal(self.Ref.p0_half, UpdVar.T.new,
-                                                                       UpdVar.q_tot.new, UpdVar.q_liq.new,
-                                                                       UpdVar.q_rai.new, UpdVar.H.new,
-                                                                       i, k)
+                    UpdMicro.compute_update_combined_local_thetal(tmp['p_0_half'], UpdVar.T.new,
+                                                                  UpdVar.q_tot.new, UpdVar.q_liq.new,
+                                                                  UpdVar.q_rai.new, UpdVar.H.new,
+                                                                  i, k)
                 UpdVar.q_rai.new[i][k_1] = 0.0
 
         return
@@ -736,7 +736,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for i in i_uds:
             self.m[i][kb_1] = 0.0
             for k in grid.over_elems_real(Center()):
-                self.m[i][k] = ((UpdVar.W.values[i][k] - q['w', i_env].values[k] )* self.Ref.rho0[k]
+                self.m[i][k] = ((UpdVar.W.values[i][k] - q['w', i_env].values[k] )* tmp['ρ_0'][k]
                                * UpdVar.Area.values[i].Mid(k))
 
         for k in grid.over_elems_real(Center()):
@@ -1064,7 +1064,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         k_1 = grid.first_interior(Zmin())
         k_2 = grid.first_interior(Zmax())
 
-        alpha0LL = self.Ref.alpha0_half[k_1]
+        alpha0LL = tmp['α_0_half'][k_1]
         zLL = grid.z_half[k_1]
 
         x = Half(grid)

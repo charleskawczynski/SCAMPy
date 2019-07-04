@@ -104,6 +104,10 @@ class ReferenceState:
             tmp['α_0_half'][k] = self.alpha0_half[k]
             tmp['ρ_0_half'][k] = 1.0/tmp['α_0_half'][k]
             tmp['p_0_half'][k] = self.p0_half[k]
+        for k in grid.over_elems(Node()):
+            tmp['α_0'][k] = self.alpha0[k]
+            tmp['ρ_0'][k] = 1.0/tmp['α_0'][k]
+            tmp['p_0'][k] = self.p0[k]
 
         plt.plot(self.p0.values         , grid.z     ); plt.savefig(Stats.figpath+'p0.png'         ); plt.close()
         plt.plot(self.p0_half.values    , grid.z_half); plt.savefig(Stats.figpath+'p0_half.png'    ); plt.close()
