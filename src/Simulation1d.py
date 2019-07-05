@@ -41,16 +41,24 @@ class Simulation1d:
         )
 
         temp_vars = (
-                     ('ρ_0'         , Node()   , Neumann(), 1),
-                     ('α_0'         , Node()   , Neumann(), 1),
-                     ('p_0'         , Node()   , Neumann(), 1),
-                     ('ρ_0_half'    , Center() , Neumann(), 1),
-                     ('α_0_half'    , Center() , Neumann(), 1),
-                     ('p_0_half'    , Center() , Neumann(), 1),
-                     ('K_m'         , Center() , Neumann(), N_sd),
-                     ('K_h'         , Center() , Neumann(), N_sd),
-                     ('ρaK_m'       , Node()   , Neumann(), N_sd),
-                     ('ρaK_h'       , Node()   , Neumann(), N_sd),
+                     ('ρ_0'           , Node()   , Neumann(), 1),
+                     ('α_0'           , Node()   , Neumann(), 1),
+                     ('p_0'           , Node()   , Neumann(), 1),
+                     ('ρ_0_half'      , Center() , Neumann(), 1),
+                     ('α_0_half'      , Center() , Neumann(), 1),
+                     ('p_0_half'      , Center() , Neumann(), 1),
+                     ('K_m'           , Center() , Neumann(), 1),
+                     ('K_h'           , Center() , Neumann(), 1),
+                     ('l_mix'         , Center() , Neumann(), 1),
+                     ('mf_θ_liq'      , Node() , Neumann(), N_sd),
+                     ('mf_q_tot'      , Node() , Neumann(), N_sd),
+                     ('mf_tend_θ_liq' , Node() , Neumann(), N_sd),
+                     ('mf_tend_q_tot' , Node() , Neumann(), N_sd),
+                     ('mf_tmp'        , Node() , Neumann(), N_sd),
+                     ('entr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
+                     ('detr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
+                     ('ρaK_m'         , Node()   , Neumann(), N_sd),
+                     ('ρaK_h'         , Node()   , Neumann(), N_sd),
                      )
 
         q_2MO = (
@@ -86,15 +94,15 @@ class Simulation1d:
         self.Ref = ReferenceState(self.grid)
         self.Case = CasesFactory(namelist, paramlist)
 
-        self.GMV       = GridMeanVariables(namelist, self.grid, self.Ref)
+        self.GMV       = GridMeanVariables(namelist, self.grid)
         self.UpdVar    = UpdraftVariables(self.n_updrafts, namelist, paramlist, self.grid)
         self.EnvVar    = EnvironmentVariables(namelist, self.grid)
 
-        self.UpdThermo = UpdraftThermodynamics(self.n_updrafts, self.grid, self.Ref, self.UpdVar)
-        self.UpdMicro  = UpdraftMicrophysics(paramlist, self.n_updrafts, self.grid, self.Ref)
-        self.EnvThermo = EnvironmentThermodynamics(namelist, paramlist, self.grid, self.Ref, self.EnvVar)
+        self.UpdThermo = UpdraftThermodynamics(self.n_updrafts, self.grid, self.UpdVar)
+        self.UpdMicro  = UpdraftMicrophysics(paramlist, self.n_updrafts, self.grid)
+        self.EnvThermo = EnvironmentThermodynamics(namelist, paramlist, self.grid, self.EnvVar)
 
-        self.Turb = ParameterizationFactory(namelist, paramlist, self.grid, self.Ref)
+        self.Turb = ParameterizationFactory(namelist, paramlist, self.grid)
         self.TS = TimeStepping(namelist)
         self.Stats = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
         self.tri_diag = type('', (), {})()
@@ -119,7 +127,7 @@ class Simulation1d:
         self.GMV.zero_tendencies(self.grid)
         self.Case.update_surface(self.grid, self.GMV, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.GMV, self.TS, self.tmp)
-        self.Turb.initialize_covariance(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.Ref, self.Case)
+        self.Turb.initialize_covariance(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.Case)
         for k in self.grid.over_elems(Center()):
             self.EnvVar.tke.values[k] = self.GMV.tke.values[k]
             self.EnvVar.cv_θ_liq.values[k] = self.GMV.cv_θ_liq.values[k]
@@ -133,7 +141,7 @@ class Simulation1d:
             self.Case.update_forcing(self.grid, self.GMV, self.TS, self.tmp)
             self.Turb.update(self.grid, self.q, self.tmp, self.GMV, self.EnvVar,
                              self.UpdVar, self.UpdMicro, self.EnvThermo,
-                             self.UpdThermo, self.Ref, self.Case, self.TS, self.tri_diag)
+                             self.UpdThermo, self.Case, self.TS, self.tri_diag)
 
             self.TS.update()
             self.GMV.update(self.grid, self.TS)

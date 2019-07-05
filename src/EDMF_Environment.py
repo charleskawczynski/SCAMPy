@@ -4,7 +4,6 @@ from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
 from TimeStepping import TimeStepping
-from ReferenceState import ReferenceState
 from Variables import VariableDiagnostic, GridMeanVariables
 from funcs_thermo import  *
 from funcs_micro import *
@@ -77,8 +76,7 @@ class EnvironmentVariables:
         return
 
 class EnvironmentThermodynamics:
-    def __init__(self, namelist, paramlist, grid, Ref, EnvVar):
-        self.Ref = Ref
+    def __init__(self, namelist, paramlist, grid, EnvVar):
         self.qt_dry         = Half(grid)
         self.th_dry         = Half(grid)
         self.t_cloudy       = Half(grid)

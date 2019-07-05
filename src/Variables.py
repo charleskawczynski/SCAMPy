@@ -5,7 +5,6 @@ from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
 from TimeStepping import TimeStepping
 from NetCDFIO import NetCDFIO_Stats
-from ReferenceState import ReferenceState
 
 from funcs_thermo import eos, t_to_entropy_c, t_to_thetali_c, \
     alpha_c, buoyancy_c
@@ -37,9 +36,7 @@ class VariableDiagnostic:
         return
 
 class GridMeanVariables:
-    def __init__(self, namelist, grid, Ref):
-        self.Ref = Ref
-
+    def __init__(self, namelist, grid):
         self.U              = VariablePrognostic(grid, Center(), Neumann())
         self.V              = VariablePrognostic(grid, Center(), Neumann())
         self.W              = VariablePrognostic(grid, Node()  , Neumann())

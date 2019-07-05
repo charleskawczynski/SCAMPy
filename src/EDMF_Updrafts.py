@@ -4,7 +4,6 @@ from funcs_thermo import  *
 from funcs_micro import  *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
-import ReferenceState
 from Variables import GridMeanVariables
 from NetCDFIO import NetCDFIO_Stats
 from EDMF_Environment import EnvironmentVariables
@@ -145,8 +144,7 @@ class UpdraftVariables:
         return
 
 class UpdraftThermodynamics:
-    def __init__(self, n_updrafts, grid, Ref, UpdVar):
-        self.Ref = Ref
+    def __init__(self, n_updrafts, grid, UpdVar):
         self.n_updrafts = n_updrafts
         return
 
@@ -182,8 +180,7 @@ class UpdraftThermodynamics:
         return
 
 class UpdraftMicrophysics:
-    def __init__(self, paramlist, n_updrafts, grid, Ref):
-        self.Ref = Ref
+    def __init__(self, paramlist, n_updrafts, grid):
         self.n_updrafts = n_updrafts
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
         self.prec_source_h = [Half(grid) for i in range(n_updrafts)]
