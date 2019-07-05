@@ -409,12 +409,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def get_GMV_CoVar(self, grid, q, au, phi_u, psi_u, phi_e,  psi_e, covar_e, gmv_phi, gmv_psi, gmv_covar, name):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        tke_factor = 1.0
+        tke_factor = 0.5 if name == 'tke' else 1.0
         ae = q['a', i_env]
 
         for k in grid.over_elems(Center()):
             if name == 'tke':
-                tke_factor = 0.5
                 phi_diff = phi_e.Mid(k) - gmv_phi.Mid(k)
                 psi_diff = psi_e.Mid(k) - gmv_psi.Mid(k)
             else:
@@ -436,13 +435,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def get_env_covar_from_GMV(self, grid, q, au, phi_u, psi_u, phi_e, psi_e, covar_e, gmv_phi, gmv_psi, gmv_covar, name):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        tke_factor = 1.0
+        tke_factor = 0.5 if name == 'tke' else 1.0
         ae = q['a', i_env]
 
         for k in grid.over_elems(Center()):
             if ae[k] > 0.0:
                 if name == 'tke':
-                    tke_factor = 0.5
                     phi_diff = phi_e.Mid(k) - gmv_phi.values.Mid(k)
                     psi_diff = psi_e.Mid(k) - gmv_psi.values.Mid(k)
                 else:
@@ -795,10 +793,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
             prefactor = Rd * exner_c(p_0)/p_0
 
-            d_alpha_thetal_dry = prefactor * (1.0 + (eps_vi-1.0) * qt_dry)
-            d_alpha_qt_dry = prefactor * th_dry * (eps_vi-1.0)
+            d_alpha_thetal_dry = prefactor * (1.0 + (eps_vi - 1.0) * qt_dry)
+            d_alpha_qt_dry = prefactor * th_dry * (eps_vi - 1.0)
+            CF_env = EnvVar.CF.values[k]
 
-            if EnvVar.CF.values[k] > 0.0:
+            if CF_env > 0.0:
                 d_alpha_thetal_cloudy = (prefactor * (1.0 + eps_vi * (1.0 + lh / Rv / t_cloudy) * qv_cloudy - qt_cloudy )
                                          / (1.0 + lh * lh / cpm / Rv / t_cloudy / t_cloudy * qv_cloudy))
                 d_alpha_qt_cloudy = (lh / cpm / t_cloudy * d_alpha_thetal_cloudy - prefactor) * th_cloudy
@@ -806,10 +805,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 d_alpha_thetal_cloudy = 0.0
                 d_alpha_qt_cloudy = 0.0
 
-            d_alpha_thetal_total = (EnvVar.CF.values[k] * d_alpha_thetal_cloudy
-                                    + (1.0-EnvVar.CF.values[k]) * d_alpha_thetal_dry)
-            d_alpha_qt_total = (EnvVar.CF.values[k] * d_alpha_qt_cloudy
-                                + (1.0-EnvVar.CF.values[k]) * d_alpha_qt_dry)
+            d_alpha_thetal_total = (CF_env * d_alpha_thetal_cloudy + (1.0-CF_env) * d_alpha_thetal_dry)
+            d_alpha_qt_total     = (CF_env * d_alpha_qt_cloudy     + (1.0-CF_env) * d_alpha_qt_dry)
 
             term_1 = - tmp['K_h'][k] * grad_θ_liq * d_alpha_thetal_total
             term_2 = - tmp['K_h'][k] * grad_q_tot * d_alpha_qt_total
@@ -912,48 +909,34 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def compute_covariance_shear(self, grid, q, tmp, GMV, Covar, UpdVar1, UpdVar2, EnvVar1, EnvVar2, name):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        diff_var1 = 0.0
-        diff_var2 = 0.0
-        du = 0.0
-        dv = 0.0
-        tke_factor = 1.0
-        du_high = 0.0
-        dv_high = 0.0
         ae = q['a', i_env]
 
+        tke_factor = 0.5 if name == 'tke' else 1.0
+        grad_u = 0.0
+        grad_v = 0.0
         for k in grid.over_elems_real(Center()):
             if name == 'tke':
-                du_low = du_high
-                dv_low = dv_high
-                du_high = grad(GMV.U.values.Dual(k), grid)
-                dv_high = grad(GMV.V.values.Dual(k), grid)
-                diff_var2 = grad(EnvVar2.Dual(k), grid)
-                diff_var1 = grad(EnvVar1.Dual(k), grid)
-                tke_factor = 0.5
+                grad_u = grad_neg(GMV.U.values.Cut(k), grid)
+                grad_v = grad_neg(GMV.V.values.Cut(k), grid)
+                grad_var2 = grad_neg(EnvVar2.Cut(k), grid)
+                grad_var1 = grad_neg(EnvVar1.Cut(k), grid)
             else:
-                du_low = 0.0
-                dv_low = 0.0
-                du_high = 0.0
-                dv_high = 0.0
-                diff_var2 = grad(EnvVar2.Cut(k), grid)
-                diff_var1 = grad(EnvVar1.Cut(k), grid)
-            Covar.shear[k] = tke_factor*2.0*(tmp['ρ_0_half'][k] * ae[k] * tmp['K_h'][k] *
-                        (diff_var1*diff_var2 +
-                            pow(interp2pt(du_low, du_high),2.0) +
-                            pow(interp2pt(dv_low, dv_high),2.0)))
+                grad_var2 = grad(EnvVar2.Cut(k), grid)
+                grad_var1 = grad(EnvVar1.Cut(k), grid)
+            ρaK = tmp['ρ_0_half'][k] * ae[k] * tmp['K_h'][k]
+            Covar.shear[k] = tke_factor*2.0*ρaK * (grad_var1*grad_var2 + grad_u**2.0 + grad_v**2.0)
         return
 
     def compute_covariance_interdomain_src(self, grid, q, tmp, au, phi_u, psi_u, phi_e, psi_e, Covar, name):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        tke_factor = 0.5 if name == 'tke' else 1.0
         for k in grid.over_elems(Center()):
             Covar.interdomain[k] = 0.0
             for i in i_uds:
                 if name == 'tke':
-                    tke_factor = 0.5
                     phi_diff = phi_u.values[i].Mid(k) - phi_e.Mid(k)
                     psi_diff = psi_u.values[i].Mid(k) - psi_e.Mid(k)
                 else:
-                    tke_factor = 1.0
                     phi_diff = phi_u.values[i][k]-phi_e.values[k]
                     psi_diff = psi_u.values[i][k]-psi_e.values[k]
 
@@ -962,6 +945,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def compute_covariance_entr(self, grid, q, tmp, UpdVar, Covar, UpdVar1, UpdVar2, EnvVar1, EnvVar2, name):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        tke_factor = 0.5 if name == 'tke' else 1.0
         for k in grid.over_elems_real(Center()):
             Covar.entr_gain[k] = 0.0
             for i in i_uds:
@@ -970,13 +954,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     updvar2 = UpdVar2.values[i].Mid(k)
                     envvar1 = EnvVar1.Mid(k)
                     envvar2 = EnvVar2.Mid(k)
-                    tke_factor = 0.5
                 else:
                     updvar1 = UpdVar1.values[i][k]
                     updvar2 = UpdVar2.values[i][k]
                     envvar1 = EnvVar1.values[k]
                     envvar2 = EnvVar2.values[k]
-                    tke_factor = 1.0
                 w_u = UpdVar.W.values[i].Mid(k)
                 Covar.entr_gain[k] += tke_factor*UpdVar.Area.values[i][k] * np.fabs(w_u) * tmp['detr_sc', i][k] * \
                                              (updvar1 - envvar1) * (updvar2 - envvar2)
