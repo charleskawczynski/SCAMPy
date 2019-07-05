@@ -41,6 +41,13 @@ class Simulation1d:
         )
 
         temp_vars = (
+                     ('mean_entr_sc'  , Center() , Neumann(), 1),
+                     ('mean_detr_sc'  , Center() , Neumann(), 1),
+                     ('massflux_half' , Center() , Neumann(), 1),
+                     ('mf_q_tot_half' , Center() , Neumann(), 1),
+                     ('mf_h_half'     , Center() , Neumann(), 1),
+                     ('mf_qt_half'    , Center() , Neumann(), 1),
+                     ('temp_C'        , Center() , Neumann(), 1),
                      ('ρ_0'           , Node()   , Neumann(), 1),
                      ('α_0'           , Node()   , Neumann(), 1),
                      ('p_0'           , Node()   , Neumann(), 1),

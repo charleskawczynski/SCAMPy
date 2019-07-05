@@ -17,17 +17,16 @@ from funcs_thermo import  *
 from funcs_turbulence import *
 from funcs_utility import *
 
-def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit):
-    theta_rho = Half(grid)
+def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit, temp_C):
     maxgrad = 0.0
-    theta_rho_bl = theta_rho.surface_bl(grid)
+    theta_rho_bl = temp_C.surface_bl(grid)
     for k in grid.over_elems_real(Center()):
         q_tot = GMV.q_tot.values[k]
         q_vap = q_tot - GMV.q_liq.values[k]
-        theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], q_tot, q_vap)
+        temp_C[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], q_tot, q_vap)
     if option == 'theta_rho':
         for k in grid.over_elems_real(Center()):
-            if theta_rho[k] > theta_rho_bl:
+            if temp_C[k] > theta_rho_bl:
                 zi = grid.z_half[k]
                 break
     elif option == 'thetal_maxgrad':
@@ -37,7 +36,7 @@ def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit):
                 maxgrad = grad_TH
                 zi = grid.z[k]
     elif option == 'critical_Ri':
-        zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, grid, Ri_bulk_crit)
+        zi = get_inversion(temp_C, GMV.U.values, GMV.V.values, grid, Ri_bulk_crit)
     else:
         print('INVERSION HEIGHT OPTION NOT RECOGNIZED')
     return zi
@@ -53,7 +52,7 @@ class ParameterizationBase:
         return
 
     def compute_eddy_diffusivities_similarity_Siebesma2007(self, grid, GMV, Case, tmp):
-        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
+        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         ustar = Case.Sur.ustar
         for k in grid.over_elems_real(Center()):
@@ -169,13 +168,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         Stats.add_profile('entrainment_sc')
         Stats.add_profile('detrainment_sc')
         Stats.add_profile('massflux_half')
-        Stats.add_profile('massflux_h')
-        Stats.add_profile('massflux_qt')
-        Stats.add_profile('massflux_tendency_h')
-        Stats.add_profile('massflux_tendency_qt')
+        Stats.add_profile('massflux_θ_liq')
+        Stats.add_profile('massflux_q_tot')
+        Stats.add_profile('massflux_tendency_θ_liq')
+        Stats.add_profile('massflux_tendency_q_tot')
         Stats.add_profile('mixing_length')
-        Stats.add_profile('updraft_qt_precip')
-        Stats.add_profile('updraft_thetal_precip')
+        Stats.add_profile('updraft_q_tot_precip')
+        Stats.add_profile('updraft_θ_liq_precip')
 
         Stats.add_profile('tke_buoy')
         Stats.add_profile('tke_dissipation')
@@ -207,11 +206,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def io(self, grid, q, tmp, Stats, EnvVar, UpdVar, UpdMicro):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        mean_entr_sc  = Half(grid)
-        mean_detr_sc  = Half(grid)
-        massflux_half = Half(grid)
-        mf_h_half     = Half(grid)
-        mf_qt_half    = Half(grid)
 
         UpdVar.io(grid, Stats)
         EnvVar.io(grid, Stats)
@@ -219,25 +213,25 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         Stats.write_profile_new('eddy_viscosity'  , grid, tmp['K_m'])
         Stats.write_profile_new('eddy_diffusivity', grid, tmp['K_h'])
         for k in grid.over_elems_real(Center()):
-            mf_h_half[k] = tmp['mf_θ_liq'].Mid(k)
-            mf_qt_half[k] = tmp['mf_q_tot'].Mid(k)
-            massflux_half[k] = tmp['mf_tmp', 0].Mid(k)
+            tmp['mf_h_half'][k] = tmp['mf_θ_liq'].Mid(k)
+            tmp['mf_q_tot_half'][k] = tmp['mf_q_tot'].Mid(k)
+            tmp['massflux_half'][k] = tmp['mf_tmp', 0].Mid(k)
             a_bulk = sum([q['a', i][k] for i in i_uds])
             if a_bulk > 0.0:
                 for i in i_uds:
-                    mean_entr_sc[k] += q['a', i][k] * tmp['entr_sc', i][k]/a_bulk
-                    mean_detr_sc[k] += q['a', i][k] * tmp['detr_sc', i][k]/a_bulk
+                    tmp['mean_entr_sc'][k] += q['a', i][k] * tmp['entr_sc', i][k]/a_bulk
+                    tmp['mean_detr_sc'][k] += q['a', i][k] * tmp['detr_sc', i][k]/a_bulk
 
-        Stats.write_profile_new('entrainment_sc', grid, mean_entr_sc)
-        Stats.write_profile_new('detrainment_sc', grid, mean_detr_sc)
-        Stats.write_profile_new('massflux_half'      , grid, massflux_half)
-        Stats.write_profile_new('massflux_h'    , grid, mf_h_half)
-        Stats.write_profile_new('massflux_qt'   , grid, mf_qt_half)
-        Stats.write_profile_new('massflux_tendency_h'  , grid, tmp['mf_tend_θ_liq'])
-        Stats.write_profile_new('massflux_tendency_qt' , grid, tmp['mf_tend_q_tot'])
+        Stats.write_profile_new('entrainment_sc', grid, tmp['mean_entr_sc'])
+        Stats.write_profile_new('detrainment_sc', grid, tmp['mean_detr_sc'])
+        Stats.write_profile_new('massflux_half'      , grid, tmp['massflux_half'])
+        Stats.write_profile_new('massflux_θ_liq'    , grid, tmp['mf_h_half'])
+        Stats.write_profile_new('massflux_q_tot'   , grid, tmp['mf_q_tot_half'])
+        Stats.write_profile_new('massflux_tendency_θ_liq'  , grid, tmp['mf_tend_θ_liq'])
+        Stats.write_profile_new('massflux_tendency_q_tot' , grid, tmp['mf_tend_q_tot'])
         Stats.write_profile_new('mixing_length'        , grid, tmp['l_mix'])
-        Stats.write_profile_new('updraft_qt_precip'    , grid, UpdMicro.prec_source_qt_tot)
-        Stats.write_profile_new('updraft_thetal_precip', grid, UpdMicro.prec_source_h_tot)
+        Stats.write_profile_new('updraft_q_tot_precip'    , grid, UpdMicro.prec_source_qt_tot)
+        Stats.write_profile_new('updraft_θ_liq_precip', grid, UpdMicro.prec_source_h_tot)
 
         self.compute_covariance_dissipation(grid, q, tmp, EnvVar.tke, EnvVar)
         Stats.write_profile_new('tke_dissipation', grid, EnvVar.tke.dissipation)
@@ -278,7 +272,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     def update(self, grid, q, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
 
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
+        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         self.decompose_environment(grid, q, GMV, EnvVar, UpdVar)
         self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.W.values,  UpdVar.W.values,  q['w', i_env],  q['w', i_env],  EnvVar.tke.values,    GMV.W.values,  GMV.W.values,  GMV.tke.values, 'tke')
@@ -363,7 +357,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def set_updraft_surface_bc(self, grid, GMV, Case, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
-        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
+        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         k_1 = grid.first_interior(Zmin())
         zLL = grid.z_half[k_1]
@@ -793,22 +787,22 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
             prefactor = Rd * exner_c(p_0)/p_0
 
-            d_alpha_thetal_dry = prefactor * (1.0 + (eps_vi - 1.0) * qt_dry)
+            d_alpha_θ_liq_dry = prefactor * (1.0 + (eps_vi - 1.0) * qt_dry)
             d_alpha_qt_dry = prefactor * th_dry * (eps_vi - 1.0)
             CF_env = EnvVar.CF.values[k]
 
             if CF_env > 0.0:
-                d_alpha_thetal_cloudy = (prefactor * (1.0 + eps_vi * (1.0 + lh / Rv / t_cloudy) * qv_cloudy - qt_cloudy )
+                d_alpha_θ_liq_cloudy = (prefactor * (1.0 + eps_vi * (1.0 + lh / Rv / t_cloudy) * qv_cloudy - qt_cloudy )
                                          / (1.0 + lh * lh / cpm / Rv / t_cloudy / t_cloudy * qv_cloudy))
-                d_alpha_qt_cloudy = (lh / cpm / t_cloudy * d_alpha_thetal_cloudy - prefactor) * th_cloudy
+                d_alpha_qt_cloudy = (lh / cpm / t_cloudy * d_alpha_θ_liq_cloudy - prefactor) * th_cloudy
             else:
-                d_alpha_thetal_cloudy = 0.0
+                d_alpha_θ_liq_cloudy = 0.0
                 d_alpha_qt_cloudy = 0.0
 
-            d_alpha_thetal_total = (CF_env * d_alpha_thetal_cloudy + (1.0-CF_env) * d_alpha_thetal_dry)
+            d_alpha_θ_liq_total = (CF_env * d_alpha_θ_liq_cloudy + (1.0-CF_env) * d_alpha_θ_liq_dry)
             d_alpha_qt_total     = (CF_env * d_alpha_qt_cloudy     + (1.0-CF_env) * d_alpha_qt_dry)
 
-            term_1 = - tmp['K_h'][k] * grad_θ_liq * d_alpha_thetal_total
+            term_1 = - tmp['K_h'][k] * grad_θ_liq * d_alpha_θ_liq_total
             term_2 = - tmp['K_h'][k] * grad_q_tot * d_alpha_qt_total
 
             # TODO - check
@@ -863,16 +857,16 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.compute_covariance_rain(grid, q, tmp, TS, GMV, EnvVar, EnvThermo)
 
         self.reset_surface_covariance(grid, q, tmp, GMV, Case)
-        self.update_covariance_ED(grid, q, tmp, GMV, EnvVar, UpdVar, Case,TS, GMV.W,     GMV.W,     GMV.tke,            EnvVar.tke,           we           , we           , UpdVar.W    , UpdVar.W, 'tke', tri_diag)
-        self.update_covariance_ED(grid, q, tmp, GMV, EnvVar, UpdVar, Case,TS, GMV.H,     GMV.H,     GMV.cv_θ_liq,       EnvVar.cv_θ_liq,      EnvVar.H.values    , EnvVar.H.values    , UpdVar.H    , UpdVar.H, 'cv_θ_liq', tri_diag)
-        self.update_covariance_ED(grid, q, tmp, GMV, EnvVar, UpdVar, Case,TS, GMV.q_tot, GMV.q_tot, GMV.cv_q_tot,       EnvVar.cv_q_tot,      EnvVar.q_tot.values, EnvVar.q_tot.values, UpdVar.q_tot, UpdVar.q_tot, 'cv_q_tot', tri_diag)
-        self.update_covariance_ED(grid, q, tmp, GMV, EnvVar, UpdVar, Case,TS, GMV.H,     GMV.q_tot, GMV.cv_θ_liq_q_tot, EnvVar.cv_θ_liq_q_tot,EnvVar.H.values    , EnvVar.q_tot.values, UpdVar.H    , UpdVar.q_tot, 'cv_θ_liq_q_tot', tri_diag)
+        self.update_covariance_ED(grid, q, tmp, EnvVar.tke           , GMV, EnvVar, UpdVar, Case, TS, GMV.W    , GMV.W    , GMV.tke            , we                 , we                 , UpdVar.W    , UpdVar.W    , 'tke'           , tri_diag)
+        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_θ_liq      , GMV, EnvVar, UpdVar, Case, TS, GMV.H    , GMV.H    , GMV.cv_θ_liq       , EnvVar.H.values    , EnvVar.H.values    , UpdVar.H    , UpdVar.H    , 'cv_θ_liq'      , tri_diag)
+        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_q_tot      , GMV, EnvVar, UpdVar, Case, TS, GMV.q_tot, GMV.q_tot, GMV.cv_q_tot       , EnvVar.q_tot.values, EnvVar.q_tot.values, UpdVar.q_tot, UpdVar.q_tot, 'cv_q_tot'      , tri_diag)
+        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, GMV, EnvVar, UpdVar, Case, TS, GMV.H    , GMV.q_tot, GMV.cv_θ_liq_q_tot , EnvVar.H.values    , EnvVar.q_tot.values, UpdVar.H    , UpdVar.q_tot, 'cv_θ_liq_q_tot', tri_diag)
         self.cleanup_covariance(grid, GMV, EnvVar, UpdVar)
         return
 
 
     def initialize_covariance(self, grid, q, tmp, GMV, EnvVar, Case):
-        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
+        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         ws = self.wstar
         us = Case.Sur.ustar
@@ -1001,7 +995,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             Covar.dissipation[k] = (tmp['ρ_0_half'][k] * ae[k] * Covar.values[k] * pow(tke_env, 0.5)/l_mix * self.tke_diss_coeff)
         return
 
-    def update_covariance_ED(self, grid, q, tmp, GMV, EnvVar, UpdVar, Case, TS, GmvVar1, GmvVar2, GmvCovar, Covar,  EnvVar1,  EnvVar2, UpdVar1,  UpdVar2, name, tri_diag):
+    def update_covariance_ED(self, grid, q, tmp, Covar, GMV, EnvVar, UpdVar, Case, TS, GmvVar1, GmvVar2, GmvCovar, EnvVar1,  EnvVar2, UpdVar1,  UpdVar2, name, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         dzi = grid.dzi
         dzi2 = grid.dzi**2.0
@@ -1012,7 +1006,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         alpha0LL = tmp['α_0_half'][k_1]
         zLL = grid.z_half[k_1]
 
-        x = Half(grid)
         ae_old = Half(grid)
 
         for k in grid.over_elems(Center()):
@@ -1073,13 +1066,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             tri_diag.b[k_2] += tri_diag.c[k_2]
             tri_diag.c[k_2] = 0.0
 
-        tridiag_solve_wrapper_new(grid, x, tri_diag)
+        tridiag_solve_wrapper_new(grid, Covar.values, tri_diag)
 
         for k in grid.over_elems_real(Center()):
             if name == 'cv_θ_liq_q_tot':
-                Covar.values[k] = np.fmax(x[k], - np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
-                Covar.values[k] = np.fmin(x[k],   np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
+                Covar.values[k] = np.fmax(Covar.values[k], - np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
+                Covar.values[k] = np.fmin(Covar.values[k],   np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
             else:
-                Covar.values[k] = np.fmax(x[k], 0.0)
+                Covar.values[k] = np.fmax(Covar.values[k], 0.0)
 
         return

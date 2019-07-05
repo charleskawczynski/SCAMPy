@@ -21,6 +21,11 @@ def friendly_name(s):
 
 def get_var_mapper(var_tuple):
     var_names = [var_name for (var_name, loc, bc, nsd) in var_tuple]
+
+    # var_names.sort()
+    # var_names_unique = sorted(list(set(var_names)))
+    # assert all(var_names==var_names_unique)
+
     end_index = list(np.cumsum([nsd for (var_name, loc, bc, nsd) in var_tuple]))
     start_index = [0]+[x for x in end_index][0:-1]
     vals = [list(range(a,b)) for a,b in zip(start_index, end_index)]
