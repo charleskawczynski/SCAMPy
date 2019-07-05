@@ -775,12 +775,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def compute_tke_buoy(self, grid, q, GMV, EnvVar, EnvThermo, tmp):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        grad_thl_minus=0.0
-        grad_qt_minus=0.0
-        grad_thl_plus=0
-        grad_qt_plus=0
-        grad_θ_liq = Full(grid)
-        grad_q_tot = Full(grid)
         ae = q['a', i_env]
 
         # Note that source terms at the first interior point are not really used because that is where tke boundary condition is
@@ -792,15 +786,14 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             qv_cloudy = EnvThermo.qv_cloudy[k]
             qt_cloudy = EnvThermo.qt_cloudy[k]
             th_cloudy = EnvThermo.th_cloudy[k]
+            p_0 = tmp['p_0_half'][k]
 
             lh = latent_heat(t_cloudy)
             cpm = cpm_c(qt_cloudy)
-            grad_thl_minus = grad_thl_plus
-            grad_qt_minus = grad_qt_plus
-            grad_thl_plus = grad(EnvVar.θ_liq.values.Dual(k), grid)
-            grad_qt_plus  = grad(EnvVar.q_tot.values.Dual(k), grid)
+            grad_θ_liq = grad_neg(EnvVar.θ_liq.values.Cut(k), grid)
+            grad_q_tot = grad_neg(EnvVar.q_tot.values.Cut(k), grid)
 
-            prefactor = Rd * exner_c(tmp['p_0_half'][k])/tmp['p_0_half'][k]
+            prefactor = Rd * exner_c(p_0)/p_0
 
             d_alpha_thetal_dry = prefactor * (1.0 + (eps_vi-1.0) * qt_dry)
             d_alpha_qt_dry = prefactor * th_dry * (eps_vi-1.0)
@@ -818,12 +811,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             d_alpha_qt_total = (EnvVar.CF.values[k] * d_alpha_qt_cloudy
                                 + (1.0-EnvVar.CF.values[k]) * d_alpha_qt_dry)
 
+            term_1 = - tmp['K_h'][k] * grad_θ_liq * d_alpha_thetal_total
+            term_2 = - tmp['K_h'][k] * grad_q_tot * d_alpha_qt_total
+
             # TODO - check
-            EnvVar.tke.buoy[k] = g / tmp['α_0_half'][k] * ae[k] * tmp['ρ_0_half'][k] \
-                               * ( \
-                                   - tmp['K_h'][k] * interp2pt(grad_thl_plus, grad_thl_minus) * d_alpha_thetal_total \
-                                   - tmp['K_h'][k] * interp2pt(grad_qt_plus,  grad_qt_minus)  * d_alpha_qt_total\
-                                 )
+            EnvVar.tke.buoy[k] = g / tmp['α_0_half'][k] * ae[k] * tmp['ρ_0_half'][k] * (term_1 + term_2)
         return
 
     def compute_tke_pressure(self, grid, tmp, q, EnvVar, UpdVar):
@@ -908,13 +900,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
     def cleanup_covariance(self, grid, GMV, EnvVar, UpdVar):
         tmp_eps = 1e-18
         for k in grid.over_elems_real(Center()):
-            if GMV.tke.values[k] < tmp_eps:                     GMV.tke.values[k] = 0.0
-            if GMV.cv_θ_liq.values[k] < tmp_eps:                    GMV.cv_θ_liq.values[k] = 0.0
-            if GMV.cv_q_tot.values[k] < tmp_eps:                   GMV.cv_q_tot.values[k] = 0.0
-            if np.fabs(GMV.cv_θ_liq_q_tot.values[k]) < tmp_eps:         GMV.cv_θ_liq_q_tot.values[k] = 0.0
-            if EnvVar.cv_θ_liq.values[k] < tmp_eps:            EnvVar.cv_θ_liq.values[k] = 0.0
-            if EnvVar.tke.values[k] < tmp_eps:             EnvVar.tke.values[k] = 0.0
-            if EnvVar.cv_q_tot.values[k] < tmp_eps:           EnvVar.cv_q_tot.values[k] = 0.0
+            if GMV.tke.values[k] < tmp_eps:                        GMV.tke.values[k]               = 0.0
+            if GMV.cv_θ_liq.values[k] < tmp_eps:                   GMV.cv_θ_liq.values[k]          = 0.0
+            if GMV.cv_q_tot.values[k] < tmp_eps:                   GMV.cv_q_tot.values[k]          = 0.0
+            if np.fabs(GMV.cv_θ_liq_q_tot.values[k]) < tmp_eps:    GMV.cv_θ_liq_q_tot.values[k]    = 0.0
+            if EnvVar.cv_θ_liq.values[k] < tmp_eps:                EnvVar.cv_θ_liq.values[k]       = 0.0
+            if EnvVar.tke.values[k] < tmp_eps:                     EnvVar.tke.values[k]            = 0.0
+            if EnvVar.cv_q_tot.values[k] < tmp_eps:                EnvVar.cv_q_tot.values[k]       = 0.0
             if np.fabs(EnvVar.cv_θ_liq_q_tot.values[k]) < tmp_eps: EnvVar.cv_θ_liq_q_tot.values[k] = 0.0
 
 
@@ -1008,10 +1000,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         ae = q['a', i_env]
 
         for k in grid.over_elems_real(Center()):
+            ρa_0 = tmp['ρ_0_half'][k]*ae[k]
             EnvVar.tke.rain_src[k] = 0.0
-            EnvVar.cv_θ_liq.rain_src[k]       = tmp['ρ_0_half'][k] * ae[k] * 2. * EnvThermo.Hvar_rain_dt[k]   * TS.dti
-            EnvVar.cv_q_tot.rain_src[k]       = tmp['ρ_0_half'][k] * ae[k] * 2. * EnvThermo.QTvar_rain_dt[k]  * TS.dti
-            EnvVar.cv_θ_liq_q_tot.rain_src[k] = tmp['ρ_0_half'][k] * ae[k] *      EnvThermo.HQTcov_rain_dt[k] * TS.dti
+            EnvVar.cv_θ_liq.rain_src[k]       = ρa_0 * 2. * EnvThermo.Hvar_rain_dt[k]   * TS.dti
+            EnvVar.cv_q_tot.rain_src[k]       = ρa_0 * 2. * EnvThermo.QTvar_rain_dt[k]  * TS.dti
+            EnvVar.cv_θ_liq_q_tot.rain_src[k] = ρa_0 *      EnvThermo.HQTcov_rain_dt[k] * TS.dti
         return
 
 
@@ -1026,7 +1019,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             Covar.dissipation[k] = (tmp['ρ_0_half'][k] * ae[k] * Covar.values[k] * pow(tke_env, 0.5)/l_mix * self.tke_diss_coeff)
         return
 
-    def update_covariance_ED(self, grid, q, tmp, GMV, EnvVar, UpdVar, Case,TS, GmvVar1, GmvVar2, GmvCovar, Covar,  EnvVar1,  EnvVar2, UpdVar1,  UpdVar2, name, tri_diag):
+    def update_covariance_ED(self, grid, q, tmp, GMV, EnvVar, UpdVar, Case, TS, GmvVar1, GmvVar2, GmvCovar, Covar,  EnvVar1,  EnvVar2, UpdVar1,  UpdVar2, name, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         dzi = grid.dzi
         dzi2 = grid.dzi**2.0
