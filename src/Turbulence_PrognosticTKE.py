@@ -48,21 +48,11 @@ def ParameterizationFactory(namelist, paramlist, grid):
 
 class ParameterizationBase:
     def __init__(self, paramlist, grid):
-        self.turbulence_tendency = Half(grid)
         self.prandtl_number = paramlist['turbulence']['prandtl_number']
         self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']
         return
 
-    def update(self, grid, q, tmp, GMV, Case, TS):
-        for k in grid.over_elems_real(Center()):
-            GMV.H.tendencies[k] += (GMV.H.new[k] - GMV.H.values[k]) * TS.dti
-            GMV.q_tot.tendencies[k] += (GMV.q_tot.new[k] - GMV.q_tot.values[k]) * TS.dti
-            GMV.U.tendencies[k] += (GMV.U.new[k] - GMV.U.values[k]) * TS.dti
-            GMV.V.tendencies[k] += (GMV.V.new[k] - GMV.V.values[k]) * TS.dti
-        return
-
-    # Compute eddy diffusivities from similarity theory (Siebesma 2007)
-    def compute_eddy_diffusivities_similarity(self, grid, GMV, Case, tmp):
+    def compute_eddy_diffusivities_similarity_Siebesma2007(self, grid, GMV, Case, tmp):
         self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit)
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         ustar = Case.Sur.ustar
@@ -303,7 +293,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         self.update_GMV_ED(grid, q, GMV, UpdMicro, Case, TS, tmp, tri_diag)
 
-        ParameterizationBase.update(self, grid, q, tmp, GMV, Case, TS)
+        for k in grid.over_elems_real(Center()):
+            GMV.H.tendencies[k] += (GMV.H.new[k] - GMV.H.values[k]) * TS.dti
+            GMV.q_tot.tendencies[k] += (GMV.q_tot.new[k] - GMV.q_tot.values[k]) * TS.dti
+            GMV.U.tendencies[k] += (GMV.U.new[k] - GMV.U.values[k]) * TS.dti
+            GMV.V.tendencies[k] += (GMV.V.new[k] - GMV.V.values[k]) * TS.dti
         GMV.H.set_bcs(grid)
         GMV.q_tot.set_bcs(grid)
         GMV.q_rai.set_bcs(grid)
@@ -356,10 +350,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             tmp['l_mix'][k] = np.fmax( 1.0/(1.0/np.fmax(l1,1e-10) + 1.0/l2), 1e-3)
         return
 
-
     def compute_eddy_diffusivities_tke(self, grid, tmp, GMV, EnvVar, Case):
         if self.similarity_diffusivity:
-            ParameterizationBase.compute_eddy_diffusivities_similarity(self, grid, GMV, Case)
+            ParameterizationBase.compute_eddy_diffusivities_similarity_Siebesma2007(self, grid, GMV, Case)
         else:
             self.compute_mixing_length(grid, tmp, Case.Sur.obukhov_length, EnvVar)
             for k in grid.over_elems_real(Center()):
@@ -861,7 +854,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def compute_covariance(self, grid, q, GMV, EnvVar, UpdVar, EnvThermo, Case, TS, tmp, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        if self.similarity_diffusivity: # otherwise, we computed mixing length when we computed
+        if self.similarity_diffusivity:
             self.compute_mixing_length(grid, tmp, Case.Sur.obukhov_length, EnvVar)
         we = q['w', i_env]
         self.compute_tke_buoy(grid, q, GMV, EnvVar, EnvThermo, tmp)
@@ -1016,8 +1009,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         for k in grid.over_elems_real(Center()):
             EnvVar.tke.rain_src[k] = 0.0
-            EnvVar.cv_θ_liq.rain_src[k]   = tmp['ρ_0_half'][k] * ae[k] * 2. * EnvThermo.Hvar_rain_dt[k]   * TS.dti
-            EnvVar.cv_q_tot.rain_src[k]  = tmp['ρ_0_half'][k] * ae[k] * 2. * EnvThermo.QTvar_rain_dt[k]  * TS.dti
+            EnvVar.cv_θ_liq.rain_src[k]       = tmp['ρ_0_half'][k] * ae[k] * 2. * EnvThermo.Hvar_rain_dt[k]   * TS.dti
+            EnvVar.cv_q_tot.rain_src[k]       = tmp['ρ_0_half'][k] * ae[k] * 2. * EnvThermo.QTvar_rain_dt[k]  * TS.dti
             EnvVar.cv_θ_liq_q_tot.rain_src[k] = tmp['ρ_0_half'][k] * ae[k] *      EnvThermo.HQTcov_rain_dt[k] * TS.dti
         return
 
