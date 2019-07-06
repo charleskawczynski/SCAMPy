@@ -3,7 +3,7 @@ from parameters import *
 from funcs_thermo import  *
 from funcs_micro import  *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Full, Half, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from Variables import GridMeanVariables
 from NetCDFIO import NetCDFIO_Stats
 from EDMF_Environment import EnvironmentVariables

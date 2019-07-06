@@ -2,7 +2,7 @@ import numpy as np
 from parameters import *
 
 def sd_c(pd, T):
-    return sd_tilde + cpd*np.log(T/T_tilde) -Rd*np.log(pd/p_tilde)
+    return sd_tilde + cpd*np.log(T/T_tilde) - Rd * np.log(pd/p_tilde)
 
 def sv_c(pv, T):
     return sv_tilde + cpv*np.log(T/T_tilde) - Rv * np.log(pv/p_tilde)

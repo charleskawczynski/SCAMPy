@@ -1,5 +1,5 @@
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Full, Half, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from NetCDFIO import NetCDFIO_Stats
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,137 +7,103 @@ from scipy.integrate import odeint
 from funcs_thermo import t_to_entropy_c, eos, eos_entropy, alpha_c
 from parameters import *
 
+def initialize(grid, Stats, tmp, loc, sg, Pg, Tg, qtg):
+    sg = t_to_entropy_c(Pg, Tg, qtg, 0.0, 0.0)
+    # Form a right hand side for integrating the hydrostatic equation to
+    # determine the reference pressure
+    def rhs(p, z):
+        T, q_l = eos_entropy(np.exp(p),  qtg, sg)
+        q_i = 0.0
+        R_m = Rd * (1.0 - qtg + eps_vi * (qtg - q_l - q_i))
+        return -g / (R_m * T)
+
+    # Construct arrays for integration points
+    z_full = [grid.z[k] for k in grid.over_elems_real(Node())]
+    z_half = [grid.z_half[k] for k in grid.over_elems_real(Center())]
+    z = z_full if isinstance(loc, Node) else z_half
+
+    # We are integrating the log pressure so need to take the log of the
+    # surface pressure
+    p_0 = Field.field(grid, loc)
+    α_0 = Field.field(grid, loc)
+    ρ_0 = Field.field(grid, loc)
+    p_0 = Field.field(grid, loc)
+    q_liq = Field.field(grid, loc)
+    q_ice = Field.field(grid, loc)
+    q_vap = Field.field(grid, loc)
+    temperature = Field.field(grid, loc)
+
+    p0 = np.log(Pg)
+    p_0[grid.slice_real(loc)] = odeint(rhs, p0, z, hmax=1.0)[:, 0]
+    p_0.apply_Neumann(grid, 0.0)
+    p_0[:] = np.exp(p_0[:])
+
+    # Compute reference state thermodynamic profiles
+    for k in grid.over_elems_real(loc):
+        temperature[k], q_liq[k] = eos_entropy(p_0[k], qtg, sg)
+        q_vap[k] = qtg - (q_liq[k] + q_ice[k])
+        α_0[k] = alpha_c(p_0[k], temperature[k], qtg, q_vap[k])
+        ρ_0[k] = 1.0/α_0[k]
+
+    # Sanity check: make sure Reference State entropy is uniform
+    for k in grid.over_elems(loc):
+        s = t_to_entropy_c(p_0[k], temperature[k], qtg, q_liq[k], q_ice[k])
+        if np.abs(s - sg)/sg > 0.01:
+            print('Error in reference profiles entropy not constant !')
+            print('Likely error in saturation adjustment')
+
+    α_0.extrap(grid)
+    p_0.extrap(grid)
+    ρ_0.extrap(grid)
+
+    p_0_name = nice_name('p_0')+str(loc.__class__.__name__)
+    ρ_0_name = nice_name('ρ_0')+str(loc.__class__.__name__)
+    α_0_name = nice_name('α_0')+str(loc.__class__.__name__)
+
+    plt.plot(p_0.values, grid.z); plt.savefig(Stats.figpath+p_0_name+'.png'); plt.close()
+    plt.plot(ρ_0.values, grid.z); plt.savefig(Stats.figpath+ρ_0_name+'.png'); plt.close()
+    plt.plot(α_0.values, grid.z); plt.savefig(Stats.figpath+α_0_name+'.png'); plt.close()
+
+    p_0.export_data(grid, Stats.outpath+p_0_name+'.dat')
+    ρ_0.export_data(grid, Stats.outpath+ρ_0_name+'.dat')
+    α_0.export_data(grid, Stats.outpath+α_0_name+'.dat')
+
+    k_1 = grid.boundary(Zmin())
+    k_2 = grid.boundary(Zmax())
+
+    Stats.add_reference_profile(p_0_name)
+    Stats.write_reference_profile(p_0_name, α_0[k_1:k_2])
+    Stats.add_reference_profile(ρ_0_name)
+    Stats.write_reference_profile(ρ_0_name, p_0[k_1:k_2])
+    Stats.add_reference_profile(α_0_name)
+    Stats.write_reference_profile(α_0_name, ρ_0[k_1:k_2])
+
+    return p_0, ρ_0, α_0
+
+
 class ReferenceState:
     def __init__(self, grid):
-        self.p0          = Full(grid)
-        self.p0_half     = Half(grid)
-        self.alpha0      = Full(grid)
-        self.alpha0_half = Half(grid)
-        self.rho0        = Full(grid)
-        self.rho0_half   = Half(grid)
+        self.p_0      = Full(grid)
+        self.α_0      = Full(grid)
+        self.ρ_0      = Full(grid)
+        self.p_0_half = Half(grid)
+        self.α_0_half = Half(grid)
+        self.ρ_0_half = Half(grid)
         return
 
     def initialize(self, grid, Stats, tmp):
         self.sg = t_to_entropy_c(self.Pg, self.Tg, self.qtg, 0.0, 0.0)
-        # Form a right hand side for integrating the hydrostatic equation to
-        # determine the reference pressure
-        def rhs(p, z):
-            T, q_l = eos_entropy(np.exp(p),  self.qtg, self.sg)
-            q_i = 0.0
-            R_m = Rd * (1.0 - self.qtg + eps_vi * (self.qtg - q_l - q_i))
-            return -g / (R_m * T)
-
-        # Construct arrays for integration points
-
-        z = [grid.z[k] for k in grid.over_elems_real(Node())]
-        z_half = [grid.z_half[k] for k in grid.over_elems_real(Center())]
-
-        # We are integrating the log pressure so need to take the log of the
-        # surface pressure
-        p0 = np.log(self.Pg)
-
-        p = Full(grid)
-        p_half = Half(grid)
-
-        # Perform the integration
-        p[grid.slice_real(Node())] = odeint(rhs, p0, z, hmax=1.0)[:, 0]
-        p_half[grid.slice_real(Center())] = odeint(rhs, p0, z_half, hmax=1.0)[:, 0]
-
-        p_half.apply_Neumann(grid, 0.0)
-        p.apply_Neumann(grid, 0.0)
-
-        # Set boundary conditions
-        p[:] = np.exp(p[:])
-        p_half[:] = np.exp(p_half[:])
-
-        p_ = p
-        p_half_ = p_half
-        temperature = Full(grid)
-        temperature_half = Half(grid)
-        alpha = Full(grid)
-        alpha_half = Half(grid)
-
-        ql = Full(grid)
-        qi = Full(grid)
-        qv = Full(grid)
-
-        ql_half = Half(grid)
-        qi_half = Half(grid)
-        qv_half = Half(grid)
-
-        # Compute reference state thermodynamic profiles
-        # for k in grid.over_elems(Node()):
-        for k in grid.over_elems_real(Node()):
-            temperature[k], ql[k] = eos_entropy(p_[k], self.qtg, self.sg)
-            qv[k] = self.qtg - (ql[k] + qi[k])
-            self.alpha0[k] = alpha_c(p_[k], temperature[k], self.qtg, qv[k])
-            self.rho0[k] = 1.0/self.alpha0[k]
-
-        # for k in grid.over_elems(Center()):
-        for k in grid.over_elems_real(Center()):
-            temperature_half[k], ql_half[k] = eos_entropy(p_half_[k], self.qtg, self.sg)
-            qv_half[k] = self.qtg - (ql_half[k] + qi_half[k])
-            self.alpha0_half[k] = alpha_c(p_half_[k], temperature_half[k], self.qtg, qv_half[k])
-            self.rho0_half[k] = 1.0/self.alpha0_half[k]
-
-        # Now do a sanity check to make sure that the Reference State entropy profile is uniform following
-        # saturation adjustment
-        for k in grid.over_elems(Center()):
-            s = t_to_entropy_c(p_half[k],temperature_half[k],self.qtg,ql_half[k],qi_half[k])
-            if np.abs(s - self.sg)/self.sg > 0.01:
-                print('Error in reference profiles entropy not constant !')
-                print('Likely error in saturation adjustment')
-
-        self.p0[:] = p_[:]
-        self.p0_half[:] = p_half[:]
-
-        self.alpha0.extrap(grid)
-        self.alpha0_half.extrap(grid)
-        self.p0.extrap(grid)
-        self.p0_half.extrap(grid)
-        self.rho0.extrap(grid)
-        self.rho0_half.extrap(grid)
+        self.p_0, self.ρ_0, self.α_0 = initialize(grid, Stats, tmp, Node(), self.sg, self.Pg, self.Tg, self.qtg)
+        self.p_0_half, self.ρ_0_half, self.α_0_half = initialize(grid, Stats, tmp, Center(), self.sg, self.Pg, self.Tg, self.qtg)
 
         for k in grid.over_elems(Center()):
-            tmp['α_0_half'][k] = self.alpha0_half[k]
+            tmp['α_0_half'][k] = self.α_0_half[k]
             tmp['ρ_0_half'][k] = 1.0/tmp['α_0_half'][k]
-            tmp['p_0_half'][k] = self.p0_half[k]
+            tmp['p_0_half'][k] = self.p_0_half[k]
         for k in grid.over_elems(Node()):
-            tmp['α_0'][k] = self.alpha0[k]
+            tmp['α_0'][k] = self.α_0[k]
             tmp['ρ_0'][k] = 1.0/tmp['α_0'][k]
-            tmp['p_0'][k] = self.p0[k]
-
-        plt.plot(self.p0.values         , grid.z     ); plt.savefig(Stats.figpath+'p0.png'         ); plt.close()
-        plt.plot(self.p0_half.values    , grid.z_half); plt.savefig(Stats.figpath+'p0_half.png'    ); plt.close()
-        plt.plot(self.rho0.values       , grid.z     ); plt.savefig(Stats.figpath+'rho0.png'       ); plt.close()
-        plt.plot(self.rho0_half.values  , grid.z_half); plt.savefig(Stats.figpath+'rho0_half.png'  ); plt.close()
-        plt.plot(self.alpha0.values     , grid.z     ); plt.savefig(Stats.figpath+'alpha0.png'     ); plt.close()
-        plt.plot(self.alpha0_half.values, grid.z_half); plt.savefig(Stats.figpath+'alpha0_half.png'); plt.close()
-
-        self.p0.export_data(grid         ,Stats.outpath+'p0.dat')
-        self.p0_half.export_data(grid    ,Stats.outpath+'p0_half.dat')
-        self.rho0.export_data(grid       ,Stats.outpath+'rho0.dat')
-        self.rho0_half.export_data(grid  ,Stats.outpath+'rho0_half.dat')
-        self.alpha0.export_data(grid     ,Stats.outpath+'alpha0.dat')
-        self.alpha0_half.export_data(grid,Stats.outpath+'alpha0_half.dat')
-
-        k_1 = grid.boundary(Zmin())
-        k_2 = grid.boundary(Zmax())
-
-        Stats.add_reference_profile('alpha0')
-        Stats.write_reference_profile('alpha0', self.alpha0[k_1:k_2])
-        Stats.add_reference_profile('alpha0_half')
-        Stats.write_reference_profile('alpha0_half', self.alpha0_half[k_1:k_2])
-
-        Stats.add_reference_profile('p0')
-        Stats.write_reference_profile('p0', self.p0[k_1:k_2])
-        Stats.add_reference_profile('p0_half')
-        Stats.write_reference_profile('p0_half', self.p0_half[k_1:k_2])
-
-        Stats.add_reference_profile('rho0')
-        Stats.write_reference_profile('rho0', self.rho0[k_1:k_2])
-        Stats.add_reference_profile('rho0_half')
-        Stats.write_reference_profile('rho0_half', self.rho0_half[k_1:k_2])
+            tmp['p_0'][k] = self.p_0[k]
 
         return
 

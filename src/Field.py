@@ -2,6 +2,11 @@ import os
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 import numpy as np
 
+def nice_name(s):
+    s = s.replace('α', 'alpha')
+    s = s.replace('ρ', 'rho')
+    return s
+
 class Neumann:
     def __init__(self):
         return

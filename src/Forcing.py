@@ -1,7 +1,7 @@
 import numpy as np
 from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Full, Half, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 
 from Variables import GridMeanVariables, VariablePrognostic
