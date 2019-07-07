@@ -60,7 +60,7 @@ class GridMeanVariables:
         self.θ_liq.zero_tendencies(grid)
         return
 
-    def update(self, grid, TS):
+    def update(self, grid, q_tendencies, TS):
         for k in grid.over_elems_real(Center()):
             self.U.values[k]  +=  self.U.tendencies[k] * TS.dt
             self.V.values[k]  +=  self.V.tendencies[k] * TS.dt

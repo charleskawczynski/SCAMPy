@@ -64,7 +64,7 @@ class CasesBase:
         return
     def update_surface(self, grid, GMV, TS, tmp):
         return
-    def update_forcing(self, grid, GMV, TS, tmp):
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
         return
 
 
@@ -141,8 +141,8 @@ class Soares(CasesBase):
     def update_surface(self, grid, GMV, TS, tmp):
         self.Sur.update(grid, GMV, tmp)
         return
-    def update_forcing(self, grid, GMV, TS, tmp):
-        self.Fo.update(grid, GMV, tmp)
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
+        self.Fo.update(grid, q_tendencies, GMV, tmp)
         return
 
 class Bomex(CasesBase):
@@ -254,8 +254,8 @@ class Bomex(CasesBase):
     def update_surface(self, grid, GMV, TS, tmp):
         self.Sur.update(grid, GMV, tmp)
         return
-    def update_forcing(self, grid, GMV, TS, tmp):
-        self.Fo.update(grid, GMV, tmp)
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
+        self.Fo.update(grid, q_tendencies, GMV, tmp)
         return
 
 class life_cycle_Tan2018(CasesBase):
@@ -379,8 +379,8 @@ class life_cycle_Tan2018(CasesBase):
         self.Sur.bflux = (g * ((8.0e-3*weight + (eps_vi-1.0)*(299.1 * 5.2e-5*weight  + 22.45e-3 * 8.0e-3*weight)) /(299.1 * (1.0 + (eps_vi-1) * 22.45e-3))))
         self.Sur.update(grid, GMV, tmp)
         return
-    def update_forcing(self, grid, GMV, TS, tmp):
-        self.Fo.update(grid, GMV, tmp)
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
+        self.Fo.update(grid, q_tendencies, GMV, tmp)
         return
 
 class Rico(CasesBase):
@@ -490,8 +490,8 @@ class Rico(CasesBase):
         self.Sur.update(grid, GMV, tmp)
         return
 
-    def update_forcing(self, grid, GMV, TS, tmp):
-        self.Fo.update(grid, GMV, tmp)
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
+        self.Fo.update(grid, q_tendencies, GMV, tmp)
         return
 
 class TRMM_LBA(CasesBase):
@@ -771,7 +771,7 @@ class TRMM_LBA(CasesBase):
         self.Sur.rho_uflux = 0.0
         self.Sur.rho_vflux = 0.0
         return
-    def update_forcing(self, grid, GMV, TS, tmp):
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
 
         ind2 = int(mt.ceil(TS.t/600.0))
         ind1 = int(mt.trunc(TS.t/600.0))
@@ -795,7 +795,7 @@ class TRMM_LBA(CasesBase):
                                                  *(TS.t/60.0-self.rad_time[ind1])+self.rad[ind1,k]
                     else:
                         self.Fo.dTdt[k] = 0.0
-        self.Fo.update(grid, GMV, tmp)
+        self.Fo.update(grid, q_tendencies, GMV, tmp)
 
         return
 
@@ -897,7 +897,7 @@ class ARM_SGP(CasesBase):
         self.Sur.rho_vflux = 0.0
         return
 
-    def update_forcing(self, grid, GMV, TS, tmp):
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
         t_in = np.array([0.0, 3.0, 6.0, 9.0, 12.0, 14.5]) * 3600.0 #LES time is in sec
         AT_in = np.array([0.0, 0.0, 0.0, -0.08, -0.016, -0.016])/3600.0 # Advective forcing for theta [K/h] converted to [K/sec]
         RT_in = np.array([-0.125, 0.0, 0.0, 0.0, 0.0, -0.1])/3600.0  # Radiative forcing for theta [K/h] converted to [K/sec]
@@ -913,7 +913,7 @@ class ARM_SGP(CasesBase):
                     self.Fo.dTdt[k] = dTdt*(1-(z[k]-1000.0)/1000.0)
                     self.Fo.dqtdt[k]  = dqtdt * exner_c(tmp['p_0_half'][k])\
                                         *(1-(z[k]-1000.0)/1000.0)
-        self.Fo.update(grid, GMV, tmp)
+        self.Fo.update(grid, q_tendencies, GMV, tmp)
 
         return
 
@@ -1034,8 +1034,8 @@ class GATE_III(CasesBase):
         self.Sur.update(grid, GMV, tmp) # here lhf and shf are needed for calcualtion of bflux in surface and thus u_star
         return
 
-    def update_forcing(self, grid, GMV, TS, tmp):
-        self.Fo.update(grid, GMV, tmp)
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
+        self.Fo.update(grid, q_tendencies, GMV, tmp)
         return
 
 
@@ -1226,8 +1226,8 @@ class DYCOMS_RF01(CasesBase):
         self.Sur.update(grid, GMV, tmp)
         return
 
-    def update_forcing(self, grid, GMV, TS, tmp):
-        self.Fo.update(grid, GMV, tmp)
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
+        self.Fo.update(grid, q_tendencies, GMV, tmp)
         return
 
 class GABLS(CasesBase):
@@ -1311,8 +1311,8 @@ class GABLS(CasesBase):
         self.Sur.update(grid, GMV, tmp)
         return
 
-    def update_forcing(self, grid, GMV, TS, tmp):
-        self.Fo.update(grid, GMV, tmp)
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
+        self.Fo.update(grid, q_tendencies, GMV, tmp)
         return
 
 # Not fully implemented yet - Ignacio
@@ -1403,6 +1403,6 @@ class SP(CasesBase):
         self.Sur.update(grid, GMV, tmp)
         return
 
-    def update_forcing(self, grid, GMV, TS, tmp):
-        self.Fo.update(grid, GMV, tmp)
+    def update_forcing(self, grid, q_tendencies, GMV, TS, tmp):
+        self.Fo.update(grid, q_tendencies, GMV, tmp)
         return

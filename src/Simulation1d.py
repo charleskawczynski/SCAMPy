@@ -140,7 +140,7 @@ class Simulation1d:
     def run(self):
         self.GMV.zero_tendencies(self.grid)
         self.Case.update_surface(self.grid, self.GMV, self.TS, self.tmp)
-        self.Case.update_forcing(self.grid, self.GMV, self.TS, self.tmp)
+        self.Case.update_forcing(self.grid, self.q_tendencies, self.GMV, self.TS, self.tmp)
         self.Turb.initialize_covariance(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.Case)
         for k in self.grid.over_elems(Center()):
             self.EnvVar.tke.values[k] = self.GMV.tke.values[k]
@@ -152,13 +152,13 @@ class Simulation1d:
             print('Percent complete: ', self.TS.t/self.TS.t_max*100)
             self.GMV.zero_tendencies(self.grid)
             self.Case.update_surface(self.grid, self.GMV, self.TS, self.tmp)
-            self.Case.update_forcing(self.grid, self.GMV, self.TS, self.tmp)
-            self.Turb.update(self.grid, self.q, self.tmp, self.GMV, self.EnvVar,
+            self.Case.update_forcing(self.grid, self.q_tendencies, self.GMV, self.TS, self.tmp)
+            self.Turb.update(self.grid, self.q, self.q_tendencies, self.tmp, self.GMV, self.EnvVar,
                              self.UpdVar, self.UpdMicro, self.EnvThermo,
                              self.UpdThermo, self.Case, self.TS, self.tri_diag)
 
             self.TS.update()
-            self.GMV.update(self.grid, self.TS)
+            self.GMV.update(self.grid, self.q_tendencies, self.TS)
             self.Turb.update_GMV_diagnostics(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.UpdVar)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
