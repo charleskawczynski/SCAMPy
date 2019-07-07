@@ -50,7 +50,6 @@ class GridMeanVariables:
         self.cv_q_tot       = VariableDiagnostic(grid, Center(), Neumann())
         self.cv_θ_liq       = VariableDiagnostic(grid, Center(), Neumann())
         self.cv_θ_liq_q_tot = VariableDiagnostic(grid, Center(), Neumann())
-
         return
 
     def zero_tendencies(self, grid):

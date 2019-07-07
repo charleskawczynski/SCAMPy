@@ -89,14 +89,12 @@ class Simulation1d:
                      ('rain_src'   , Center(), Neumann(), 1),
                      )
 
-        self.grid = Grid(z_min, z_max, n_elems_real, n_ghost)
-
-        self.q = StateVec(unkowns, self.grid)
-        self.q_new = copy.deepcopy(self.q)
-        self.q_old = copy.deepcopy(self.q)
+        self.grid         = Grid(z_min, z_max, n_elems_real, n_ghost)
+        self.q            = StateVec(unkowns, self.grid)
+        self.q_new        = copy.deepcopy(self.q)
+        self.q_old        = copy.deepcopy(self.q)
         self.q_tendencies = copy.deepcopy(self.q)
-
-        self.tmp = StateVec(temp_vars, self.grid)
+        self.tmp          = StateVec(temp_vars, self.grid)
 
         self.tmp_O2 = {}
         self.tmp_O2['tke']            = StateVec(q_2MO, self.grid)
@@ -107,8 +105,8 @@ class Simulation1d:
 
         self.n_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
 
-        self.Ref = ReferenceState(self.grid)
-        self.Case = CasesFactory(namelist, paramlist)
+        self.Ref       = ReferenceState(self.grid)
+        self.Case      = CasesFactory(namelist, paramlist)
 
         self.GMV       = GridMeanVariables(namelist, self.grid)
         self.UpdVar    = UpdraftVariables(self.n_updrafts, namelist, paramlist, self.grid)
@@ -118,8 +116,8 @@ class Simulation1d:
         self.UpdMicro  = UpdraftMicrophysics(paramlist, self.n_updrafts, self.grid)
         self.EnvThermo = EnvironmentThermodynamics(namelist, paramlist, self.grid, self.EnvVar)
 
-        self.Turb = ParameterizationFactory(namelist, paramlist, self.grid)
-        self.TS = TimeStepping(namelist)
+        self.Turb  = ParameterizationFactory(namelist, paramlist, self.grid)
+        self.TS    = TimeStepping(namelist)
         self.Stats = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
         self.tri_diag = type('', (), {})()
         self.tri_diag.a = Half(self.grid)

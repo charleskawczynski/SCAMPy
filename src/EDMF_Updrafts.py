@@ -179,10 +179,10 @@ class UpdraftMicrophysics:
     def __init__(self, paramlist, n_updrafts, grid):
         self.n_updrafts = n_updrafts
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
-        self.prec_source_h = [Half(grid) for i in range(n_updrafts)]
-        self.prec_source_qt = [Half(grid) for i in range(n_updrafts)]
-        self.prec_src_θ_liq_tot  = Half(grid)
-        self.prec_source_q_tot_tot = Half(grid)
+        self.prec_src_θ_liq = [Half(grid) for i in range(n_updrafts)]
+        self.prec_src_q_tot = [Half(grid) for i in range(n_updrafts)]
+        self.prec_src_θ_liq_tot = Half(grid)
+        self.prec_src_q_tot_tot = Half(grid)
         return
 
     def compute_sources(self, grid, UpdVar, tmp):
@@ -194,33 +194,37 @@ class UpdraftMicrophysics:
                 T = UpdVar.T.values[i][k]
                 p_0 = tmp['p_0_half'][k]
                 tmp_qr = acnv_instant(q_tot, q_tot, self.max_supersaturation, T, p_0)
-                self.prec_source_qt[i][k] = -tmp_qr
-                self.prec_source_h[i][k]  = rain_source_to_thetal(p_0, T, q_tot, q_tot, 0.0, tmp_qr)
+                self.prec_src_q_tot[i][k] = -tmp_qr
+                self.prec_src_θ_liq[i][k] = rain_source_to_thetal(p_0, T, q_tot, q_tot, 0.0, tmp_qr)
         for k in grid.over_elems(Center()):
-            self.prec_src_θ_liq_tot[k]  = np.sum([self.prec_source_h[i][k] * UpdVar.Area.values[i][k] for i in i_uds])
-            self.prec_source_q_tot_tot[k] = np.sum([self.prec_source_qt[i][k]* UpdVar.Area.values[i][k] for i in i_uds])
+            self.prec_src_θ_liq_tot[k] = np.sum([self.prec_src_θ_liq[i][k] * UpdVar.Area.values[i][k] for i in i_uds])
+            self.prec_src_q_tot_tot[k] = np.sum([self.prec_src_q_tot[i][k] * UpdVar.Area.values[i][k] for i in i_uds])
 
         return
 
     def update_updraftvars(self, grid, UpdVar):
         for i in range(self.n_updrafts):
             for k in grid.over_elems(Center()):
-                s = self.prec_source_qt[i][k]
+                s = self.prec_src_q_tot[i][k]
                 UpdVar.q_tot.values[i][k] += s
                 UpdVar.q_liq.values[i][k] += s
                 UpdVar.q_rai.values[i][k] -= s
-                UpdVar.θ_liq.values[i][k] += self.prec_source_h[i][k]
+                UpdVar.θ_liq.values[i][k] += self.prec_src_θ_liq[i][k]
         return
 
     def compute_update_combined_local_thetal(self, p_0, T, q_tot, q_liq, q_rai, θ_liq, i, k):
 
-        tmp_qr = acnv_instant(q_liq[i][k], q_tot[i][k], self.max_supersaturation, T[i][k], p_0[k])
-        self.prec_source_qt[i][k] = -tmp_qr
-        self.prec_source_h[i][k]  = rain_source_to_thetal(p_0[k], T[i][k], q_tot[i][k], q_liq[i][k], 0.0, tmp_qr)
-        s = self.prec_source_qt[i][k]
+        p_0_k = p_0[k]
+        q_tot_k = q_tot[i][k]
+        q_liq_k = q_liq[i][k]
+        T_k = T[i][k]
+        tmp_qr = acnv_instant(q_liq_k, q_tot_k, self.max_supersaturation, T_k, p_0_k)
+        s = -tmp_qr
+        self.prec_src_q_tot[i][k] = s
+        self.prec_src_θ_liq[i][k] = rain_source_to_thetal(p_0_k, T_k, q_tot_k, q_liq_k, 0.0, tmp_qr)
         q_tot[i][k] += s
         q_liq[i][k] += s
         q_rai[i][k] -= s
-        θ_liq[i][k]  += self.prec_source_h[i][k]
+        θ_liq[i][k] += self.prec_src_θ_liq[i][k]
 
         return

@@ -165,43 +165,43 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         Stats.add_profile('eddy_viscosity')
         Stats.add_profile('eddy_diffusivity')
-        Stats.add_profile('entrainment_sc')
-        Stats.add_profile('detrainment_sc')
+        Stats.add_profile('mean_entr_sc')
+        Stats.add_profile('mean_detr_sc')
         Stats.add_profile('massflux_half')
-        Stats.add_profile('massflux_θ_liq')
-        Stats.add_profile('massflux_q_tot')
-        Stats.add_profile('massflux_tendency_θ_liq')
-        Stats.add_profile('massflux_tendency_q_tot')
-        Stats.add_profile('mixing_length')
+        Stats.add_profile('mf_θ_liq_half')
+        Stats.add_profile('mf_q_tot_half')
+        Stats.add_profile('mf_tend_θ_liq')
+        Stats.add_profile('mf_tend_q_tot')
+        Stats.add_profile('l_mix')
         Stats.add_profile('updraft_q_tot_precip')
         Stats.add_profile('updraft_θ_liq_precip')
 
-        Stats.add_profile('tke_buoy')
         Stats.add_profile('tke_dissipation')
         Stats.add_profile('tke_entr_gain')
         Stats.add_profile('tke_detr_loss')
         Stats.add_profile('tke_shear')
-        Stats.add_profile('tke_pressure')
+        Stats.add_profile('tke_buoy')
+        Stats.add_profile('tke_press')
         Stats.add_profile('tke_interdomain')
 
-        Stats.add_profile('Hvar_dissipation')
-        Stats.add_profile('QTvar_dissipation')
-        Stats.add_profile('HQTcov_dissipation')
-        Stats.add_profile('Hvar_entr_gain')
-        Stats.add_profile('QTvar_entr_gain')
-        Stats.add_profile('Hvar_detr_loss')
-        Stats.add_profile('QTvar_detr_loss')
-        Stats.add_profile('HQTcov_detr_loss')
-        Stats.add_profile('HQTcov_entr_gain')
-        Stats.add_profile('Hvar_shear')
-        Stats.add_profile('QTvar_shear')
-        Stats.add_profile('HQTcov_shear')
-        Stats.add_profile('Hvar_rain')
-        Stats.add_profile('QTvar_rain')
-        Stats.add_profile('HQTcov_rain')
-        Stats.add_profile('Hvar_interdomain')
-        Stats.add_profile('QTvar_interdomain')
-        Stats.add_profile('HQTcov_interdomain')
+        Stats.add_profile('cv_θ_liq_dissipation')
+        Stats.add_profile('cv_q_tot_dissipation')
+        Stats.add_profile('cv_θ_liq_q_tot_dissipation')
+        Stats.add_profile('cv_θ_liq_entr_gain')
+        Stats.add_profile('cv_q_tot_entr_gain')
+        Stats.add_profile('cv_θ_liq_q_tot_entr_gain')
+        Stats.add_profile('cv_θ_liq_detr_loss')
+        Stats.add_profile('cv_q_tot_detr_loss')
+        Stats.add_profile('cv_θ_liq_q_tot_detr_loss')
+        Stats.add_profile('cv_θ_liq_shear')
+        Stats.add_profile('cv_q_tot_shear')
+        Stats.add_profile('cv_θ_liq_q_tot_shear')
+        Stats.add_profile('cv_θ_liq_rain_src')
+        Stats.add_profile('cv_q_tot_rain_src')
+        Stats.add_profile('cv_θ_liq_q_tot_rain_src')
+        Stats.add_profile('cv_θ_liq_interdomain')
+        Stats.add_profile('cv_q_tot_interdomain')
+        Stats.add_profile('cv_θ_liq_q_tot_interdomain')
         return
 
     def io(self, grid, q, tmp, Stats, EnvVar, UpdVar, UpdMicro):
@@ -222,51 +222,52 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                     tmp['mean_entr_sc'][k] += q['a', i][k] * tmp['entr_sc', i][k]/a_bulk
                     tmp['mean_detr_sc'][k] += q['a', i][k] * tmp['detr_sc', i][k]/a_bulk
 
-        Stats.write_profile_new('entrainment_sc', grid, tmp['mean_entr_sc'])
-        Stats.write_profile_new('detrainment_sc', grid, tmp['mean_detr_sc'])
-        Stats.write_profile_new('massflux_half'      , grid, tmp['massflux_half'])
-        Stats.write_profile_new('massflux_θ_liq'    , grid, tmp['mf_θ_liq_half'])
-        Stats.write_profile_new('massflux_q_tot'   , grid, tmp['mf_q_tot_half'])
-        Stats.write_profile_new('massflux_tendency_θ_liq'  , grid, tmp['mf_tend_θ_liq'])
-        Stats.write_profile_new('massflux_tendency_q_tot' , grid, tmp['mf_tend_q_tot'])
-        Stats.write_profile_new('mixing_length'        , grid, tmp['l_mix'])
-        Stats.write_profile_new('updraft_q_tot_precip'    , grid, UpdMicro.prec_source_q_tot_tot)
-        Stats.write_profile_new('updraft_θ_liq_precip', grid, UpdMicro.prec_src_θ_liq_tot)
-
         self.compute_covariance_dissipation(grid, q, tmp, EnvVar.tke, EnvVar)
-        Stats.write_profile_new('tke_dissipation', grid, EnvVar.tke.dissipation)
-        Stats.write_profile_new('tke_entr_gain'  , grid, EnvVar.tke.entr_gain)
         self.compute_covariance_detr(grid, q, tmp, EnvVar.tke, UpdVar)
-        Stats.write_profile_new('tke_detr_loss'  , grid, EnvVar.tke.detr_loss)
-        Stats.write_profile_new('tke_shear'      , grid, EnvVar.tke.shear)
-        Stats.write_profile_new('tke_buoy'       , grid, EnvVar.tke.buoy)
-        Stats.write_profile_new('tke_pressure'   , grid, EnvVar.tke.press)
-        Stats.write_profile_new('tke_interdomain', grid, EnvVar.tke.interdomain)
-
         self.compute_covariance_dissipation(grid, q, tmp, EnvVar.cv_θ_liq, EnvVar)
-        Stats.write_profile_new('Hvar_dissipation'  , grid, EnvVar.cv_θ_liq.dissipation)
         self.compute_covariance_dissipation(grid, q, tmp, EnvVar.cv_q_tot, EnvVar)
-        Stats.write_profile_new('QTvar_dissipation' , grid, EnvVar.cv_q_tot.dissipation)
         self.compute_covariance_dissipation(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, EnvVar)
-        Stats.write_profile_new('HQTcov_dissipation', grid, EnvVar.cv_θ_liq_q_tot.dissipation)
-        Stats.write_profile_new('Hvar_entr_gain'    , grid, EnvVar.cv_θ_liq.entr_gain)
-        Stats.write_profile_new('QTvar_entr_gain'   , grid, EnvVar.cv_q_tot.entr_gain)
-        Stats.write_profile_new('HQTcov_entr_gain'  , grid, EnvVar.cv_θ_liq_q_tot.entr_gain)
         self.compute_covariance_detr(grid, q, tmp, EnvVar.cv_θ_liq, UpdVar)
         self.compute_covariance_detr(grid, q, tmp, EnvVar.cv_q_tot, UpdVar)
         self.compute_covariance_detr(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, UpdVar)
-        Stats.write_profile_new('Hvar_detr_loss'    , grid, EnvVar.cv_θ_liq.detr_loss)
-        Stats.write_profile_new('QTvar_detr_loss'   , grid, EnvVar.cv_q_tot.detr_loss)
-        Stats.write_profile_new('HQTcov_detr_loss'  , grid, EnvVar.cv_θ_liq_q_tot.detr_loss)
-        Stats.write_profile_new('Hvar_shear'        , grid, EnvVar.cv_θ_liq.shear)
-        Stats.write_profile_new('QTvar_shear'       , grid, EnvVar.cv_q_tot.shear)
-        Stats.write_profile_new('HQTcov_shear'      , grid, EnvVar.cv_θ_liq_q_tot.shear)
-        Stats.write_profile_new('Hvar_rain'         , grid, EnvVar.cv_θ_liq.rain_src)
-        Stats.write_profile_new('QTvar_rain'        , grid, EnvVar.cv_q_tot.rain_src)
-        Stats.write_profile_new('HQTcov_rain'       , grid, EnvVar.cv_θ_liq_q_tot.rain_src)
-        Stats.write_profile_new('Hvar_interdomain'  , grid, EnvVar.cv_θ_liq.interdomain)
-        Stats.write_profile_new('QTvar_interdomain' , grid, EnvVar.cv_q_tot.interdomain)
-        Stats.write_profile_new('HQTcov_interdomain', grid, EnvVar.cv_θ_liq_q_tot.interdomain)
+
+        Stats.write_profile_new('mean_entr_sc'  , grid, tmp['mean_entr_sc'])
+        Stats.write_profile_new('mean_detr_sc'  , grid, tmp['mean_detr_sc'])
+        Stats.write_profile_new('massflux_half' , grid, tmp['massflux_half'])
+        Stats.write_profile_new('mf_θ_liq_half' , grid, tmp['mf_θ_liq_half'])
+        Stats.write_profile_new('mf_q_tot_half' , grid, tmp['mf_q_tot_half'])
+        Stats.write_profile_new('mf_tend_θ_liq' , grid, tmp['mf_tend_θ_liq'])
+        Stats.write_profile_new('mf_tend_q_tot' , grid, tmp['mf_tend_q_tot'])
+        Stats.write_profile_new('l_mix'         , grid, tmp['l_mix'])
+        Stats.write_profile_new('updraft_q_tot_precip' , grid, UpdMicro.prec_src_q_tot_tot)
+        Stats.write_profile_new('updraft_θ_liq_precip' , grid, UpdMicro.prec_src_θ_liq_tot)
+
+        Stats.write_profile_new('tke_dissipation' , grid, EnvVar.tke.dissipation)
+        Stats.write_profile_new('tke_entr_gain'   , grid, EnvVar.tke.entr_gain)
+        Stats.write_profile_new('tke_detr_loss'   , grid, EnvVar.tke.detr_loss)
+        Stats.write_profile_new('tke_shear'       , grid, EnvVar.tke.shear)
+        Stats.write_profile_new('tke_buoy'        , grid, EnvVar.tke.buoy)
+        Stats.write_profile_new('tke_press'       , grid, EnvVar.tke.press)
+        Stats.write_profile_new('tke_interdomain' , grid, EnvVar.tke.interdomain)
+
+        Stats.write_profile_new('cv_θ_liq_dissipation'       , grid, EnvVar.cv_θ_liq.dissipation)
+        Stats.write_profile_new('cv_q_tot_dissipation'       , grid, EnvVar.cv_q_tot.dissipation)
+        Stats.write_profile_new('cv_θ_liq_q_tot_dissipation' , grid, EnvVar.cv_θ_liq_q_tot.dissipation)
+        Stats.write_profile_new('cv_θ_liq_entr_gain'         , grid, EnvVar.cv_θ_liq.entr_gain)
+        Stats.write_profile_new('cv_q_tot_entr_gain'         , grid, EnvVar.cv_q_tot.entr_gain)
+        Stats.write_profile_new('cv_θ_liq_q_tot_entr_gain'   , grid, EnvVar.cv_θ_liq_q_tot.entr_gain)
+        Stats.write_profile_new('cv_θ_liq_detr_loss'         , grid, EnvVar.cv_θ_liq.detr_loss)
+        Stats.write_profile_new('cv_q_tot_detr_loss'         , grid, EnvVar.cv_q_tot.detr_loss)
+        Stats.write_profile_new('cv_θ_liq_q_tot_detr_loss'   , grid, EnvVar.cv_θ_liq_q_tot.detr_loss)
+        Stats.write_profile_new('cv_θ_liq_shear'             , grid, EnvVar.cv_θ_liq.shear)
+        Stats.write_profile_new('cv_q_tot_shear'             , grid, EnvVar.cv_q_tot.shear)
+        Stats.write_profile_new('cv_θ_liq_q_tot_shear'       , grid, EnvVar.cv_θ_liq_q_tot.shear)
+        Stats.write_profile_new('cv_θ_liq_rain_src'          , grid, EnvVar.cv_θ_liq.rain_src)
+        Stats.write_profile_new('cv_q_tot_rain_src'          , grid, EnvVar.cv_q_tot.rain_src)
+        Stats.write_profile_new('cv_θ_liq_q_tot_rain_src'    , grid, EnvVar.cv_θ_liq_q_tot.rain_src)
+        Stats.write_profile_new('cv_θ_liq_interdomain'       , grid, EnvVar.cv_θ_liq.interdomain)
+        Stats.write_profile_new('cv_q_tot_interdomain'       , grid, EnvVar.cv_q_tot.interdomain)
+        Stats.write_profile_new('cv_θ_liq_q_tot_interdomain' , grid, EnvVar.cv_θ_liq_q_tot.interdomain)
         return
 
     def update(self, grid, q, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
@@ -351,8 +352,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.compute_mixing_length(grid, tmp, Case.Sur.obukhov_length, EnvVar)
             for k in grid.over_elems_real(Center()):
                 lm = tmp['l_mix'][k]
-                tmp['K_m'][k] = self.tke_ed_coeff * lm * np.sqrt(np.fmax(EnvVar.tke.values[k],0.0) )
-                tmp['K_h'][k] = tmp['K_m'][k] / self.prandtl_number
+                K_m_k = self.tke_ed_coeff * lm * np.sqrt(np.fmax(EnvVar.tke.values[k],0.0) )
+                tmp['K_m'][k] = K_m_k
+                tmp['K_h'][k] = K_m_k / self.prandtl_number
         return
 
     def set_updraft_surface_bc(self, grid, GMV, Case, tmp):
@@ -709,8 +711,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 tmp['mf_q_tot'][k] += tmp['mf_tmp', i][k] * (UpdVar.q_tot.values[i].Mid(k) - EnvVar.q_tot.values.Mid(k))
 
         for k in grid.over_elems_real(Center()):
-            tmp['mf_tend_θ_liq'][k] = -tmp['α_0_half'][k]*grad(tmp['mf_θ_liq'].Dual(k), grid)
-            tmp['mf_tend_q_tot'][k] = -tmp['α_0_half'][k]*grad(tmp['mf_q_tot'].Dual(k), grid)
+            α_0_k = tmp['α_0_half'][k]
+            tmp['mf_tend_θ_liq'][k] = -α_0_k*grad(tmp['mf_θ_liq'].Dual(k), grid)
+            tmp['mf_tend_q_tot'][k] = -α_0_k*grad(tmp['mf_q_tot'].Dual(k), grid)
         return
 
     def update_GMV_ED(self, grid, q, GMV, UpdMicro, Case, TS, tmp, tri_diag):
@@ -731,7 +734,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         # Solve q_tot
         for k in grid.over_elems(Center()):
-            tri_diag.f[k] = GMV.q_tot.values[k] + TS.dt * tmp['mf_tend_q_tot'][k] + UpdMicro.prec_source_q_tot_tot[k]
+            tri_diag.f[k] = GMV.q_tot.values[k] + TS.dt * tmp['mf_tend_q_tot'][k] + UpdMicro.prec_src_q_tot_tot[k]
         tri_diag.f[k_1] = tri_diag.f[k_1] + TS.dt * Case.Sur.rho_qtflux * dzi * α_1/ae_1
 
         tridiag_solve_wrapper_new(grid, GMV.q_tot.new, tri_diag)
@@ -802,8 +805,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             d_alpha_θ_liq_total = (CF_env * d_alpha_θ_liq_cloudy + (1.0-CF_env) * d_alpha_θ_liq_dry)
             d_alpha_qt_total     = (CF_env * d_alpha_qt_cloudy     + (1.0-CF_env) * d_alpha_qt_dry)
 
-            term_1 = - tmp['K_h'][k] * grad_θ_liq * d_alpha_θ_liq_total
-            term_2 = - tmp['K_h'][k] * grad_q_tot * d_alpha_qt_total
+            K_h_k = tmp['K_h'][k]
+            term_1 = - K_h_k * grad_θ_liq * d_alpha_θ_liq_total
+            term_2 = - K_h_k * grad_q_tot * d_alpha_qt_total
 
             # TODO - check
             EnvVar.tke.buoy[k] = g / tmp['α_0_half'][k] * ae[k] * tmp['ρ_0_half'][k] * (term_1 + term_2)
@@ -817,8 +821,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 wu_half = UpdVar.W.values[i].Mid(k)
                 we_half = q['w', i_env].Mid(k)
                 a_i = UpdVar.Area.values[i][k]
-                press_buoy= (-1.0 * tmp['ρ_0_half'][k] * a_i * UpdVar.B.values[i][k] * self.pressure_buoy_coeff)
-                press_drag = (-1.0 * tmp['ρ_0_half'][k] * np.sqrt(a_i) * (self.pressure_drag_coeff/self.pressure_plume_spacing* (wu_half - we_half)*np.fabs(wu_half - we_half)))
+                ρ_0_k = tmp['ρ_0_half'][k]
+                press_buoy = (-1.0 * ρ_0_k * a_i * UpdVar.B.values[i][k] * self.pressure_buoy_coeff)
+                press_drag_coeff = -1.0 * ρ_0_k * np.sqrt(a_i) * self.pressure_drag_coeff/self.pressure_plume_spacing
+                press_drag = press_drag_coeff * (wu_half - we_half)*np.fabs(wu_half - we_half)
                 EnvVar.tke.press[k] += (we_half - wu_half) * (press_buoy + press_drag)
         return
 
