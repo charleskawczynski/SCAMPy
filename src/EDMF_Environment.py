@@ -83,9 +83,9 @@ class EnvironmentThermodynamics:
         self.qv_cloudy      = Half(grid)
         self.qt_cloudy      = Half(grid)
         self.th_cloudy      = Half(grid)
-        self.Hvar_rain_dt   = Half(grid)
-        self.QTvar_rain_dt  = Half(grid)
-        self.HQTcov_rain_dt = Half(grid)
+        self.cv_θ_liq_rain_dt   = Half(grid)
+        self.cv_q_tot_rain_dt  = Half(grid)
+        self.cv_θ_liq_q_tot_rain_dt = Half(grid)
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
         return
 

@@ -31,7 +31,7 @@ def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit, temp_C):
                 break
     elif option == 'thetal_maxgrad':
         for k in grid.over_elems_real(Center()):
-            grad_TH = grad(GMV.θ_liq.values.Dual(k), grid)
+            grad_TH = grad(GMV.H.values.Dual(k), grid)
             if grad_TH > maxgrad:
                 maxgrad = grad_TH
                 zi = grid.z[k]
@@ -782,7 +782,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
             lh = latent_heat(t_cloudy)
             cpm = cpm_c(qt_cloudy)
-            grad_θ_liq = grad_neg(EnvVar.θ_liq.values.Cut(k), grid)
+            grad_θ_liq = grad_neg(EnvVar.H.values.Cut(k), grid)
             grad_q_tot = grad_neg(EnvVar.q_tot.values.Cut(k), grid)
 
             prefactor = Rd * exner_c(p_0)/p_0
@@ -978,9 +978,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for k in grid.over_elems_real(Center()):
             ρa_0 = tmp['ρ_0_half'][k]*ae[k]
             EnvVar.tke.rain_src[k] = 0.0
-            EnvVar.cv_θ_liq.rain_src[k]       = ρa_0 * 2. * EnvThermo.Hvar_rain_dt[k]   * TS.dti
-            EnvVar.cv_q_tot.rain_src[k]       = ρa_0 * 2. * EnvThermo.QTvar_rain_dt[k]  * TS.dti
-            EnvVar.cv_θ_liq_q_tot.rain_src[k] = ρa_0 *      EnvThermo.HQTcov_rain_dt[k] * TS.dti
+            EnvVar.cv_θ_liq.rain_src[k]       = ρa_0 * 2. * EnvThermo.cv_θ_liq_rain_dt[k]       * TS.dti
+            EnvVar.cv_q_tot.rain_src[k]       = ρa_0 * 2. * EnvThermo.cv_q_tot_rain_dt[k]       * TS.dti
+            EnvVar.cv_θ_liq_q_tot.rain_src[k] = ρa_0 *      EnvThermo.cv_θ_liq_q_tot_rain_dt[k] * TS.dti
         return
 
 
