@@ -478,13 +478,13 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 input_st.af = UpdVar.Area.values[i][k]
                 input_st.tke = EnvVar.tke.values[k]
                 input_st.qt_env = EnvVar.q_tot.values[k]
-                input_st.ql_env = EnvVar.q_liq.values[k]
+                input_st.q_liq_env = EnvVar.q_liq.values[k]
                 input_st.θ_liq_env = EnvVar.θ_liq.values[k]
                 input_st.b_env = EnvVar.B.values[k]
                 input_st.w_env = q['w', i_env].values[k]
                 input_st.θ_liq_up = UpdVar.θ_liq.values[i][k]
                 input_st.qt_up = UpdVar.q_tot.values[i][k]
-                input_st.ql_up = UpdVar.q_liq.values[i][k]
+                input_st.q_liq_up = UpdVar.q_liq.values[i][k]
                 input_st.env_Hvar = EnvVar.cv_θ_liq.values[k]
                 input_st.env_QTvar = EnvVar.cv_q_tot.values[k]
                 input_st.env_HQTcov = EnvVar.cv_θ_liq_q_tot.values[k]
@@ -772,12 +772,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         # Note that source terms at the first interior point are not really used because that is where tke boundary condition is
         # enforced (according to MO similarity). Thus here I am being sloppy about lowest grid point
         for k in grid.over_elems_real(Center()):
-            qt_dry = EnvThermo.qt_dry[k]
-            th_dry = EnvThermo.th_dry[k]
+            qt_dry = EnvThermo.q_tot_dry[k]
+            th_dry = EnvThermo.θ_dry[k]
             t_cloudy = EnvThermo.t_cloudy[k]
-            qv_cloudy = EnvThermo.qv_cloudy[k]
-            qt_cloudy = EnvThermo.qt_cloudy[k]
-            th_cloudy = EnvThermo.th_cloudy[k]
+            qv_cloudy = EnvThermo.q_vap_cloudy[k]
+            qt_cloudy = EnvThermo.q_tot_cloudy[k]
+            th_cloudy = EnvThermo.θ_cloudy[k]
             p_0 = tmp['p_0_half'][k]
 
             lh = latent_heat(t_cloudy)
