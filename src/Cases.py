@@ -85,8 +85,8 @@ class Soares(CasesBase):
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
         theta = Half(grid)
-        ql = 0.0
-        qi = 0.0
+        q_liq = 0.0
+        q_ice = 0.0
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
@@ -163,8 +163,8 @@ class Bomex(CasesBase):
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
         thetal = Half(grid)
-        ql=0.0
-        qi =0.0 # IC of Bomex is cloud-free
+        q_liq = 0.0
+        q_ice = 0.0 # IC of Bomex is cloud-free
         z = grid.z_half
 
         for k in grid.over_elems_real(Center()):
@@ -178,7 +178,7 @@ class Bomex(CasesBase):
             if z[k] > 2000.0:
                 thetal[k] = 308.2 + (z[k] - 2000.0) * (311.85 - 308.2)/(3000.0 - 2000.0)
 
-            #Set qt profile
+            #Set q_tot profile
             if z[k] <= 520:
                 GMV.q_tot.values[k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
             if z[k] > 520.0 and z[k] <= 1480.0:
@@ -280,8 +280,8 @@ class life_cycle_Tan2018(CasesBase):
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
         thetal = Half(grid)
-        ql=0.0
-        qi =0.0 # IC of Bomex is cloud-free
+        q_liq = 0.0
+        q_ice = 0.0 # IC of Bomex is cloud-free
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
             #Set Thetal profile
@@ -294,7 +294,7 @@ class life_cycle_Tan2018(CasesBase):
             if z[k] > 2000.0:
                 thetal[k] = 308.2 + (z[k] - 2000.0) * (311.85 - 308.2)/(3000.0 - 2000.0)
 
-            #Set qt profile
+            #Set q_tot profile
             if z[k] <= 520:
                 GMV.q_tot.values[k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
             if z[k] > 520.0 and z[k] <= 1480.0:
@@ -372,9 +372,8 @@ class life_cycle_Tan2018(CasesBase):
         CasesBase.io(self,Stats)
         return
     def update_surface(self, grid, GMV, TS, tmp):
-        weight = 1.0
         weight_factor = 0.01 + 0.99 *(np.cos(2.0*pi * TS.t /3600.0) + 1.0)/2.0
-        weight = weight * weight_factor
+        weight = weight_factor
         self.Sur.lhf = self.lhf0*weight
         self.Sur.shf = self.shf0*weight
         self.Sur.bflux = (g * ((8.0e-3*weight + (eps_vi-1.0)*(299.1 * 5.2e-5*weight  + 22.45e-3 * 8.0e-3*weight)) /(299.1 * (1.0 + (eps_vi-1) * 22.45e-3))))
@@ -405,8 +404,8 @@ class Rico(CasesBase):
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
         thetal = Half(grid)
-        ql=0.0
-        qi =0.0 # IC of Rico is cloud-free
+        q_liq = 0.0
+        q_ice = 0.0 # IC of Rico is cloud-free
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
@@ -418,7 +417,7 @@ class Rico(CasesBase):
             else:
                 thetal[k] = 297.9 + (317.0-297.9)/(4000.0-740.0)*(z[k] - 740.0)
 
-            #Set qt profile
+            #Set q_tot profile
             if z[k] <= 740.0:
                 GMV.q_tot.values[k] =  (16.0 + (13.8 - 16.0)/740.0 * z[k])/1000.0
             elif z[k] > 740.0 and z[k] <= 3260.0:
@@ -514,7 +513,7 @@ class TRMM_LBA(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        p1 = Half(grid)
+        p_1 = Half(grid)
 
         # TRMM_LBA inputs from Grabowski et al. 2006
         z_in = np.array([0.130,  0.464,  0.573,  1.100,  1.653,  2.216,  2.760,
@@ -566,7 +565,7 @@ class TRMM_LBA(CasesBase):
                           5.32,   1.14,  -0.65,   5.27,   5.27])
         # interpolate to the model grid-points
 
-        p1 = np.interp(grid.z_half,z_in,p_in)
+        p_1 = np.interp(grid.z_half,z_in,p_in)
         GMV.U.values[:] = np.interp(grid.z_half,z_in,u_in)
         GMV.V.values[:] = np.interp(grid.z_half,z_in,v_in)
 
@@ -588,13 +587,19 @@ class TRMM_LBA(CasesBase):
 
 
         for k in grid.over_elems_real(Center()):
-            PV_star = pv_star(GMV.T.values[k])
-            qv_star = PV_star*epsi/(p1[k]- PV_star + epsi*PV_star*RH[k]/100.0) # eq. 37 in pressel et al and the def of RH
-            qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
-            GMV.q_tot.values[k] = qv_star*RH[k]/100.0
-            GMV.θ_liq.values[k] = thetali_c(tmp['p_0_half'][k],GMV.T.values[k], GMV.q_tot.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
+            p_vap_star = pv_star(GMV.T.values[k])
+            # eq. 37 in pressel et al and the def of RH
+            q_vap_star = p_vap_star*epsi/(p_1[k]- p_vap_star + epsi*p_vap_star*RH[k]/100.0)
+            q_vap = GMV.q_tot.values[k] - GMV.q_liq.values[k]
+            GMV.q_tot.values[k] = q_vap_star*RH[k]/100.0
+            GMV.θ_liq.values[k] = thetali_c(tmp['p_0_half'][k],
+                                            GMV.T.values[k],
+                                            GMV.q_tot.values[k],
+                                            0.0,
+                                            0.0,
+                                            latent_heat(GMV.T.values[k]))
 
-            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], qv)
+            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], q_vap)
 
         GMV.q_tot.set_bcs(grid)
         GMV.θ_liq.set_bcs(grid)
@@ -814,23 +819,23 @@ class ARM_SGP(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        p1 = Half(grid)
+        p_1 = Half(grid)
 
         # ARM_SGP inputs
         z_in = np.array([0.0, 50.0, 350.0, 650.0, 700.0, 1300.0, 2500.0, 5500.0 ]) #LES z is in meters
         Theta_in = np.array([299.0, 301.5, 302.5, 303.53, 303.7, 307.13, 314.0, 343.2]) # K
-        r_in = np.array([15.2,15.17,14.98,14.8,14.7,13.5,3.0,3.0])/1000 # qt should be in kg/kg
+        r_in = np.array([15.2,15.17,14.98,14.8,14.7,13.5,3.0,3.0])/1000 # q_tot should be in kg/kg
         qt_in = np.divide(r_in,(1+r_in))
         print(qt_in)
 
         # interpolate to the model grid-points
         Theta = np.interp(grid.z_half,z_in,Theta_in)
-        qt = np.interp(grid.z_half,z_in,qt_in)
+        q_tot = np.interp(grid.z_half,z_in,qt_in)
 
 
         for k in grid.over_elems_real(Center()):
             GMV.U.values[k] = 10.0
-            GMV.q_tot.values[k] = qt[k]
+            GMV.q_tot.values[k] = q_tot[k]
             GMV.T.values[k] = Theta[k]*exner_c(tmp['p_0_half'][k])
             GMV.θ_liq.values[k] = thetali_c(tmp['p_0_half'][k],GMV.T.values[k],
                                             GMV.q_tot.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
@@ -896,7 +901,7 @@ class ARM_SGP(CasesBase):
         t_in = np.array([0.0, 3.0, 6.0, 9.0, 12.0, 14.5]) * 3600.0 #LES time is in sec
         AT_in = np.array([0.0, 0.0, 0.0, -0.08, -0.016, -0.016])/3600.0 # Advective forcing for theta [K/h] converted to [K/sec]
         RT_in = np.array([-0.125, 0.0, 0.0, 0.0, 0.0, -0.1])/3600.0  # Radiative forcing for theta [K/h] converted to [K/sec]
-        Rqt_in = np.array([0.08, 0.02, 0.04, -0.1, -0.16, -0.3])/1000.0/3600.0 # Radiative forcing for qt converted to [kg/kg/sec]
+        Rqt_in = np.array([0.08, 0.02, 0.04, -0.1, -0.16, -0.3])/1000.0/3600.0 # Radiative forcing for q_tot converted to [kg/kg/sec]
         dTdt = np.interp(TS.t,t_in,AT_in) + np.interp(TS.t,t_in,RT_in)
         dqtdt =  np.interp(TS.t,t_in,Rqt_in)
         z = self.Fo.grid.z_half
@@ -932,7 +937,7 @@ class GATE_III(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
-        qt = Half(grid)
+        q_tot = Half(grid)
         T = Half(grid)
         U = Half(grid)
         theta_rho = Half(grid)
@@ -955,12 +960,12 @@ class GATE_III(CasesBase):
 
         # interpolate to the model grid-points
         T = np.interp(grid.z_half,z_T_in,T_in) # interpolate to ref pressure level
-        qt = np.interp(grid.z_half,z_in,qt_in)
+        q_tot = np.interp(grid.z_half,z_in,qt_in)
         U = np.interp(grid.z_half,z_in,U_in)
 
 
         for k in grid.over_elems_real(Center()):
-            GMV.q_tot.values[k] = qt[k]
+            GMV.q_tot.values[k] = q_tot[k]
             GMV.T.values[k] = T[k]
             GMV.U.values[k] = U[k]
 
@@ -1002,7 +1007,7 @@ class GATE_III(CasesBase):
         RAD_in   = np.array([-2.9,  -1.1, -0.8, -1.1, -1.25, -1.35,   -1.4,  -1.4, -1.44, -1.52,  -1.6, -1.54, -1.49,
                              -1.43, -1.36, -1.3, -1.25, -1.2, -1.15, -1.1, -1.05,  -1.0,  -0.95,   -0.9,  -0.85, -0.8,
                              -0.75, -0.7, -0.6, -0.3,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0])/(24.0*3600.0)
-        # Advective qt forcing  for theta [g/kg/d] converted to [kg/kg/sec]
+        # Advective q_tot forcing  for theta [g/kg/d] converted to [kg/kg/sec]
         r_tend_in = np.array([ 0.0,   1.2,  2.0,  2.3,   2.2,   2.1,    1.9,   1.7,   1.5,  1.35,  1.22,  1.08,  0.95,
                                0.82,  0.7,  0.6,   0.5,  0.4,   0.3,  0.2,   0.1,  0.05, 0.0025, 0.0012, 0.0006,  0.0,
                                0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0])/(24.0*3600.0)/1000.0
@@ -1063,7 +1068,7 @@ class DYCOMS_RF01(CasesBase):
         Compute thetal using constants from Stevens et al 2005 DYCOMS case.
         :param p: pressure [Pa]
         :param T: temperature [K]
-        :param ql: liquid water specific humidity
+        :param q_liq: liquid water specific humidity
         :return: theta l
         """
         theta_ = T_ / exner_c(p_, kappa = dycoms_Rd / dycoms_cp)
@@ -1072,12 +1077,12 @@ class DYCOMS_RF01(CasesBase):
     # helper function
     def dycoms_sat_adjst(self, p_, thetal_, qt_):
         '''
-        Use saturation adjustment scheme to compute temperature and ql given thetal and qt.
+        Use saturation adjustment scheme to compute temperature and q_liq given thetal and q_tot.
         We can't use the default scampy function because of different values of cp, Rd and L
         :param p: pressure [Pa]
         :param thetal: liquid water potential temperature  [K]
-        :param qt:  total water specific humidity
-        :return: T, ql
+        :param q_tot:  total water specific humidity
+        :return: T, q_liq
         '''
         #Compute temperature
         t_1 = thetal_ * exner_c(p_, kappa = dycoms_Rd / dycoms_cp)
@@ -1087,7 +1092,7 @@ class DYCOMS_RF01(CasesBase):
         qs_1 = qv_star_c(p_, qt_, pv_star_1)
 
         if qt_ <= qs_1:
-            #If not saturated return temperature and ql = 0.0
+            #If not saturated return temperature and q_liq = 0.0
             return t_1, 0.0
         else:
             ql_1 = qt_ - qs_1
@@ -1111,8 +1116,8 @@ class DYCOMS_RF01(CasesBase):
 
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
         thetal = Half(grid)
-        ql     = Half(grid)
-        qi     = 0.0                                             # no ice
+        q_liq     = Half(grid)
+        q_ice     = 0.0                                             # no ice
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
@@ -1122,25 +1127,25 @@ class DYCOMS_RF01(CasesBase):
             if z[k] > 840.0:
                thetal[k] = (297.5 + (z[k] - 840.0)**(1.0/3.0))
 
-            # qt profile as defined in DYCOMS
+            # q_tot profile as defined in DYCOMS
             if z[k] <= 840.0:
                GMV.q_tot.values[k] = 9. / 1000.0
             if z[k] > 840.0:
                GMV.q_tot.values[k] = 1.5 / 1000.0
 
-            # ql and T profile
-            # (calculated by saturation adjustment using thetal and qt values provided in DYCOMS
+            # q_liq and T profile
+            # (calculated by saturation adjustment using thetal and q_tot values provided in DYCOMS
             # and using Rd, cp and L constants as defined in DYCOMS)
             GMV.T.values[k], GMV.q_liq.values[k] = self.dycoms_sat_adjst(tmp['p_0_half'][k], thetal[k], GMV.q_tot.values[k])
 
             # thermodynamic variable profile (either entropy or thetal)
-            # (calculated based on T and ql profiles.
+            # (calculated based on T and q_liq profiles.
             # Here we use Rd, cp and L constants as defined in scampy)
-            GMV.θ_liq.values[k] = t_to_thetali_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], GMV.q_liq.values[k], qi)
+            GMV.θ_liq.values[k] = t_to_thetali_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], GMV.q_liq.values[k], q_ice)
 
             # buoyancy profile
-            qv = GMV.q_tot.values[k] - qi - GMV.q_liq.values[k]
-            alpha = alpha_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], qv)
+            q_vap = GMV.q_tot.values[k] - q_ice - GMV.q_liq.values[k]
+            alpha = alpha_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], q_vap)
             GMV.B.values[k] = buoyancy_c(tmp['α_0_half'][k], alpha)
 
             # velocity profile (geostrophic)
@@ -1246,8 +1251,8 @@ class GABLS(CasesBase):
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
         thetal = Half(grid)
-        ql=0.0
-        qi =0.0 # IC of GABLS cloud-free
+        q_liq = 0.0
+        q_ice = 0.0 # IC of GABLS cloud-free
 
         for k in grid.over_elems_real(Center()):
             #Set wind velocity profile
@@ -1260,7 +1265,7 @@ class GABLS(CasesBase):
             else:
                 thetal[k] = 265.0 + (grid.z_half[k] - 100.0) * 0.01
 
-            #Set qt profile
+            #Set q_tot profile
             GMV.q_tot.values[k] = 0.0
 
         for k in grid.over_elems_real(Center()):
@@ -1332,8 +1337,8 @@ class SP(CasesBase):
 
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
         thetal = Half(grid)
-        ql=0.0
-        qi =0.0 # IC of SP cloud-free
+        q_liq = 0.0
+        q_ice = 0.0 # IC of SP cloud-free
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
@@ -1347,7 +1352,7 @@ class SP(CasesBase):
             else:
                 thetal[k] = 308.0 + (z[k] - 1074.0) * 0.003
 
-            #Set qt profile
+            #Set q_tot profile
             GMV.q_tot.values[k] = 0.0
 
         for k in grid.over_elems_real(Center()):

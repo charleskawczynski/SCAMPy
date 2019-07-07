@@ -515,7 +515,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def compute_zbl_qt_grad(self, grid, GMV):
-        # computes inversion height as z with max gradient of qt
+        # computes inversion height as z with max gradient of q_tot
         zbl_qt = 0.0
         qt_grad = 0.0
         for k in grid.over_elems_real(Center()):

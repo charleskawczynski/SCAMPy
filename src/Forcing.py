@@ -58,9 +58,9 @@ class ForcingStandard(ForcingBase):
 
         for k in grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
-            qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
+            q_vap = GMV.q_tot.values[k] - GMV.q_liq.values[k]
             GMV.θ_liq.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k], GMV.q_tot.values[k],
-                                                                qv, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
+                                                                q_vap, GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
             GMV.q_tot.tendencies[k] += self.dqtdt[k]
         if self.apply_subsidence:
             for k in grid.over_elems_real(Center()):
@@ -88,8 +88,8 @@ class ForcingStandard(ForcingBase):
 #
 #         for k in grid.over_elems_real(Center()):
 #             # Apply large-scale horizontal advection tendencies
-#             qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
-#             GMV.θ_liq.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.q_tot.values[k], qv,
+#             q_vap = GMV.q_tot.values[k] - GMV.q_liq.values[k]
+#             GMV.θ_liq.tendencies[k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.q_tot.values[k], q_vap,
 #                                                                 GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
 #             GMV.q_tot.tendencies[k] += self.dqtdt[k]
 #
@@ -129,15 +129,15 @@ class ForcingDYCOMS_RF01(ForcingBase):
         see eq. 3 in Stevens et. al. 2005 DYCOMS paper
         """
 
-        # find zi (level of 8.0 g/kg isoline of qt)
+        # find z_i (level of 8.0 g/kg isoline of q_tot)
         k_1 = grid.first_interior(Zmin())
-        zi     = grid.z[k_1]
+        z_i = grid.z[k_1]
         for k in grid.over_elems_real(Center()):
             if (GMV.q_tot.values[k] < 8.0 / 1000):
                 idx_zi = k
                 # will be used at cell edges
-                zi     = grid.z[idx_zi]
-                rhoi   = tmp['ρ_0_half'][idx_zi]
+                z_i  = grid.z[idx_zi]
+                rhoi = tmp['ρ_0_half'][idx_zi]
                 break
 
         self.f_rad = Full(grid)
@@ -162,12 +162,12 @@ class ForcingDYCOMS_RF01(ForcingBase):
 
         # cooling in free troposphere
         for k in range(k_1, k_2):
-            if grid.z[k] > zi:
-                cbrt_z         = np.cbrt(grid.z[k] - zi)
-                self.f_rad[k] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + zi * cbrt_z)
+            if grid.z[k] > z_i:
+                cbrt_z         = np.cbrt(grid.z[k] - z_i)
+                self.f_rad[k] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + z_i * cbrt_z)
         # condition at the top
-        cbrt_z                   = np.cbrt(grid.z[k] + grid.dz - zi)
-        self.f_rad[k_2] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + zi * cbrt_z)
+        cbrt_z                   = np.cbrt(grid.z[k] + grid.dz - z_i)
+        self.f_rad[k_2] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + z_i * cbrt_z)
 
         for k in grid.over_elems_real(Center()):
             self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / grid.dz / tmp['ρ_0_half'][k] / dycoms_cp
@@ -184,10 +184,10 @@ class ForcingDYCOMS_RF01(ForcingBase):
         for k in grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
             q_tot = GMV.q_tot.values[k]
-            qv = q_tot - GMV.q_liq.values[k]
+            q_vap = q_tot - GMV.q_liq.values[k]
             GMV.θ_liq.tendencies[k]  += self.convert_forcing_prog_fp(tmp['p_0_half'][k],
                                                                  q_tot,
-                                                                 qv,
+                                                                 q_vap,
                                                                  GMV.T.values[k],
                                                                  self.dqtdt[k],
                                                                  self.dTdt[k])

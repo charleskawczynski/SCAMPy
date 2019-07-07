@@ -22,8 +22,8 @@ class SurfaceBase:
     def free_convection_windspeed(self, grid, GMV, tmp):
         theta_rho = Half(grid)
         for k in grid.over_elems(Center()):
-            qv = GMV.q_tot.values[k] - GMV.q_liq.values[k]
-            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], qv)
+            q_vap = GMV.q_tot.values[k] - GMV.q_liq.values[k]
+            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], q_vap)
         zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, grid, self.Ri_bulk_crit)
         wstar = get_wstar(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )

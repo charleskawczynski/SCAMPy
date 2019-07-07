@@ -70,10 +70,10 @@ class UpdraftVariables:
     def initialize_io(self, Stats):
         Stats.add_profile('updraft_area')
         Stats.add_profile('updraft_w')
-        Stats.add_profile('updraft_qt')
+        Stats.add_profile('updraft_q_tot')
         Stats.add_profile('updraft_q_liq')
-        Stats.add_profile('updraft_qr')
-        Stats.add_profile('updraft_thetal')
+        Stats.add_profile('updraft_q_rai')
+        Stats.add_profile('updraft_θ_liq')
         Stats.add_profile('updraft_temperature')
         Stats.add_profile('updraft_buoyancy')
         Stats.add_ts('updraft_cloud_cover')
@@ -123,8 +123,8 @@ class UpdraftVariables:
     def io(self, grid, Stats):
         self.get_cloud_base_top_cover(grid)
         Stats.write_ts('updraft_cloud_cover', np.sum(self.cloud_cover))
-        Stats.write_ts('updraft_cloud_base', np.amin(self.cloud_base))
-        Stats.write_ts('updraft_cloud_top', np.amax(self.cloud_top))
+        Stats.write_ts('updraft_cloud_base' , np.amin(self.cloud_base))
+        Stats.write_ts('updraft_cloud_top'  , np.amax(self.cloud_top))
         return
 
     def get_cloud_base_top_cover(self, grid):
@@ -189,11 +189,13 @@ class UpdraftMicrophysics:
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         for i in i_uds:
             for k in grid.over_elems(Center()):
-                tmp_qr = acnv_instant(UpdVar.q_liq.values[i][k], UpdVar.q_tot.values[i][k], self.max_supersaturation,\
-                                      UpdVar.T.values[i][k], tmp['p_0_half'][k])
+                q_tot = UpdVar.q_tot.values[i][k]
+                q_tot = UpdVar.q_liq.values[i][k]
+                T = UpdVar.T.values[i][k]
+                p_0 = tmp['p_0_half'][k]
+                tmp_qr = acnv_instant(q_tot, q_tot, self.max_supersaturation, T, p_0)
                 self.prec_source_qt[i][k] = -tmp_qr
-                self.prec_source_h[i][k]  = rain_source_to_thetal(tmp['p_0_half'][k], UpdVar.T.values[i][k],\
-                                             UpdVar.q_tot.values[i][k], UpdVar.q_liq.values[i][k], 0.0, tmp_qr)
+                self.prec_source_h[i][k]  = rain_source_to_thetal(p_0, T, q_tot, q_tot, 0.0, tmp_qr)
         for k in grid.over_elems(Center()):
             self.prec_src_θ_liq_tot[k]  = np.sum([self.prec_source_h[i][k] * UpdVar.Area.values[i][k] for i in i_uds])
             self.prec_source_q_tot_tot[k] = np.sum([self.prec_source_qt[i][k]* UpdVar.Area.values[i][k] for i in i_uds])
