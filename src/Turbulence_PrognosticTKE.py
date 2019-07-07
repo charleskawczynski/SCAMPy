@@ -831,7 +831,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             GMV.q_rai.values[k] = ae[k] * EnvVar.q_rai.values[k] + sum([ UpdVar.Area.values[i][k] * UpdVar.q_rai.values[i][k] for i in i_uds])
             GMV.T.values[k]     = ae[k] * EnvVar.T.values[k]     + sum([ UpdVar.Area.values[i][k] * UpdVar.T.values[i][k] for i in i_uds])
             GMV.B.values[k]     = ae[k] * EnvVar.B.values[k]     + sum([ UpdVar.Area.values[i][k] * UpdVar.B.values[i][k] for i in i_uds])
-            GMV.θ_liq.values[k] = t_to_thetali_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], GMV.q_liq.values[k], 0.0)
         return
 
 

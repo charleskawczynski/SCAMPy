@@ -38,7 +38,6 @@ class EnvironmentVariables:
         self.q_tot          = EnvironmentVariable(grid   , Center() , Neumann())
         self.q_liq          = EnvironmentVariable(grid   , Center() , Neumann())
         self.q_rai          = EnvironmentVariable(grid   , Center() , Neumann())
-        self.θ_liq          = EnvironmentVariable(grid   , Center() , Neumann())
         self.T              = EnvironmentVariable(grid   , Center() , Neumann())
         self.B              = EnvironmentVariable(grid   , Center() , Neumann())
         self.CF             = EnvironmentVariable(grid   , Center() , Neumann())
@@ -91,7 +90,6 @@ class EnvironmentThermodynamics:
 
     def update_EnvVar(self, tmp, k, EnvVar, T, H, qt, ql, qr, alpha):
         EnvVar.T.values[k]   = T
-        EnvVar.θ_liq.values[k] = H
         EnvVar.H.values[k]   = H
         EnvVar.q_tot.values[k]  = qt
         EnvVar.q_liq.values[k]  = ql

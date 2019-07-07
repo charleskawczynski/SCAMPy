@@ -46,7 +46,6 @@ class GridMeanVariables:
         self.q_liq          = VariableDiagnostic(grid, Center(), Neumann())
         self.T              = VariableDiagnostic(grid, Center(), Neumann())
         self.B              = VariableDiagnostic(grid, Center(), Neumann())
-        self.θ_liq          = VariableDiagnostic(grid, Center(), Neumann())
         self.tke            = VariableDiagnostic(grid, Center(), Neumann())
         self.cv_q_tot       = VariableDiagnostic(grid, Center(), Neumann())
         self.cv_θ_liq       = VariableDiagnostic(grid, Center(), Neumann())
@@ -128,7 +127,6 @@ class GridMeanVariables:
             self.q_liq.values[k] = ql
             self.T.values[k] = T
             qv = qt - ql
-            self.θ_liq.values[k] = t_to_thetali_c(p0, T, qt, ql, 0.0)
             alpha = alpha_c(p0, T, qt, qv)
             self.B.values[k] = buoyancy_c(tmp['α_0_half'][k], alpha)
         return

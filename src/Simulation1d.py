@@ -170,7 +170,6 @@ class Simulation1d:
         sol.e_QL = self.EnvVar.q_liq.values
         sol.e_QR = self.EnvVar.q_rai.values
         sol.e_H = self.EnvVar.H.values
-        sol.e_THL = self.EnvVar.θ_liq.values
         sol.e_T = self.EnvVar.T.values
         sol.e_B = self.EnvVar.B.values
         sol.e_CF = self.EnvVar.CF.values
@@ -184,7 +183,6 @@ class Simulation1d:
         sol.ud_QT = self.UpdVar.q_tot.values[0]
         sol.ud_QL = self.UpdVar.q_liq.values[0]
         sol.ud_QR = self.UpdVar.q_rai.values[0]
-        sol.ud_THL = self.UpdVar.θ_liq.values[0]
         sol.ud_T = self.UpdVar.T.values[0]
         sol.ud_B = self.UpdVar.B.values[0]
 
@@ -192,7 +190,6 @@ class Simulation1d:
         sol.gm_U = self.GMV.U.values
         sol.gm_H = self.GMV.H.values
         sol.gm_T = self.GMV.T.values
-        sol.gm_THL = self.GMV.θ_liq.values
         sol.gm_V = self.GMV.V.values
         sol.gm_QL = self.GMV.q_liq.values
         sol.gm_B = self.GMV.B.values
@@ -202,7 +199,6 @@ class Simulation1d:
         plt.plot(sol.ud_QT  , sol.z); plt.savefig(self.Stats.figpath+'ud_QT.png'); plt.close()
         plt.plot(sol.ud_QL  , sol.z); plt.savefig(self.Stats.figpath+'ud_QL.png'); plt.close()
         plt.plot(sol.ud_QR  , sol.z); plt.savefig(self.Stats.figpath+'ud_QR.png'); plt.close()
-        plt.plot(sol.ud_THL , sol.z); plt.savefig(self.Stats.figpath+'ud_THL.png'); plt.close()
         plt.plot(sol.ud_T   , sol.z); plt.savefig(self.Stats.figpath+'ud_T.png'); plt.close()
         plt.plot(sol.ud_B   , sol.z); plt.savefig(self.Stats.figpath+'ud_B.png'); plt.close()
         plt.plot(sol.e_W     , sol.z); plt.savefig(self.Stats.figpath+'e_W.png'); plt.close()
@@ -210,7 +206,6 @@ class Simulation1d:
         plt.plot(sol.e_QL    , sol.z); plt.savefig(self.Stats.figpath+'e_QL.png'); plt.close()
         plt.plot(sol.e_QR    , sol.z); plt.savefig(self.Stats.figpath+'e_QR.png'); plt.close()
         plt.plot(sol.e_H     , sol.z); plt.savefig(self.Stats.figpath+'e_H.png'); plt.close()
-        plt.plot(sol.e_THL   , sol.z); plt.savefig(self.Stats.figpath+'e_THL.png'); plt.close()
         plt.plot(sol.e_T     , sol.z); plt.savefig(self.Stats.figpath+'e_T.png'); plt.close()
         plt.plot(sol.e_B     , sol.z); plt.savefig(self.Stats.figpath+'e_B.png'); plt.close()
         plt.plot(sol.e_CF    , sol.z); plt.savefig(self.Stats.figpath+'e_CF.png'); plt.close()
@@ -222,7 +217,6 @@ class Simulation1d:
         plt.plot(sol.gm_U  , sol.z); plt.savefig(self.Stats.figpath+'gm_U.png'); plt.close()
         plt.plot(sol.gm_H  , sol.z); plt.savefig(self.Stats.figpath+'gm_H.png'); plt.close()
         plt.plot(sol.gm_T  , sol.z); plt.savefig(self.Stats.figpath+'gm_T.png'); plt.close()
-        plt.plot(sol.gm_THL, sol.z); plt.savefig(self.Stats.figpath+'gm_THL.png'); plt.close()
         plt.plot(sol.gm_V  , sol.z); plt.savefig(self.Stats.figpath+'gm_V.png'); plt.close()
         plt.plot(sol.gm_QL , sol.z); plt.savefig(self.Stats.figpath+'gm_QL.png'); plt.close()
         plt.plot(sol.gm_B  , sol.z); plt.savefig(self.Stats.figpath+'gm_B.png'); plt.close()

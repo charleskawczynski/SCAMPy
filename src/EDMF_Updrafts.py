@@ -32,7 +32,6 @@ class UpdraftVariables:
         self.q_tot = UpdraftVariable(grid, nu, Center(), Neumann())
         self.q_liq = UpdraftVariable(grid, nu, Center(), Neumann())
         self.q_rai = UpdraftVariable(grid, nu, Center(), Neumann())
-        self.θ_liq = UpdraftVariable(grid, nu, Center(), Neumann())
         self.T     = UpdraftVariable(grid, nu, Center(), Neumann())
         self.B     = UpdraftVariable(grid, nu, Center(), Neumann())
         self.H     = UpdraftVariable(grid, nu, Center(), Neumann())
@@ -91,7 +90,6 @@ class UpdraftVariables:
                 self.q_liq.new[i][k] = self.q_liq.values[i][k]
                 self.q_rai.new[i][k] = self.q_rai.values[i][k]
                 self.H.new[i][k] = self.H.values[i][k]
-                self.θ_liq.new[i][k] = self.θ_liq.values[i][k]
                 self.T.new[i][k] = self.T.values[i][k]
                 self.B.new[i][k] = self.B.values[i][k]
         return
@@ -105,7 +103,6 @@ class UpdraftVariables:
                 self.q_liq.old[i][k] = self.q_liq.values[i][k]
                 self.q_rai.old[i][k] = self.q_rai.values[i][k]
                 self.H.old[i][k] = self.H.values[i][k]
-                self.θ_liq.old[i][k] = self.θ_liq.values[i][k]
                 self.T.old[i][k] = self.T.values[i][k]
                 self.B.old[i][k] = self.B.values[i][k]
         return
@@ -119,7 +116,6 @@ class UpdraftVariables:
                 self.q_liq.values[i][k] = self.q_liq.new[i][k]
                 self.q_rai.values[i][k] = self.q_rai.new[i][k]
                 self.H.values[i][k] = self.H.new[i][k]
-                self.θ_liq.values[i][k] = self.θ_liq.new[i][k]
                 self.T.values[i][k] = self.T.new[i][k]
                 self.B.values[i][k] = self.B.new[i][k]
         return
