@@ -20,10 +20,10 @@ class ForcingBase:
         return
     def update(self, grid, q_tendencies, GMV, tmp):
         return
-    def coriolis_force(self, grid, q_tendencies, U, V):
+    def coriolis_force(self, grid, q_tendencies, GMV):
         for k in grid.over_elems_real(Center()):
-            U.tendencies[k] -= self.coriolis_param * (self.vg[k] - V.values[k])
-            V.tendencies[k] += self.coriolis_param * (self.ug[k] - U.values[k])
+            GMV.U.tendencies[k] -= self.coriolis_param * (self.vg[k] - GMV.V.values[k])
+            GMV.V.tendencies[k] += self.coriolis_param * (self.ug[k] - GMV.U.values[k])
         return
     def initialize_io(self, Stats):
         return
@@ -40,7 +40,7 @@ class ForcingNone(ForcingBase):
         return
     def update(self, grid, q_tendencies, GMV, tmp):
         return
-    def coriolis_force(self, grid, q_tendencies, U, V):
+    def coriolis_force(self, grid, q_tendencies, GMV):
         return
     def initialize_io(self, Stats):
         return
@@ -55,6 +55,7 @@ class ForcingStandard(ForcingBase):
         ForcingBase.initialize(self, grid, GMV)
         return
     def update(self, grid, q_tendencies, GMV, tmp):
+        i_gm, i_env, i_uds, i_sd = q_tendencies.domain_idx()
 
         for k in grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
@@ -74,7 +75,7 @@ class ForcingStandard(ForcingBase):
                 GMV.q_tot.tendencies[k] -= grad(GMV.q_tot.values.Dual(k), grid) * self.subsidence[k]
 
         if self.apply_coriolis:
-            self.coriolis_force(grid, q_tendencies, GMV.U, GMV.V)
+            self.coriolis_force(grid, q_tendencies, GMV)
 
         return
     def initialize_io(self, Stats):
@@ -101,8 +102,8 @@ class ForcingStandard(ForcingBase):
 #
 #         return
 #
-#     def coriolis_force(self, grid, q_tendencies, U, V):
-#         ForcingBase.coriolis_force(self, grid, q_tendencies, U, V)
+#     def coriolis_force(self, grid, q_tendencies, GMV):
+#         ForcingBase.coriolis_force(self, grid, q_tendencies, GMV)
 #         return
 #     def initialize_io(self, Stats):
 #         return
@@ -179,8 +180,8 @@ class ForcingDYCOMS_RF01(ForcingBase):
 
         return
 
-    def coriolis_force(self, grid, q_tendencies, U, V):
-        ForcingBase.coriolis_force(self, grid, q_tendencies, U, V)
+    def coriolis_force(self, grid, q_tendencies, GMV):
+        ForcingBase.coriolis_force(self, grid, q_tendencies, GMV)
         return
 
     def update(self, grid, q_tendencies, GMV, tmp):
@@ -202,7 +203,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
             GMV.q_tot.tendencies[k] -= grad_pos(GMV.q_tot.values.Cut(k), grid) * self.subsidence[k]
 
         if self.apply_coriolis:
-            self.coriolis_force(grid, q_tendencies, GMV.U, GMV.V)
+            self.coriolis_force(grid, q_tendencies, GMV)
 
         return
 
