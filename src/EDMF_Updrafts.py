@@ -34,7 +34,7 @@ class UpdraftVariables:
         self.q_rai = UpdraftVariable(grid, nu, Center(), Neumann())
         self.T     = UpdraftVariable(grid, nu, Center(), Neumann())
         self.B     = UpdraftVariable(grid, nu, Center(), Neumann())
-        self.H     = UpdraftVariable(grid, nu, Center(), Neumann())
+        self.θ_liq = UpdraftVariable(grid, nu, Center(), Neumann())
 
         self.updraft_fraction = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
 
@@ -53,13 +53,13 @@ class UpdraftVariables:
                 self.q_tot.values[i][k] = GMV.q_tot.values[k]
                 self.q_liq.values[i][k] = GMV.q_liq.values[k]
                 self.q_rai.values[i][k] = GMV.q_rai.values[k]
-                self.H.values[i][k] = GMV.H.values[k]
+                self.θ_liq.values[i][k] = GMV.θ_liq.values[k]
                 self.T.values[i][k] = GMV.T.values[k]
                 self.B.values[i][k] = 0.0
             self.Area.values[i][k_1] = self.updraft_fraction/self.n_updrafts
         self.q_tot.set_bcs(grid)
         self.q_rai.set_bcs(grid)
-        self.H.set_bcs(grid)
+        self.θ_liq.set_bcs(grid)
         for k in grid.over_elems(Center()):
             for i in i_uds:
                 q['a', i][k] = self.Area.values[i][k]
@@ -71,7 +71,7 @@ class UpdraftVariables:
         Stats.add_profile('updraft_area')
         Stats.add_profile('updraft_w')
         Stats.add_profile('updraft_qt')
-        Stats.add_profile('updraft_ql')
+        Stats.add_profile('updraft_q_liq')
         Stats.add_profile('updraft_qr')
         Stats.add_profile('updraft_thetal')
         Stats.add_profile('updraft_temperature')
@@ -89,7 +89,7 @@ class UpdraftVariables:
                 self.q_tot.new[i][k] = self.q_tot.values[i][k]
                 self.q_liq.new[i][k] = self.q_liq.values[i][k]
                 self.q_rai.new[i][k] = self.q_rai.values[i][k]
-                self.H.new[i][k] = self.H.values[i][k]
+                self.θ_liq.new[i][k] = self.θ_liq.values[i][k]
                 self.T.new[i][k] = self.T.values[i][k]
                 self.B.new[i][k] = self.B.values[i][k]
         return
@@ -102,7 +102,7 @@ class UpdraftVariables:
                 self.q_tot.old[i][k] = self.q_tot.values[i][k]
                 self.q_liq.old[i][k] = self.q_liq.values[i][k]
                 self.q_rai.old[i][k] = self.q_rai.values[i][k]
-                self.H.old[i][k] = self.H.values[i][k]
+                self.θ_liq.old[i][k] = self.θ_liq.values[i][k]
                 self.T.old[i][k] = self.T.values[i][k]
                 self.B.old[i][k] = self.B.values[i][k]
         return
@@ -115,7 +115,7 @@ class UpdraftVariables:
                 self.q_tot.values[i][k] = self.q_tot.new[i][k]
                 self.q_liq.values[i][k] = self.q_liq.new[i][k]
                 self.q_rai.values[i][k] = self.q_rai.new[i][k]
-                self.H.values[i][k] = self.H.new[i][k]
+                self.θ_liq.values[i][k] = self.θ_liq.new[i][k]
                 self.T.values[i][k] = self.T.new[i][k]
                 self.B.values[i][k] = self.B.new[i][k]
         return
@@ -148,8 +148,8 @@ class UpdraftThermodynamics:
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         for i in i_uds:
             for k in grid.over_elems(Center()):
-                T, ql = eos(tmp['p_0_half'][k], UpdVar.q_tot.values[i][k], UpdVar.H.values[i][k])
-                UpdVar.q_liq.values[i][k] = ql
+                T, q_liq = eos(tmp['p_0_half'][k], UpdVar.q_tot.values[i][k], UpdVar.θ_liq.values[i][k])
+                UpdVar.q_liq.values[i][k] = q_liq
                 UpdVar.T.values[i][k] = T
         return
 
@@ -207,18 +207,18 @@ class UpdraftMicrophysics:
                 UpdVar.q_tot.values[i][k] += s
                 UpdVar.q_liq.values[i][k] += s
                 UpdVar.q_rai.values[i][k] -= s
-                UpdVar.H.values[i][k] += self.prec_source_h[i][k]
+                UpdVar.θ_liq.values[i][k] += self.prec_source_h[i][k]
         return
 
-    def compute_update_combined_local_thetal(self, p0, T, qt, ql, qr, h, i, k):
+    def compute_update_combined_local_thetal(self, p_0, T, q_tot, q_liq, q_rai, θ_liq, i, k):
 
-        tmp_qr = acnv_instant(ql[i][k], qt[i][k], self.max_supersaturation, T[i][k], p0[k])
+        tmp_qr = acnv_instant(q_liq[i][k], q_tot[i][k], self.max_supersaturation, T[i][k], p_0[k])
         self.prec_source_qt[i][k] = -tmp_qr
-        self.prec_source_h[i][k]  = rain_source_to_thetal(p0[k], T[i][k], qt[i][k], ql[i][k], 0.0, tmp_qr)
+        self.prec_source_h[i][k]  = rain_source_to_thetal(p_0[k], T[i][k], q_tot[i][k], q_liq[i][k], 0.0, tmp_qr)
         s = self.prec_source_qt[i][k]
-        qt[i][k] += s
-        ql[i][k] += s
-        qr[i][k] -= s
-        h[i][k]  += self.prec_source_h[i][k]
+        q_tot[i][k] += s
+        q_liq[i][k] += s
+        q_rai[i][k] -= s
+        θ_liq[i][k]  += self.prec_source_h[i][k]
 
         return

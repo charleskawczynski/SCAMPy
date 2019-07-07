@@ -52,8 +52,8 @@ class SurfaceFixedFlux(SurfaceBase):
         ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
         α_0_surf = tmp.surface(grid, 'α_0_half')
         T_1 = GMV.T.values[k_1]
-        H_1 = GMV.H.values[k_1]
-        QT_1 = GMV.q_tot.values[k_1]
+        θ_liq_1 = GMV.θ_liq.values[k_1]
+        q_tot_1 = GMV.q_tot.values[k_1]
         V_1 = GMV.V.values[k_1]
         U_1 = GMV.U.values[k_1]
 
@@ -61,7 +61,7 @@ class SurfaceFixedFlux(SurfaceBase):
         self.windspeed = compute_windspeed(grid, GMV, 0.0)
         self.rho_qtflux = self.lhf/(latent_heat(self.Tsurface))
         self.rho_hflux = rho_tflux / exner_c(self.Ref.Pg)
-        self.bflux = buoyancy_flux(self.shf, self.lhf, T_1, QT_1, α_0_surf)
+        self.bflux = buoyancy_flux(self.shf, self.lhf, T_1, q_tot_1, α_0_surf)
 
         if not self.ustar_fixed:
             # Correction to windspeed for free convective cases (Beljaars, QJRMS (1994), 121, pp. 255-270)
@@ -76,7 +76,7 @@ class SurfaceFixedFlux(SurfaceBase):
                     print('self.lhf ==>', self.lhf)
                     print('U_1  ==>', U_1)
                     print('V_1  ==>', V_1)
-                    print('QT_1 ==>', QT_1)
+                    print('q_tot_1 ==>', q_tot_1)
                     print('α_0_surf ==>', α_0_surf)
 
             self.ustar = compute_ustar(self.windspeed, self.bflux, self.zrough, z_1)
@@ -103,21 +103,21 @@ class SurfaceFixedCoeffs(SurfaceBase):
         ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
         α_0_surf = tmp.surface(grid, 'α_0_half')
         T_1 = GMV.T.values[k_1]
-        H_1 = GMV.H.values[k_1]
-        QT_1 = GMV.q_tot.values[k_1]
+        θ_liq_1 = GMV.θ_liq.values[k_1]
+        q_tot_1 = GMV.q_tot.values[k_1]
         V_1 = GMV.V.values[k_1]
         U_1 = GMV.U.values[k_1]
 
-        cp_ = cpm_c(QT_1)
+        cp_ = cpm_c(q_tot_1)
         lv = latent_heat(T_1)
         windspeed = compute_windspeed(grid, GMV, 0.01)
-        self.rho_qtflux = -self.cq * windspeed * (QT_1 - self.qsurface) * ρ_0_surf
-        self.rho_hflux = -self.ch * windspeed * (H_1 - self.Tsurface/exner_c(self.Ref.Pg)) * ρ_0_surf
+        self.rho_qtflux = -self.cq * windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
+        self.rho_hflux = -self.ch * windspeed * (θ_liq_1 - self.Tsurface/exner_c(self.Ref.Pg)) * ρ_0_surf
 
         self.lhf = lv * self.rho_qtflux
         self.shf = cp_  * self.rho_hflux
 
-        self.bflux = buoyancy_flux(self.shf, self.lhf, T_1, QT_1, α_0_surf)
+        self.bflux = buoyancy_flux(self.shf, self.lhf, T_1, q_tot_1, α_0_surf)
         self.ustar =  np.sqrt(self.cm) * windspeed
         self.obukhov_length = compute_MO_len(self.ustar, self.bflux)
 
@@ -138,8 +138,8 @@ class SurfaceMoninObukhov(SurfaceBase):
         α_0_surf = tmp.surface(grid, 'α_0_half')
         p_1 = tmp['p_0_half'][k_1]
         T_1 = GMV.T.values[k_1]
-        H_1 = GMV.H.values[k_1]
-        QT_1 = GMV.q_tot.values[k_1]
+        θ_liq_1 = GMV.θ_liq.values[k_1]
+        q_tot_1 = GMV.q_tot.values[k_1]
         V_1 = GMV.V.values[k_1]
         U_1 = GMV.U.values[k_1]
 
@@ -158,13 +158,13 @@ class SurfaceMoninObukhov(SurfaceBase):
 
         self.rho_uflux = -self.cm * self.windspeed * U_1 * ρ_0_surf
         self.rho_vflux = -self.cm * self.windspeed * V_1 * ρ_0_surf
-        self.rho_hflux =  -self.ch * self.windspeed * (H_1  - h_star) * ρ_0_surf
-        self.rho_qtflux = -self.ch * self.windspeed * (QT_1 - self.qsurface) * ρ_0_surf
+        self.rho_hflux =  -self.ch * self.windspeed * (θ_liq_1  - h_star) * ρ_0_surf
+        self.rho_qtflux = -self.ch * self.windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
 
         self.lhf = lv * self.rho_qtflux
-        self.shf = cpm_c(QT_1) * self.rho_hflux
+        self.shf = cpm_c(q_tot_1) * self.rho_hflux
 
-        self.bflux = buoyancy_flux(self.shf, self.lhf, T_1, QT_1, α_0_surf)
+        self.bflux = buoyancy_flux(self.shf, self.lhf, T_1, q_tot_1, α_0_surf)
         self.ustar =  np.sqrt(self.cm) * self.windspeed
         self.obukhov_length = compute_MO_len(self.ustar, self.bflux)
 
@@ -185,8 +185,8 @@ class SurfaceSullivanPatton(SurfaceBase):
         α_0_1 = tmp['α_0_half'][k_1]
         ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
         T_1 = GMV.T.values[k_1]
-        H_1 = GMV.H.values[k_1]
-        QT_1 = GMV.q_tot.values[k_1]
+        θ_liq_1 = GMV.θ_liq.values[k_1]
+        q_tot_1 = GMV.q_tot.values[k_1]
         V_1 = GMV.V.values[k_1]
         U_1 = GMV.U.values[k_1]
 
@@ -209,10 +209,10 @@ class SurfaceSullivanPatton(SurfaceBase):
 
         self.rho_uflux = -self.cm * self.windspeed * U_1 * ρ_0_surf
         self.rho_vflux = -self.cm * self.windspeed * V_1 * ρ_0_surf
-        self.rho_hflux =  -self.ch * self.windspeed * (H_1 - h_star) * ρ_0_surf
-        self.rho_qtflux = -self.ch * self.windspeed * (QT_1 - self.qsurface) * ρ_0_surf
+        self.rho_hflux =  -self.ch * self.windspeed * (θ_liq_1 - h_star) * ρ_0_surf
+        self.rho_qtflux = -self.ch * self.windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
         self.lhf = lv * self.rho_qtflux
-        self.shf = cpm_c(QT_1)  * self.rho_hflux
+        self.shf = cpm_c(q_tot_1)  * self.rho_hflux
 
         self.bflux = g * theta_flux * exner_c(p_0_1) / T0
         self.ustar =  sqrt(self.cm) * self.windspeed

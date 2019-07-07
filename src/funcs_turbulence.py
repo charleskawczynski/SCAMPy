@@ -50,10 +50,10 @@ def entr_detr_buoyancy_sorting(entr_in):
 
             for m_q in range(entr_in.quadrature_order):
                 qt_hat    = (entr_in.qt_env + sqrt2 * sd_q * abscissas[m_q] + entr_in.qt_up)/2.0
-                mu_h_star = entr_in.H_env + sqrt2 * corr * sd_h * abscissas[m_q]
+                mu_h_star = entr_in.θ_liq_env + sqrt2 * corr * sd_h * abscissas[m_q]
                 inner_partiation_func = 0.0
                 for m_h in range(entr_in.quadrature_order):
-                    h_hat = (sqrt2 * sigma_h_star * abscissas[m_h] + mu_h_star + entr_in.H_up)/2.0
+                    h_hat = (sqrt2 * sigma_h_star * abscissas[m_h] + mu_h_star + entr_in.θ_liq_up)/2.0
                     # condensation
                     T, ql  = eos(entr_in.p0, qt_hat, h_hat)
                     # calcualte buoyancy
@@ -66,7 +66,7 @@ def entr_detr_buoyancy_sorting(entr_in):
                         inner_partiation_func  += weights[m_h] * sqpi_inv
                 partiation_func  += inner_partiation_func * weights[m_q] * sqpi_inv
         else:
-            h_hat = ( entr_in.H_env + entr_in.H_up)/2.0
+            h_hat = ( entr_in.θ_liq_env + entr_in.θ_liq_up)/2.0
             qt_hat = ( entr_in.qt_env + entr_in.qt_up)/2.0
 
             # condensation

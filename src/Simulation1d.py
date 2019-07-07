@@ -7,7 +7,7 @@ from EDMF_Environment import *
 from Turbulence_PrognosticTKE import ParameterizationFactory
 from Cases import CasesFactory
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
-from Field import Field, Full, Half, Dirichlet, Neumann
+from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from StateVec import StateVec
 from ReferenceState import ReferenceState
 import matplotlib.pyplot as plt
@@ -16,6 +16,16 @@ from Surface import  SurfaceBase
 from Cases import  CasesBase
 from NetCDFIO import NetCDFIO_Stats
 from TimeStepping import TimeStepping
+
+def plot_solutions(sol, Stats):
+    props = [x for x in dir(sol) if not (x.startswith('__') and x.endswith('__'))]
+    props = [x for x in props if not x=='z']
+    props = [x for x in props if not x=='z_half']
+    for p in props:
+        plt.plot(getattr(sol, p)     , sol.z)
+        file_name = nice_name(p+'.png')
+        plt.savefig(Stats.figpath+file_name)
+        plt.close()
 
 class Simulation1d:
 
@@ -165,61 +175,36 @@ class Simulation1d:
 
         i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
 
-        sol.e_W = self.q['w', i_env].values
-        sol.e_QT = self.EnvVar.q_tot.values
-        sol.e_QL = self.EnvVar.q_liq.values
-        sol.e_QR = self.EnvVar.q_rai.values
-        sol.e_H = self.EnvVar.H.values
-        sol.e_T = self.EnvVar.T.values
-        sol.e_B = self.EnvVar.B.values
-        sol.e_CF = self.EnvVar.CF.values
-        sol.e_TKE = self.EnvVar.tke.values
-        sol.e_Hvar = self.EnvVar.cv_θ_liq.values
-        sol.e_QTvar = self.EnvVar.cv_q_tot.values
-        sol.e_HQTcov = self.EnvVar.cv_θ_liq_q_tot.values
+        sol.e_W              = self.q['w', i_env].values
+        sol.e_q_tot          = self.EnvVar.q_tot.values
+        sol.e_q_liq          = self.EnvVar.q_liq.values
+        sol.e_q_rai          = self.EnvVar.q_rai.values
+        sol.e_θ_liq          = self.EnvVar.θ_liq.values
+        sol.e_T              = self.EnvVar.T.values
+        sol.e_B              = self.EnvVar.B.values
+        sol.e_CF             = self.EnvVar.CF.values
+        sol.e_tke            = self.EnvVar.tke.values
+        sol.e_cv_θ_liq       = self.EnvVar.cv_θ_liq.values
+        sol.e_cv_q_tot       = self.EnvVar.cv_q_tot.values
+        sol.e_cv_θ_liq_q_tot = self.EnvVar.cv_θ_liq_q_tot.values
 
-        sol.ud_W = self.UpdVar.W.values[0]
-        sol.ud_Area = self.UpdVar.Area.values[0]
-        sol.ud_QT = self.UpdVar.q_tot.values[0]
-        sol.ud_QL = self.UpdVar.q_liq.values[0]
-        sol.ud_QR = self.UpdVar.q_rai.values[0]
-        sol.ud_T = self.UpdVar.T.values[0]
-        sol.ud_B = self.UpdVar.B.values[0]
+        sol.ud_W     = self.UpdVar.W.values[0]
+        sol.ud_Area  = self.UpdVar.Area.values[0]
+        sol.ud_q_tot = self.UpdVar.q_tot.values[0]
+        sol.ud_q_liq = self.UpdVar.q_liq.values[0]
+        sol.ud_q_rai = self.UpdVar.q_rai.values[0]
+        sol.ud_T     = self.UpdVar.T.values[0]
+        sol.ud_B     = self.UpdVar.B.values[0]
 
-        sol.gm_QT = self.GMV.q_tot.values
-        sol.gm_U = self.GMV.U.values
-        sol.gm_H = self.GMV.H.values
-        sol.gm_T = self.GMV.T.values
-        sol.gm_V = self.GMV.V.values
-        sol.gm_QL = self.GMV.q_liq.values
-        sol.gm_B = self.GMV.B.values
+        sol.gm_q_tot = self.GMV.q_tot.values
+        sol.gm_U     = self.GMV.U.values
+        sol.gm_θ_liq = self.GMV.θ_liq.values
+        sol.gm_T     = self.GMV.T.values
+        sol.gm_V     = self.GMV.V.values
+        sol.gm_q_liq = self.GMV.q_liq.values
+        sol.gm_B     = self.GMV.B.values
 
-        plt.plot(sol.ud_W   , sol.z); plt.savefig(self.Stats.figpath+'ud_W.png'); plt.close()
-        plt.plot(sol.ud_Area, sol.z); plt.savefig(self.Stats.figpath+'ud_Area.png'); plt.close()
-        plt.plot(sol.ud_QT  , sol.z); plt.savefig(self.Stats.figpath+'ud_QT.png'); plt.close()
-        plt.plot(sol.ud_QL  , sol.z); plt.savefig(self.Stats.figpath+'ud_QL.png'); plt.close()
-        plt.plot(sol.ud_QR  , sol.z); plt.savefig(self.Stats.figpath+'ud_QR.png'); plt.close()
-        plt.plot(sol.ud_T   , sol.z); plt.savefig(self.Stats.figpath+'ud_T.png'); plt.close()
-        plt.plot(sol.ud_B   , sol.z); plt.savefig(self.Stats.figpath+'ud_B.png'); plt.close()
-        plt.plot(sol.e_W     , sol.z); plt.savefig(self.Stats.figpath+'e_W.png'); plt.close()
-        plt.plot(sol.e_QT    , sol.z); plt.savefig(self.Stats.figpath+'e_QT.png'); plt.close()
-        plt.plot(sol.e_QL    , sol.z); plt.savefig(self.Stats.figpath+'e_QL.png'); plt.close()
-        plt.plot(sol.e_QR    , sol.z); plt.savefig(self.Stats.figpath+'e_QR.png'); plt.close()
-        plt.plot(sol.e_H     , sol.z); plt.savefig(self.Stats.figpath+'e_H.png'); plt.close()
-        plt.plot(sol.e_T     , sol.z); plt.savefig(self.Stats.figpath+'e_T.png'); plt.close()
-        plt.plot(sol.e_B     , sol.z); plt.savefig(self.Stats.figpath+'e_B.png'); plt.close()
-        plt.plot(sol.e_CF    , sol.z); plt.savefig(self.Stats.figpath+'e_CF.png'); plt.close()
-        plt.plot(sol.e_TKE   , sol.z); plt.savefig(self.Stats.figpath+'e_TKE.png'); plt.close()
-        plt.plot(sol.e_Hvar  , sol.z); plt.savefig(self.Stats.figpath+'e_Hvar.png'); plt.close()
-        plt.plot(sol.e_QTvar , sol.z); plt.savefig(self.Stats.figpath+'e_QTvar.png'); plt.close()
-        plt.plot(sol.e_HQTcov, sol.z); plt.savefig(self.Stats.figpath+'e_HQTcov.png'); plt.close()
-        plt.plot(sol.gm_QT , sol.z); plt.savefig(self.Stats.figpath+'gm_QT.png'); plt.close()
-        plt.plot(sol.gm_U  , sol.z); plt.savefig(self.Stats.figpath+'gm_U.png'); plt.close()
-        plt.plot(sol.gm_H  , sol.z); plt.savefig(self.Stats.figpath+'gm_H.png'); plt.close()
-        plt.plot(sol.gm_T  , sol.z); plt.savefig(self.Stats.figpath+'gm_T.png'); plt.close()
-        plt.plot(sol.gm_V  , sol.z); plt.savefig(self.Stats.figpath+'gm_V.png'); plt.close()
-        plt.plot(sol.gm_QL , sol.z); plt.savefig(self.Stats.figpath+'gm_QL.png'); plt.close()
-        plt.plot(sol.gm_B  , sol.z); plt.savefig(self.Stats.figpath+'gm_B.png'); plt.close()
+        plot_solutions(sol, self.Stats)
         return sol
 
     def initialize_io(self):

@@ -41,7 +41,7 @@ class EnvironmentVariables:
         self.T              = EnvironmentVariable(grid   , Center() , Neumann())
         self.B              = EnvironmentVariable(grid   , Center() , Neumann())
         self.CF             = EnvironmentVariable(grid   , Center() , Neumann())
-        self.H              = EnvironmentVariable(grid   , Center() , Neumann())
+        self.θ_liq              = EnvironmentVariable(grid   , Center() , Neumann())
         self.tke            = EnvironmentVariable_2m(grid, Center() , Neumann())
         self.cv_q_tot       = EnvironmentVariable_2m(grid, Center() , Neumann())
         self.cv_θ_liq       = EnvironmentVariable_2m(grid, Center() , Neumann())
@@ -66,7 +66,7 @@ class EnvironmentVariables:
         Stats.write_profile_new('env_qt'          , grid, self.q_tot.values)
         Stats.write_profile_new('env_ql'          , grid, self.q_liq.values)
         Stats.write_profile_new('env_qr'          , grid, self.q_rai.values)
-        Stats.write_profile_new('env_thetal'      , grid, self.H.values)
+        Stats.write_profile_new('env_thetal'      , grid, self.θ_liq.values)
         Stats.write_profile_new('env_temperature' , grid, self.T.values)
         Stats.write_profile_new('env_tke'         , grid, self.tke.values)
         Stats.write_profile_new('env_Hvar'        , grid, self.cv_θ_liq.values)
@@ -88,9 +88,9 @@ class EnvironmentThermodynamics:
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
         return
 
-    def update_EnvVar(self, tmp, k, EnvVar, T, H, qt, ql, qr, alpha):
+    def update_EnvVar(self, tmp, k, EnvVar, T, θ_liq, qt, ql, qr, alpha):
         EnvVar.T.values[k]   = T
-        EnvVar.H.values[k]   = H
+        EnvVar.θ_liq.values[k]   = θ_liq
         EnvVar.q_tot.values[k]  = qt
         EnvVar.q_liq.values[k]  = ql
         EnvVar.q_rai.values[k] += qr
@@ -113,7 +113,7 @@ class EnvironmentThermodynamics:
     def eos_update_SA_mean(self, grid, EnvVar, in_Env, tmp):
         for k in grid.over_elems_real(Center()):
             p_0_k = tmp['p_0_half'][k]
-            T, ql  = eos(p_0_k, EnvVar.q_tot.values[k], EnvVar.H.values[k])
+            T, ql  = eos(p_0_k, EnvVar.q_tot.values[k], EnvVar.θ_liq.values[k])
             mph = microphysics(T, ql, p_0_k, EnvVar.q_tot.values[k], self.max_supersaturation, in_Env)
             self.update_EnvVar(tmp,   k, EnvVar, mph.T, mph.thl, mph.qt, mph.ql, mph.qr, mph.alpha)
             self.update_cloud_dry(k, EnvVar, mph.T, mph.th,  mph.qt, mph.ql, mph.qv)
