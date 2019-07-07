@@ -181,8 +181,8 @@ class UpdraftMicrophysics:
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
         self.prec_source_h = [Half(grid) for i in range(n_updrafts)]
         self.prec_source_qt = [Half(grid) for i in range(n_updrafts)]
-        self.prec_source_h_tot  = Half(grid)
-        self.prec_source_qt_tot = Half(grid)
+        self.prec_src_θ_liq_tot  = Half(grid)
+        self.prec_source_q_tot_tot = Half(grid)
         return
 
     def compute_sources(self, grid, UpdVar, tmp):
@@ -195,8 +195,8 @@ class UpdraftMicrophysics:
                 self.prec_source_h[i][k]  = rain_source_to_thetal(tmp['p_0_half'][k], UpdVar.T.values[i][k],\
                                              UpdVar.q_tot.values[i][k], UpdVar.q_liq.values[i][k], 0.0, tmp_qr)
         for k in grid.over_elems(Center()):
-            self.prec_source_h_tot[k]  = np.sum([self.prec_source_h[i][k] * UpdVar.Area.values[i][k] for i in i_uds])
-            self.prec_source_qt_tot[k] = np.sum([self.prec_source_qt[i][k]* UpdVar.Area.values[i][k] for i in i_uds])
+            self.prec_src_θ_liq_tot[k]  = np.sum([self.prec_source_h[i][k] * UpdVar.Area.values[i][k] for i in i_uds])
+            self.prec_source_q_tot_tot[k] = np.sum([self.prec_source_qt[i][k]* UpdVar.Area.values[i][k] for i in i_uds])
 
         return
 

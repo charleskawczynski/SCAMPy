@@ -148,7 +148,7 @@ class SurfaceMoninObukhov(SurfaceBase):
         theta_rho_b = theta_rho_c(p_1, T_1, self.qsurface, self.qsurface)
         lv = latent_heat(T_1)
 
-        h_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
+        θ_liq_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
 
         self.windspeed = compute_windspeed(grid, GMV, 0.0)
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/z_1
@@ -158,7 +158,7 @@ class SurfaceMoninObukhov(SurfaceBase):
 
         self.rho_uflux = -self.cm * self.windspeed * U_1 * ρ_0_surf
         self.rho_vflux = -self.cm * self.windspeed * V_1 * ρ_0_surf
-        self.rho_hflux =  -self.ch * self.windspeed * (θ_liq_1  - h_star) * ρ_0_surf
+        self.rho_hflux =  -self.ch * self.windspeed * (θ_liq_1  - θ_liq_star) * ρ_0_surf
         self.rho_qtflux = -self.ch * self.windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
 
         self.lhf = lv * self.rho_qtflux
@@ -199,7 +199,7 @@ class SurfaceSullivanPatton(SurfaceBase):
 
         theta_flux = 0.24
 
-        h_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
+        θ_liq_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
 
         self.windspeed = compute_windspeed(grid, GMV, 0.0)
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/z_1
@@ -209,7 +209,7 @@ class SurfaceSullivanPatton(SurfaceBase):
 
         self.rho_uflux = -self.cm * self.windspeed * U_1 * ρ_0_surf
         self.rho_vflux = -self.cm * self.windspeed * V_1 * ρ_0_surf
-        self.rho_hflux =  -self.ch * self.windspeed * (θ_liq_1 - h_star) * ρ_0_surf
+        self.rho_hflux =  -self.ch * self.windspeed * (θ_liq_1 - θ_liq_star) * ρ_0_surf
         self.rho_qtflux = -self.ch * self.windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
         self.lhf = lv * self.rho_qtflux
         self.shf = cpm_c(q_tot_1)  * self.rho_hflux
