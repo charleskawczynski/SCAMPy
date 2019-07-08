@@ -41,23 +41,20 @@ def update_sol_gm(grid, q, q_tendencies, GMV, TS, tmp, tri_diag):
     ρ_0_half = tmp['ρ_0_half']
     ae = q['a', i_env]
     slice_real_n = grid.slice_real(Node())
+    slice_all_c = grid.slice_all(Center())
 
     tri_diag.ρaK[slice_real_n] = [ae.Mid(k)*tmp['K_h'].Mid(k)*ρ_0_half.Mid(k) for k in grid.over_elems_real(Node())]
     construct_tridiag_diffusion_new_new(grid, TS.dt, tri_diag, ρ_0_half, ae)
-    for k in grid.over_elems(Center()):
-        tri_diag.f[k] = GMV.q_tot.values[k] + TS.dt*q_tendencies['q_tot', i_gm][k]
+    tri_diag.f[slice_all_c] = [GMV.q_tot.values[k] + TS.dt*q_tendencies['q_tot', i_gm][k] for k in grid.over_elems(Center())]
     tridiag_solve_wrapper_new(grid, GMV.q_tot.new, tri_diag)
-    for k in grid.over_elems(Center()):
-        tri_diag.f[k] = GMV.θ_liq.values[k] + TS.dt*q_tendencies['θ_liq', i_gm][k]
+    tri_diag.f[slice_all_c] = [GMV.θ_liq.values[k] + TS.dt*q_tendencies['θ_liq', i_gm][k] for k in grid.over_elems(Center())]
     tridiag_solve_wrapper_new(grid, GMV.θ_liq.new, tri_diag)
 
     tri_diag.ρaK[slice_real_n] = [ae.Mid(k)*tmp['K_m'].Mid(k)*ρ_0_half.Mid(k) for k in grid.over_elems_real(Node())]
     construct_tridiag_diffusion_new_new(grid, TS.dt, tri_diag, ρ_0_half, ae)
-    for k in grid.over_elems(Center()):
-        tri_diag.f[k] = GMV.U.values[k] + TS.dt*q_tendencies['U', i_gm][k]
+    tri_diag.f[slice_all_c] = [GMV.U.values[k] + TS.dt*q_tendencies['U', i_gm][k] for k in grid.over_elems(Center())]
     tridiag_solve_wrapper_new(grid, GMV.U.new, tri_diag)
-    for k in grid.over_elems(Center()):
-        tri_diag.f[k] = GMV.V.values[k] + TS.dt*q_tendencies['V', i_gm][k]
+    tri_diag.f[slice_all_c] = [GMV.V.values[k] + TS.dt*q_tendencies['V', i_gm][k] for k in grid.over_elems(Center())]
     tridiag_solve_wrapper_new(grid, GMV.V.new, tri_diag)
     return
 

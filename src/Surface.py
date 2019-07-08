@@ -158,7 +158,7 @@ class SurfaceMoninObukhov(SurfaceBase):
 
         self.rho_uflux = -self.cm * self.windspeed * U_1 * ρ_0_surf
         self.rho_vflux = -self.cm * self.windspeed * V_1 * ρ_0_surf
-        self.rho_θ_liq_flux =  -self.ch * self.windspeed * (θ_liq_1  - θ_liq_star) * ρ_0_surf
+        self.rho_θ_liq_flux = -self.ch * self.windspeed * (θ_liq_1  - θ_liq_star) * ρ_0_surf
         self.rho_q_tot_flux = -self.ch * self.windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
 
         self.lhf = lv * self.rho_q_tot_flux
