@@ -724,23 +724,18 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def update_GMV_MF(self, grid, q, GMV, EnvVar, UpdVar, TS, tmp):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        slice_all_c = grid.slice_real(Center())
 
         for i in i_uds:
-            for k in grid.over_elems_real(Center()):
-                tmp['mf_tmp', i][k] = ((UpdVar.W.values[i][k] - q['w', i_env].values[k] )* tmp['ρ_0'][k]
-                               * UpdVar.Area.values[i].Mid(k))
+            tmp['mf_tmp', i][slice_all_c] = [((UpdVar.W.values[i][k] - q['w', i_env].values[k]) * tmp['ρ_0'][k]
+                           * UpdVar.Area.values[i].Mid(k)) for k in grid.over_elems_real(Center())]
 
         for k in grid.over_elems_real(Center()):
-            tmp['mf_θ_liq'][k] = 0.0
-            tmp['mf_q_tot'][k] = 0.0
-            for i in i_uds:
-                tmp['mf_θ_liq'][k] += tmp['mf_tmp', i][k] * (UpdVar.θ_liq.values[i].Mid(k) - EnvVar.θ_liq.values.Mid(k))
-                tmp['mf_q_tot'][k] += tmp['mf_tmp', i][k] * (UpdVar.q_tot.values[i].Mid(k) - EnvVar.q_tot.values.Mid(k))
+            tmp['mf_θ_liq'][k] = np.sum([tmp['mf_tmp', i][k] * (UpdVar.θ_liq.values[i].Mid(k) - EnvVar.θ_liq.values.Mid(k)) for i in i_uds])
+            tmp['mf_q_tot'][k] = np.sum([tmp['mf_tmp', i][k] * (UpdVar.q_tot.values[i].Mid(k) - EnvVar.q_tot.values.Mid(k)) for i in i_uds])
 
-        for k in grid.over_elems_real(Center()):
-            α_0_k = tmp['α_0_half'][k]
-            tmp['mf_tend_θ_liq'][k] = -α_0_k*grad(tmp['mf_θ_liq'].Dual(k), grid)
-            tmp['mf_tend_q_tot'][k] = -α_0_k*grad(tmp['mf_q_tot'].Dual(k), grid)
+        tmp['mf_tend_θ_liq'][slice_all_c] = [-tmp['α_0_half'][k]*grad(tmp['mf_θ_liq'].Dual(k), grid) for k in grid.over_elems_real(Center())]
+        tmp['mf_tend_q_tot'][slice_all_c] = [-tmp['α_0_half'][k]*grad(tmp['mf_q_tot'].Dual(k), grid) for k in grid.over_elems_real(Center())]
         return
 
     def compute_tke_buoy(self, grid, q, GMV, EnvVar, EnvThermo, tmp):
