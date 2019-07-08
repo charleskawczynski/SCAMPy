@@ -160,8 +160,7 @@ class Simulation1d:
                              self.UpdThermo, self.Case, self.TS, self.tri_diag)
 
             self.TS.update()
-            self.GMV.update(self.grid, self.q_tendencies, self.TS)
-            self.Turb.update_GMV_diagnostics(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.UpdVar)
+            self.Turb.compute_grid_means(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.UpdVar)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
         sol = self.package_sol()

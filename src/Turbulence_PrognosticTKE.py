@@ -293,11 +293,23 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             q_tendencies['q_tot', i_gm][k] += (GMV.q_tot.new[k] - GMV.q_tot.values[k]) * TS.dti
             q_tendencies['U', i_gm][k] += (GMV.U.new[k] - GMV.U.values[k]) * TS.dti
             q_tendencies['V', i_gm][k] += (GMV.V.new[k] - GMV.V.values[k]) * TS.dti
+
+        for k in grid.over_elems_real(Center()):
+            GMV.U.values[k]  +=  q_tendencies['U', i_gm][k] * TS.dt
+            GMV.V.values[k]  +=  q_tendencies['V', i_gm][k] * TS.dt
+            GMV.θ_liq.values[k] += q_tendencies['θ_liq', i_gm][k] * TS.dt
+            GMV.q_tot.values[k] += q_tendencies['q_tot', i_gm][k] * TS.dt
+            GMV.q_rai.values[k] += q_tendencies['q_rai', i_gm][k] * TS.dt
+
+        GMV.U.set_bcs(grid)
+        GMV.V.set_bcs(grid)
         GMV.θ_liq.set_bcs(grid)
         GMV.q_tot.set_bcs(grid)
         GMV.q_rai.set_bcs(grid)
-        GMV.U.set_bcs(grid)
-        GMV.V.set_bcs(grid)
+        GMV.tke.set_bcs(grid)
+        GMV.cv_q_tot.set_bcs(grid)
+        GMV.cv_θ_liq.set_bcs(grid)
+        GMV.cv_θ_liq_q_tot.set_bcs(grid)
 
         return
 
@@ -829,14 +841,15 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
 
-    def update_GMV_diagnostics(self, grid, q, tmp, GMV, EnvVar, UpdVar):
+    def compute_grid_means(self, grid, q, tmp, GMV, EnvVar, UpdVar):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         ae = q['a', i_env]
+        au = UpdVar.Area.values
         for k in grid.over_elems_real(Center()):
-            GMV.q_liq.values[k] = ae[k] * EnvVar.q_liq.values[k] + sum([ UpdVar.Area.values[i][k] * UpdVar.q_liq.values[i][k] for i in i_uds])
-            GMV.q_rai.values[k] = ae[k] * EnvVar.q_rai.values[k] + sum([ UpdVar.Area.values[i][k] * UpdVar.q_rai.values[i][k] for i in i_uds])
-            GMV.T.values[k]     = ae[k] * EnvVar.T.values[k]     + sum([ UpdVar.Area.values[i][k] * UpdVar.T.values[i][k] for i in i_uds])
-            GMV.B.values[k]     = ae[k] * EnvVar.B.values[k]     + sum([ UpdVar.Area.values[i][k] * UpdVar.B.values[i][k] for i in i_uds])
+            GMV.q_liq.values[k] = ae[k] * EnvVar.q_liq.values[k] + sum([ au[i][k] * UpdVar.q_liq.values[i][k] for i in i_uds])
+            GMV.q_rai.values[k] = ae[k] * EnvVar.q_rai.values[k] + sum([ au[i][k] * UpdVar.q_rai.values[i][k] for i in i_uds])
+            GMV.T.values[k]     = ae[k] * EnvVar.T.values[k]     + sum([ au[i][k] * UpdVar.T.values[i][k] for i in i_uds])
+            GMV.B.values[k]     = ae[k] * EnvVar.B.values[k]     + sum([ au[i][k] * UpdVar.B.values[i][k] for i in i_uds])
         return
 
 

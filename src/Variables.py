@@ -46,27 +46,6 @@ class GridMeanVariables:
         self.cv_θ_liq_q_tot = VariableDiagnostic(grid, Center(), Neumann())
         return
 
-    def update(self, grid, q_tendencies, TS):
-        i_gm, i_env, i_uds, i_sd = q_tendencies.domain_idx()
-        for k in grid.over_elems_real(Center()):
-            self.U.values[k]  +=  q_tendencies['U', i_gm][k] * TS.dt
-            self.V.values[k]  +=  q_tendencies['V', i_gm][k] * TS.dt
-            self.θ_liq.values[k] += q_tendencies['θ_liq', i_gm][k] * TS.dt
-            self.q_tot.values[k] += q_tendencies['q_tot', i_gm][k] * TS.dt
-            self.q_rai.values[k] += q_tendencies['q_rai', i_gm][k] * TS.dt
-
-        self.U.set_bcs(grid)
-        self.V.set_bcs(grid)
-        self.θ_liq.set_bcs(grid)
-        self.q_tot.set_bcs(grid)
-        self.q_rai.set_bcs(grid)
-        self.tke.set_bcs(grid)
-        self.cv_q_tot.set_bcs(grid)
-        self.cv_θ_liq.set_bcs(grid)
-        self.cv_θ_liq_q_tot.set_bcs(grid)
-        q_tendencies.assign(grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
-        return
-
     def initialize_io(self, Stats):
         Stats.add_profile('U_mean')
         Stats.add_profile('V_mean')
