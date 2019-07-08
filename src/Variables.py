@@ -13,12 +13,6 @@ class VariablePrognostic:
     def __init__(self, grid, loc, bc):
         self.values     = Field.field(grid, loc, bc)
         self.new        = Field.field(grid, loc, bc)
-        self.tendencies = Field.field(grid, loc, bc)
-        return
-
-    def zero_tendencies(self, grid):
-        for k in grid.over_elems(Center()):
-            self.tendencies[k] = 0.0
         return
 
     def set_bcs(self, grid):
@@ -52,21 +46,14 @@ class GridMeanVariables:
         self.cv_θ_liq_q_tot = VariableDiagnostic(grid, Center(), Neumann())
         return
 
-    def zero_tendencies(self, grid):
-        self.U.zero_tendencies(grid)
-        self.V.zero_tendencies(grid)
-        self.q_tot.zero_tendencies(grid)
-        self.q_rai.zero_tendencies(grid)
-        self.θ_liq.zero_tendencies(grid)
-        return
-
     def update(self, grid, q_tendencies, TS):
+        i_gm, i_env, i_uds, i_sd = q_tendencies.domain_idx()
         for k in grid.over_elems_real(Center()):
-            self.U.values[k]  +=  self.U.tendencies[k] * TS.dt
-            self.V.values[k]  +=  self.V.tendencies[k] * TS.dt
-            self.θ_liq.values[k]  +=  self.θ_liq.tendencies[k] * TS.dt
-            self.q_tot.values[k] +=  self.q_tot.tendencies[k] * TS.dt
-            self.q_rai.values[k] +=  self.q_rai.tendencies[k] * TS.dt
+            self.U.values[k]  +=  q_tendencies['U', i_gm][k] * TS.dt
+            self.V.values[k]  +=  q_tendencies['V', i_gm][k] * TS.dt
+            self.θ_liq.values[k] += q_tendencies['θ_liq', i_gm][k] * TS.dt
+            self.q_tot.values[k] += q_tendencies['q_tot', i_gm][k] * TS.dt
+            self.q_rai.values[k] += q_tendencies['q_rai', i_gm][k] * TS.dt
 
         self.U.set_bcs(grid)
         self.V.set_bcs(grid)
@@ -77,7 +64,7 @@ class GridMeanVariables:
         self.cv_q_tot.set_bcs(grid)
         self.cv_θ_liq.set_bcs(grid)
         self.cv_θ_liq_q_tot.set_bcs(grid)
-        self.zero_tendencies(grid)
+        q_tendencies.assign(grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
         return
 
     def initialize_io(self, Stats):

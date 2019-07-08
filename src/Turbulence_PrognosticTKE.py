@@ -289,10 +289,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.update_GMV_ED(grid, q, GMV, UpdMicro, Case, TS, tmp, tri_diag)
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.tendencies[k] += (GMV.θ_liq.new[k] - GMV.θ_liq.values[k]) * TS.dti
-            GMV.q_tot.tendencies[k] += (GMV.q_tot.new[k] - GMV.q_tot.values[k]) * TS.dti
-            GMV.U.tendencies[k] += (GMV.U.new[k] - GMV.U.values[k]) * TS.dti
-            GMV.V.tendencies[k] += (GMV.V.new[k] - GMV.V.values[k]) * TS.dti
+            q_tendencies['θ_liq', i_gm][k] += (GMV.θ_liq.new[k] - GMV.θ_liq.values[k]) * TS.dti
+            q_tendencies['q_tot', i_gm][k] += (GMV.q_tot.new[k] - GMV.q_tot.values[k]) * TS.dti
+            q_tendencies['U', i_gm][k] += (GMV.U.new[k] - GMV.U.values[k]) * TS.dti
+            q_tendencies['V', i_gm][k] += (GMV.V.new[k] - GMV.V.values[k]) * TS.dti
         GMV.θ_liq.set_bcs(grid)
         GMV.q_tot.set_bcs(grid)
         GMV.q_rai.set_bcs(grid)

@@ -68,6 +68,18 @@ class StateVec:
         s+= '\nfields = \n'+'\n'.join([str(x) for x in self.fields])
         return s
 
+    def assign(self, grid, name, value):
+        if isinstance(name, tuple):
+            for k in grid.over_elems(Center()):
+                for v in name:
+                    for i in self.over_sub_domains(v):
+                        self[v, i][k] = value
+        elif isinstance(name, str):
+            for k in grid.over_elems(Center()):
+                for i in self.over_sub_domains(name):
+                    self[name, i][k] = value
+
+
     def domain_idx(self):
         return self.i_gm, self.i_env, self.i_uds, self.i_sd
 

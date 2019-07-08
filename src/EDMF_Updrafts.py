@@ -15,7 +15,6 @@ class UpdraftVariable:
         self.values     = [Field.field(grid, loc, bc) for i in range(nu)]
         self.old        = [Field.field(grid, loc, bc) for i in range(nu)]
         self.new        = [Field.field(grid, loc, bc) for i in range(nu)]
-        self.tendencies = [Field.field(grid, loc, bc) for i in range(nu)]
 
     def set_bcs(self, grid):
         n_updrafts = np.shape(self.values)[0]

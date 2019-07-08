@@ -48,6 +48,8 @@ class Simulation1d:
          ('cv_q_tot'      , Center() , Neumann() , N_sd),
          ('cv_θ_liq'      , Center() , Neumann() , N_sd),
          ('cv_θ_liq_q_tot', Center() , Neumann() , N_sd),
+         ('U'             , Center() , Neumann() , N_sd),
+         ('V'             , Center() , Neumann() , N_sd),
         )
 
         temp_vars = (
@@ -138,7 +140,7 @@ class Simulation1d:
         return
 
     def run(self):
-        self.GMV.zero_tendencies(self.grid)
+        self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
         self.Case.update_surface(self.grid, self.GMV, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q_tendencies, self.GMV, self.TS, self.tmp)
         self.Turb.initialize_covariance(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.Case)
@@ -150,7 +152,7 @@ class Simulation1d:
 
         while self.TS.t <= self.TS.t_max:
             print('Percent complete: ', self.TS.t/self.TS.t_max*100)
-            self.GMV.zero_tendencies(self.grid)
+            self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
             self.Case.update_surface(self.grid, self.GMV, self.TS, self.tmp)
             self.Case.update_forcing(self.grid, self.q_tendencies, self.GMV, self.TS, self.tmp)
             self.Turb.update(self.grid, self.q, self.q_tendencies, self.tmp, self.GMV, self.EnvVar,
