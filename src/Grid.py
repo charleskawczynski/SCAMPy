@@ -87,6 +87,14 @@ class Grid:
         else:
             raise TypeError("Bad location in slice_real in Grid.py")
 
+    def slice_all(self, loc):
+        if isinstance(loc, Center):
+            return slice(0, self.nzg, 1)
+        elif isinstance(loc, Node):
+            return slice(0, self.nzg, 1)
+        else:
+            raise TypeError("Bad location in slice_all in Grid.py")
+
     def slice_ghost(self, loc, b):
         if isinstance(loc, Center):
             if isinstance(b, Zmin):

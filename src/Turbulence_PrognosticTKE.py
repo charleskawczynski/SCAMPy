@@ -40,9 +40,9 @@ def update_sol_gm(grid, q, q_tendencies, GMV, TS, tmp, tri_diag):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     ρ_0_half = tmp['ρ_0_half']
     ae = q['a', i_env]
+    slice_real_n = grid.slice_real(Node())
 
-    for k in grid.over_elems_real(Node()):
-        tri_diag.ρaK[k] = ae.Mid(k)*tmp['K_h'].Mid(k)*ρ_0_half.Mid(k)
+    tri_diag.ρaK[slice_real_n] = [ae.Mid(k)*tmp['K_h'].Mid(k)*ρ_0_half.Mid(k) for k in grid.over_elems_real(Node())]
     construct_tridiag_diffusion_new_new(grid, TS.dt, tri_diag, ρ_0_half, ae)
     for k in grid.over_elems(Center()):
         tri_diag.f[k] = GMV.q_tot.values[k] + TS.dt*q_tendencies['q_tot', i_gm][k]
@@ -51,8 +51,7 @@ def update_sol_gm(grid, q, q_tendencies, GMV, TS, tmp, tri_diag):
         tri_diag.f[k] = GMV.θ_liq.values[k] + TS.dt*q_tendencies['θ_liq', i_gm][k]
     tridiag_solve_wrapper_new(grid, GMV.θ_liq.new, tri_diag)
 
-    for k in grid.over_elems_real(Node()):
-        tri_diag.ρaK[k] = ae.Mid(k)*tmp['K_m'].Mid(k)*ρ_0_half.Mid(k)
+    tri_diag.ρaK[slice_real_n] = [ae.Mid(k)*tmp['K_m'].Mid(k)*ρ_0_half.Mid(k) for k in grid.over_elems_real(Node())]
     construct_tridiag_diffusion_new_new(grid, TS.dt, tri_diag, ρ_0_half, ae)
     for k in grid.over_elems(Center()):
         tri_diag.f[k] = GMV.U.values[k] + TS.dt*q_tendencies['U', i_gm][k]
@@ -61,59 +60,6 @@ def update_sol_gm(grid, q, q_tendencies, GMV, TS, tmp, tri_diag):
         tri_diag.f[k] = GMV.V.values[k] + TS.dt*q_tendencies['V', i_gm][k]
     tridiag_solve_wrapper_new(grid, GMV.V.new, tri_diag)
     return
-
-# def update_GMV_ED(grid, q, GMV, UpdMicro, Case, TS, tmp, tri_diag):
-#     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-#     k_1 = grid.first_interior(Zmin())
-#     dzi = grid.dzi
-#     α_1 = tmp['α_0_half'][k_1]
-#     ρ_0_half = tmp['ρ_0_half']
-#     ae = q['a', i_env]
-
-#     ae_1 = ae[k_1]
-
-#     for k in grid.over_elems_real(Node()):
-#         tri_diag.ρaK[k] = ae.Mid(k)*tmp['K_h'].Mid(k)*ρ_0_half.Mid(k)
-
-#     # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
-#     construct_tridiag_diffusion_new_new(grid, TS.dt, tri_diag, ρ_0_half, ae)
-
-#     # Solve q_tot
-#     for k in grid.over_elems(Center()):
-#         tri_diag.f[k] = GMV.q_tot.values[k] + TS.dt * tmp['mf_tend_q_tot'][k] + UpdMicro.prec_src_q_tot_tot[k]
-#     tri_diag.f[k_1] += TS.dt * Case.Sur.rho_q_tot_flux * dzi * α_1/ae_1
-
-#     tridiag_solve_wrapper_new(grid, GMV.q_tot.new, tri_diag)
-
-#     # Solve θ_liq
-#     for k in grid.over_elems(Center()):
-#         tri_diag.f[k] = GMV.θ_liq.values[k] + TS.dt * tmp['mf_tend_θ_liq'][k] + UpdMicro.prec_src_θ_liq_tot[k]
-#     tri_diag.f[k_1] += TS.dt * Case.Sur.rho_θ_liq_flux * dzi * α_1/ae_1
-
-#     tridiag_solve_wrapper_new(grid, GMV.θ_liq.new, tri_diag)
-
-#     # Solve U
-#     for k in grid.over_elems_real(Node()):
-#         tri_diag.ρaK[k] = ae.Mid(k)*tmp['K_m'].Mid(k)*ρ_0_half.Mid(k)
-
-#     # Matrix is the same for all variables that use the same eddy diffusivity, we can construct once and reuse
-#     construct_tridiag_diffusion_new_new(grid, TS.dt, tri_diag, ρ_0_half, ae)
-
-#     for k in grid.over_elems(Center()):
-#         tri_diag.f[k] = GMV.U.values[k]
-#     tri_diag.f[k_1] += TS.dt * Case.Sur.rho_uflux * dzi * α_1/ae_1
-
-#     tridiag_solve_wrapper_new(grid, GMV.U.new, tri_diag)
-
-#     # Solve V
-#     for k in grid.over_elems(Center()):
-#         tri_diag.f[k] = GMV.V.values[k]
-#     tri_diag.f[k_1] += TS.dt * Case.Sur.rho_vflux * dzi * α_1/ae_1
-
-#     tridiag_solve_wrapper_new(grid, GMV.V.new, tri_diag)
-
-#     return
-
 
 def compute_zbl_qt_grad(grid, GMV):
     # computes inversion height as z with max gradient of q_tot
