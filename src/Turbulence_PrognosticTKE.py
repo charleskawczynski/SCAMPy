@@ -1056,7 +1056,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         for k in grid.over_elems_real(Center()):
             if name == 'cv_θ_liq_q_tot':
-                Covar.values[k] = np.fmax(Covar.values[k], - np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
                 Covar.values[k] = np.fmin(Covar.values[k],   np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
             else:
                 Covar.values[k] = np.fmax(Covar.values[k], 0.0)

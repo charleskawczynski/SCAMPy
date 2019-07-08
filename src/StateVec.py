@@ -83,6 +83,12 @@ class StateVec:
     def domain_idx(self):
         return self.i_gm, self.i_env, self.i_uds, self.i_sd
 
+    def slice_updrafts(self):
+        return slice(self.i_uds[0], self.i_uds[:-1])
+
+    def slice_sub_domains(self): # restricts index order
+        return slice(self.i_sd[0], self.i_sd[:-1])
+
     def over_sub_domains(self, i=None):
         if i==None:
             return list(range(self.n_subdomains))
