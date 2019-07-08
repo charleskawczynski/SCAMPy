@@ -152,7 +152,7 @@ class UpdraftThermodynamics:
                 UpdVar.T.values[i][k] = T
         return
 
-    def buoyancy(self, grid, q, tmp, UpdVar, EnvVar, GMV, extrap):
+    def buoyancy(self, grid, q, tmp, UpdVar, EnvVar, GMV):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         for i in i_uds:
             for k in grid.over_elems_real(Center()):

@@ -123,10 +123,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.n_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
 
         try:
-            self.use_steady_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['use_steady_updrafts']
-        except:
-            self.use_steady_updrafts = False
-        try:
             self.use_local_micro = namelist['turbulence']['EDMF_PrognosticTKE']['use_local_micro']
         except:
             self.use_local_micro = True
@@ -160,18 +156,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         except:
             self.similarity_diffusivity = False
             print('Turbulence--EDMF_PrognosticTKE: defaulting to tke-based eddy diffusivity')
-
-        try:
-            self.extrapolate_buoyancy = namelist['turbulence']['EDMF_PrognosticTKE']['extrapolate_buoyancy']
-        except:
-            self.extrapolate_buoyancy = True
-            print('Turbulence--EDMF_PrognosticTKE: defaulting to extrapolation of updraft buoyancy along a pseudoadiabat')
-
-        try:
-            self.mixing_scheme = str(namelist['turbulence']['EDMF_PrognosticTKE']['mixing_length'])
-        except:
-            self.mixing_scheme = 'tke'
-            print('Using tke mixing length formulation as default')
 
         # Get values from paramlist
         # set defaults at some point?
@@ -370,7 +354,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         while time_elapsed < TS.dt:
             self.compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q)
             EnvThermo.eos_update_SA_mean(grid, EnvVar, False, tmp)
-            UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV, self.extrapolate_buoyancy)
+            UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
             UpdMicro.compute_sources(grid, UpdVar, tmp)
             UpdMicro.update_updraftvars(grid, UpdVar)
 
@@ -387,7 +371,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
             self.decompose_environment(grid, q, GMV, EnvVar, UpdVar)
         EnvThermo.eos_update_SA_mean(grid, EnvVar, True, tmp)
-        UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV, self.extrapolate_buoyancy)
+        UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
         return
 
     def compute_mixing_length(self, grid, tmp, obukhov_length, EnvVar):
