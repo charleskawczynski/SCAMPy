@@ -17,6 +17,18 @@ from funcs_thermo import  *
 from funcs_turbulence import *
 from funcs_utility import *
 
+
+def compute_zbl_qt_grad(grid, GMV):
+    # computes inversion height as z with max gradient of q_tot
+    zbl_q_tot = 0.0
+    q_tot_grad = 0.0
+    for k in grid.over_elems_real(Center()):
+        q_tot_grad_new = grad(GMV.q_tot.values.Dual(k), grid)
+        if np.fabs(q_tot_grad) > q_tot_grad:
+            q_tot_grad = np.fabs(q_tot_grad_new)
+            zbl_q_tot = grid.z_half[k]
+    return zbl_q_tot
+
 def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit, temp_C):
     maxgrad = 0.0
     theta_rho_bl = temp_C.surface_bl(grid)
@@ -291,12 +303,12 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         for k in grid.over_elems_real(Center()):
             q_tendencies['θ_liq', i_gm][k] += (GMV.θ_liq.new[k] - GMV.θ_liq.values[k]) * TS.dti
             q_tendencies['q_tot', i_gm][k] += (GMV.q_tot.new[k] - GMV.q_tot.values[k]) * TS.dti
-            q_tendencies['U', i_gm][k] += (GMV.U.new[k] - GMV.U.values[k]) * TS.dti
-            q_tendencies['V', i_gm][k] += (GMV.V.new[k] - GMV.V.values[k]) * TS.dti
+            q_tendencies['U', i_gm][k]     += (GMV.U.new[k]     - GMV.U.values[k])     * TS.dti
+            q_tendencies['V', i_gm][k]     += (GMV.V.new[k]     - GMV.V.values[k])     * TS.dti
 
         for k in grid.over_elems_real(Center()):
-            GMV.U.values[k]  +=  q_tendencies['U', i_gm][k] * TS.dt
-            GMV.V.values[k]  +=  q_tendencies['V', i_gm][k] * TS.dt
+            GMV.U.values[k]     += q_tendencies['U', i_gm][k]     * TS.dt
+            GMV.V.values[k]     += q_tendencies['V', i_gm][k]     * TS.dt
             GMV.θ_liq.values[k] += q_tendencies['θ_liq', i_gm][k] * TS.dt
             GMV.q_tot.values[k] += q_tendencies['q_tot', i_gm][k] * TS.dt
             GMV.q_rai.values[k] += q_tendencies['q_rai', i_gm][k] * TS.dt
@@ -480,7 +492,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         input_st.b_mean = 0
         input_st.dz = grid.dz
-        input_st.zbl = self.compute_zbl_qt_grad(grid, GMV)
+        input_st.zbl = compute_zbl_qt_grad(grid, GMV)
         for i in i_uds:
             input_st.zi = UpdVar.cloud_base[i]
             for k in grid.over_elems_real(Center()):
@@ -527,17 +539,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                 tmp['detr_sc', i][k] = ret.detr_sc * self.detrainment_factor
 
         return
-
-    def compute_zbl_qt_grad(self, grid, GMV):
-        # computes inversion height as z with max gradient of q_tot
-        zbl_qt = 0.0
-        qt_grad = 0.0
-        for k in grid.over_elems_real(Center()):
-            qt_grad_new = grad(GMV.q_tot.values.Dual(k), grid)
-            if np.fabs(qt_grad) > qt_grad:
-                qt_grad = np.fabs(qt_grad_new)
-                zbl_qt = grid.z_half[k]
-        return zbl_qt
 
     def solve_updraft_velocity_area(self, grid, q, tmp, GMV, UpdVar, TS):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
@@ -787,39 +788,39 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         # Note that source terms at the first interior point are not really used because that is where tke boundary condition is
         # enforced (according to MO similarity). Thus here I am being sloppy about lowest grid point
         for k in grid.over_elems_real(Center()):
-            qt_dry = EnvThermo.q_tot_dry[k]
-            th_dry = EnvThermo.θ_dry[k]
+            q_tot_dry = EnvThermo.q_tot_dry[k]
+            θ_dry = EnvThermo.θ_dry[k]
             t_cloudy = EnvThermo.t_cloudy[k]
-            qv_cloudy = EnvThermo.q_vap_cloudy[k]
-            qt_cloudy = EnvThermo.q_tot_cloudy[k]
-            th_cloudy = EnvThermo.θ_cloudy[k]
+            q_vap_cloudy = EnvThermo.q_vap_cloudy[k]
+            q_tot_cloudy = EnvThermo.q_tot_cloudy[k]
+            θ_cloudy = EnvThermo.θ_cloudy[k]
             p_0 = tmp['p_0_half'][k]
 
             lh = latent_heat(t_cloudy)
-            cpm = cpm_c(qt_cloudy)
+            cpm = cpm_c(q_tot_cloudy)
             grad_θ_liq = grad_neg(EnvVar.θ_liq.values.Cut(k), grid)
             grad_q_tot = grad_neg(EnvVar.q_tot.values.Cut(k), grid)
 
             prefactor = Rd * exner_c(p_0)/p_0
 
-            d_alpha_θ_liq_dry = prefactor * (1.0 + (eps_vi - 1.0) * qt_dry)
-            d_alpha_qt_dry = prefactor * th_dry * (eps_vi - 1.0)
+            d_alpha_θ_liq_dry = prefactor * (1.0 + (eps_vi - 1.0) * q_tot_dry)
+            d_alpha_q_tot_dry = prefactor * θ_dry * (eps_vi - 1.0)
             CF_env = EnvVar.CF.values[k]
 
             if CF_env > 0.0:
-                d_alpha_θ_liq_cloudy = (prefactor * (1.0 + eps_vi * (1.0 + lh / Rv / t_cloudy) * qv_cloudy - qt_cloudy )
-                                         / (1.0 + lh * lh / cpm / Rv / t_cloudy / t_cloudy * qv_cloudy))
-                d_alpha_qt_cloudy = (lh / cpm / t_cloudy * d_alpha_θ_liq_cloudy - prefactor) * th_cloudy
+                d_alpha_θ_liq_cloudy = (prefactor * (1.0 + eps_vi * (1.0 + lh / Rv / t_cloudy) * q_vap_cloudy - q_tot_cloudy )
+                                         / (1.0 + lh * lh / cpm / Rv / t_cloudy / t_cloudy * q_vap_cloudy))
+                d_alpha_q_tot_cloudy = (lh / cpm / t_cloudy * d_alpha_θ_liq_cloudy - prefactor) * θ_cloudy
             else:
                 d_alpha_θ_liq_cloudy = 0.0
-                d_alpha_qt_cloudy = 0.0
+                d_alpha_q_tot_cloudy = 0.0
 
             d_alpha_θ_liq_total = (CF_env * d_alpha_θ_liq_cloudy + (1.0-CF_env) * d_alpha_θ_liq_dry)
-            d_alpha_qt_total     = (CF_env * d_alpha_qt_cloudy     + (1.0-CF_env) * d_alpha_qt_dry)
+            d_alpha_q_tot_total = (CF_env * d_alpha_q_tot_cloudy + (1.0-CF_env) * d_alpha_q_tot_dry)
 
             K_h_k = tmp['K_h'][k]
             term_1 = - K_h_k * grad_θ_liq * d_alpha_θ_liq_total
-            term_2 = - K_h_k * grad_q_tot * d_alpha_qt_total
+            term_2 = - K_h_k * grad_q_tot * d_alpha_q_tot_total
 
             # TODO - check
             EnvVar.tke.buoy[k] = g / tmp['α_0_half'][k] * ae[k] * tmp['ρ_0_half'][k] * (term_1 + term_2)

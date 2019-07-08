@@ -145,9 +145,9 @@ class Simulation1d:
         self.Case.update_forcing(self.grid, self.q_tendencies, self.GMV, self.TS, self.tmp)
         self.Turb.initialize_covariance(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.Case)
         for k in self.grid.over_elems(Center()):
-            self.EnvVar.tke.values[k] = self.GMV.tke.values[k]
-            self.EnvVar.cv_θ_liq.values[k] = self.GMV.cv_θ_liq.values[k]
-            self.EnvVar.cv_q_tot.values[k] = self.GMV.cv_q_tot.values[k]
+            self.EnvVar.tke.values[k]            = self.GMV.tke.values[k]
+            self.EnvVar.cv_θ_liq.values[k]       = self.GMV.cv_θ_liq.values[k]
+            self.EnvVar.cv_q_tot.values[k]       = self.GMV.cv_q_tot.values[k]
             self.EnvVar.cv_θ_liq_q_tot.values[k] = self.GMV.cv_θ_liq_q_tot.values[k]
 
         while self.TS.t <= self.TS.t_max:
