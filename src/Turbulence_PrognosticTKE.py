@@ -23,13 +23,12 @@ def compute_tendencies_gm(grid, q_tendencies, q, GMV, UpdMicro, Case, TS, tmp, t
     dzi = grid.dzi
     α_1 = tmp['α_0_half'][k_1]
     ae_1 = q['a', i_env][k_1]
+    slice_all_c = grid.slice_all(Center())
 
-    for k in grid.over_elems(Center()):
-        q_tendencies['q_tot', i_gm][k] += tmp['mf_tend_q_tot'][k] + UpdMicro.prec_src_q_tot_tot[k]*TS.dti
+    q_tendencies['q_tot', i_gm][slice_all_c] += [tmp['mf_tend_q_tot'][k] + UpdMicro.prec_src_q_tot_tot[k]*TS.dti for k in grid.over_elems(Center())]
     q_tendencies['q_tot', i_gm][k_1] += Case.Sur.rho_q_tot_flux * dzi * α_1/ae_1
 
-    for k in grid.over_elems(Center()):
-        q_tendencies['θ_liq', i_gm][k] += tmp['mf_tend_θ_liq'][k] + UpdMicro.prec_src_θ_liq_tot[k]*TS.dti
+    q_tendencies['θ_liq', i_gm][slice_all_c] += [tmp['mf_tend_θ_liq'][k] + UpdMicro.prec_src_θ_liq_tot[k]*TS.dti for k in grid.over_elems(Center())]
     q_tendencies['θ_liq', i_gm][k_1] += Case.Sur.rho_θ_liq_flux * dzi * α_1/ae_1
 
     q_tendencies['U', i_gm][k_1] += Case.Sur.rho_uflux * dzi * α_1/ae_1
@@ -313,9 +312,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         self.decompose_environment(grid, q, GMV, EnvVar, UpdVar)
         self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.W.values,  UpdVar.W.values,  q['w', i_env],  q['w', i_env],  EnvVar.tke.values,    GMV.W.values,  GMV.W.values,  GMV.tke.values, 'tke')
-        self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.θ_liq.values,  EnvVar.θ_liq.values,  EnvVar.θ_liq.values,  EnvVar.cv_θ_liq.values,   GMV.θ_liq.values,  GMV.θ_liq.values,  GMV.cv_θ_liq.values, '')
-        self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.q_tot.values, UpdVar.q_tot.values, EnvVar.q_tot.values, EnvVar.q_tot.values, EnvVar.cv_q_tot.values,  GMV.q_tot.values, GMV.q_tot.values, GMV.cv_q_tot.values, '')
-        self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.q_tot.values, EnvVar.θ_liq.values,  EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot.values, GMV.θ_liq.values,  GMV.q_tot.values, GMV.cv_θ_liq_q_tot.values, '')
+        self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.θ_liq.values, EnvVar.θ_liq.values, EnvVar.θ_liq.values, EnvVar.cv_θ_liq.values,       GMV.θ_liq.values, GMV.θ_liq.values, GMV.cv_θ_liq.values      , '')
+        self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.q_tot.values,  UpdVar.q_tot.values, EnvVar.q_tot.values, EnvVar.q_tot.values, EnvVar.cv_q_tot.values,       GMV.q_tot.values, GMV.q_tot.values, GMV.cv_q_tot.values      , '')
+        self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.q_tot.values, EnvVar.θ_liq.values, EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot.values, GMV.θ_liq.values, GMV.q_tot.values, GMV.cv_θ_liq_q_tot.values, '')
         self.update_GMV_MF(grid, q, GMV, EnvVar, UpdVar, TS, tmp)
         self.compute_eddy_diffusivities_tke(grid, tmp, GMV, EnvVar, Case)
         self.compute_covariance(grid, q, GMV, EnvVar, UpdVar, EnvThermo, Case, TS, tmp, tri_diag)
