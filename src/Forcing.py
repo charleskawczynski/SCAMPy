@@ -16,7 +16,6 @@ class ForcingBase:
         self.dqtdt      = Half(grid)
         self.ug         = Half(grid)
         self.vg         = Half(grid)
-        self.convert_forcing_prog_fp = convert_forcing_thetal
         return
     def update(self, grid, q_tendencies, GMV, tmp):
         return
@@ -62,7 +61,7 @@ class ForcingStandard(ForcingBase):
             # Apply large-scale horizontal advection tendencies
             q_tot = GMV.q_tot.values[k]
             q_vap = q_tot - GMV.q_liq.values[k]
-            q_tendencies['θ_liq', i_gm][k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k],
+            q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0_half'][k],
                                                                     q_tot,
                                                                     q_vap,
                                                                     GMV.T.values[k],
@@ -97,7 +96,7 @@ class ForcingStandard(ForcingBase):
 #         for k in grid.over_elems_real(Center()):
 #             # Apply large-scale horizontal advection tendencies
 #             q_vap = GMV.q_tot.values[k] - GMV.q_liq.values[k]
-#             q_tendencies['θ_liq', i_gm][k] += self.convert_forcing_prog_fp(tmp['p_0_half'][k],GMV.q_tot.values[k], q_vap,
+#             q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0_half'][k],GMV.q_tot.values[k], q_vap,
 #                                                                 GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
 #             q_tendencies['q_tot', i_gm][k] += self.dqtdt[k]
 #
@@ -194,7 +193,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
             # Apply large-scale horizontal advection tendencies
             q_tot = GMV.q_tot.values[k]
             q_vap = q_tot - GMV.q_liq.values[k]
-            q_tendencies['θ_liq', i_gm][k]  += self.convert_forcing_prog_fp(tmp['p_0_half'][k],
+            q_tendencies['θ_liq', i_gm][k]  += convert_forcing_thetal(tmp['p_0_half'][k],
                                                                  q_tot,
                                                                  q_vap,
                                                                  GMV.T.values[k],
