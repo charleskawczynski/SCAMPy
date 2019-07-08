@@ -301,17 +301,11 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.update_GMV_ED(grid, q, GMV, UpdMicro, Case, TS, tmp, tri_diag)
 
         for k in grid.over_elems_real(Center()):
-            q_tendencies['θ_liq', i_gm][k] += (GMV.θ_liq.new[k] - GMV.θ_liq.values[k]) * TS.dti
-            q_tendencies['q_tot', i_gm][k] += (GMV.q_tot.new[k] - GMV.q_tot.values[k]) * TS.dti
-            q_tendencies['U', i_gm][k]     += (GMV.U.new[k]     - GMV.U.values[k])     * TS.dti
-            q_tendencies['V', i_gm][k]     += (GMV.V.new[k]     - GMV.V.values[k])     * TS.dti
-
-        for k in grid.over_elems_real(Center()):
-            GMV.U.values[k]     += q_tendencies['U', i_gm][k]     * TS.dt
-            GMV.V.values[k]     += q_tendencies['V', i_gm][k]     * TS.dt
-            GMV.θ_liq.values[k] += q_tendencies['θ_liq', i_gm][k] * TS.dt
-            GMV.q_tot.values[k] += q_tendencies['q_tot', i_gm][k] * TS.dt
-            GMV.q_rai.values[k] += q_tendencies['q_rai', i_gm][k] * TS.dt
+            GMV.U.values[k]     = GMV.U.new[k]     + q_tendencies['U', i_gm][k]     * TS.dt
+            GMV.V.values[k]     = GMV.V.new[k]     + q_tendencies['V', i_gm][k]     * TS.dt
+            GMV.θ_liq.values[k] = GMV.θ_liq.new[k] + q_tendencies['θ_liq', i_gm][k] * TS.dt
+            GMV.q_tot.values[k] = GMV.q_tot.new[k] + q_tendencies['q_tot', i_gm][k] * TS.dt
+            GMV.q_rai.values[k] = GMV.q_rai.new[k] + q_tendencies['q_rai', i_gm][k] * TS.dt
 
         GMV.U.set_bcs(grid)
         GMV.V.set_bcs(grid)
@@ -748,14 +742,14 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         # Solve q_tot
         for k in grid.over_elems(Center()):
             tri_diag.f[k] = GMV.q_tot.values[k] + TS.dt * tmp['mf_tend_q_tot'][k] + UpdMicro.prec_src_q_tot_tot[k]
-        tri_diag.f[k_1] = tri_diag.f[k_1] + TS.dt * Case.Sur.rho_qtflux * dzi * α_1/ae_1
+        tri_diag.f[k_1] += TS.dt * Case.Sur.rho_qtflux * dzi * α_1/ae_1
 
         tridiag_solve_wrapper_new(grid, GMV.q_tot.new, tri_diag)
 
         # Solve θ_liq
         for k in grid.over_elems(Center()):
             tri_diag.f[k] = GMV.θ_liq.values[k] + TS.dt * tmp['mf_tend_θ_liq'][k] + UpdMicro.prec_src_θ_liq_tot[k]
-        tri_diag.f[k_1] = tri_diag.f[k_1] + TS.dt * Case.Sur.rho_hflux * dzi * α_1/ae_1
+        tri_diag.f[k_1] += TS.dt * Case.Sur.rho_hflux * dzi * α_1/ae_1
 
         tridiag_solve_wrapper_new(grid, GMV.θ_liq.new, tri_diag)
 
@@ -768,14 +762,14 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         for k in grid.over_elems(Center()):
             tri_diag.f[k] = GMV.U.values[k]
-        tri_diag.f[k_1] = tri_diag.f[k_1] + TS.dt * Case.Sur.rho_uflux * dzi * α_1/ae_1
+        tri_diag.f[k_1] += TS.dt * Case.Sur.rho_uflux * dzi * α_1/ae_1
 
         tridiag_solve_wrapper_new(grid, GMV.U.new, tri_diag)
 
         # Solve V
         for k in grid.over_elems(Center()):
             tri_diag.f[k] = GMV.V.values[k]
-        tri_diag.f[k_1] = tri_diag.f[k_1] + TS.dt * Case.Sur.rho_vflux * dzi * α_1/ae_1
+        tri_diag.f[k_1] += TS.dt * Case.Sur.rho_vflux * dzi * α_1/ae_1
 
         tridiag_solve_wrapper_new(grid, GMV.V.new, tri_diag)
 
