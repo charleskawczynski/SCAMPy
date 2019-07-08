@@ -17,6 +17,18 @@ from funcs_thermo import  *
 from funcs_turbulence import *
 from funcs_utility import *
 
+# Find values of environmental variables by subtracting updraft values from grid mean values
+def decompose_environment(grid, q, GMV, EnvVar, UpdVar):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    for k in grid.over_elems(Center()):
+        a_env = q['a', i_env][k]
+        EnvVar.q_tot.values[k] = (GMV.q_tot.values[k] - sum([q['a', i][k]*UpdVar.q_tot.values[i][k] for i in i_uds]))/a_env
+        EnvVar.θ_liq.values[k] = (GMV.θ_liq.values[k] - sum([q['a', i][k]*UpdVar.θ_liq.values[i][k] for i in i_uds]))/a_env
+        # Assuming GMV.W = 0!
+        a_env = q['a', i_env].Mid(k)
+        q['w', i_env][k] = (0.0 - sum([q['a', i][k]*UpdVar.W.values[i][k] for i in i_uds]))/a_env
+    return
+
 def compute_tendencies_gm(grid, q_tendencies, q, GMV, UpdMicro, Case, TS, tmp, tri_diag):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
@@ -310,7 +322,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
-        self.decompose_environment(grid, q, GMV, EnvVar, UpdVar)
+        decompose_environment(grid, q, GMV, EnvVar, UpdVar)
         self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.W.values,  UpdVar.W.values,  q['w', i_env],  q['w', i_env],  EnvVar.tke.values,    GMV.W.values,  GMV.W.values,  GMV.tke.values, 'tke')
         self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.θ_liq.values, EnvVar.θ_liq.values, EnvVar.θ_liq.values, EnvVar.cv_θ_liq.values,       GMV.θ_liq.values, GMV.θ_liq.values, GMV.cv_θ_liq.values      , '')
         self.get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.q_tot.values,  UpdVar.q_tot.values, EnvVar.q_tot.values, EnvVar.q_tot.values, EnvVar.cv_q_tot.values,       GMV.q_tot.values, GMV.q_tot.values, GMV.cv_q_tot.values      , '')
@@ -319,7 +331,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.compute_eddy_diffusivities_tke(grid, tmp, GMV, EnvVar, Case)
         self.compute_covariance(grid, q, GMV, EnvVar, UpdVar, EnvThermo, Case, TS, tmp, tri_diag)
 
-        self.compute_prognostic_updrafts(grid, q, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS)
+        self.compute_prognostic_updrafts(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS)
 
         compute_tendencies_gm(grid, q_tendencies, q, GMV, UpdMicro, Case, TS, tmp, tri_diag)
         update_sol_gm(grid, q, q_tendencies, GMV, TS, tmp, tri_diag)
@@ -343,7 +355,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         return
 
-    def compute_prognostic_updrafts(self, grid, q, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS):
+    def compute_prognostic_updrafts(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS):
         time_elapsed = 0.0
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         UpdVar.set_new_with_values(grid)
@@ -357,8 +369,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             UpdMicro.compute_sources(grid, UpdVar, tmp)
             UpdMicro.update_updraftvars(grid, UpdVar)
 
-            self.solve_updraft_velocity_area(grid, q, tmp, GMV, UpdVar, TS)
-            self.solve_updraft_scalars(grid, q, tmp, GMV, EnvVar, UpdVar, UpdMicro, TS)
+            self.solve_updraft_velocity_area(grid, q, q_tendencies, tmp, GMV, UpdVar, TS)
+            self.solve_updraft_scalars(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, TS)
             UpdVar.θ_liq.set_bcs(grid)
             UpdVar.q_tot.set_bcs(grid)
             UpdVar.q_rai.set_bcs(grid)
@@ -368,7 +380,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             UpdVar.set_values_with_new(grid)
             time_elapsed += self.dt_upd
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
-            self.decompose_environment(grid, q, GMV, EnvVar, UpdVar)
+            decompose_environment(grid, q, GMV, EnvVar, UpdVar)
         EnvThermo.eos_update_SA_mean(grid, EnvVar, True, tmp)
         UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
         return
@@ -431,18 +443,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         GMV.cv_θ_liq.values[k_1]       = get_surface_variance(flux1*alpha0LL,flux1*alpha0LL, ustar, zLL, oblength)
         GMV.cv_q_tot.values[k_1]       = get_surface_variance(flux2*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
         GMV.cv_θ_liq_q_tot.values[k_1] = get_surface_variance(flux1*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
-        return
-
-    # Find values of environmental variables by subtracting updraft values from grid mean values
-    def decompose_environment(self, grid, q, GMV, EnvVar, UpdVar):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        for k in grid.over_elems(Center()):
-            a_env = q['a', i_env][k]
-            EnvVar.q_tot.values[k] = (GMV.q_tot.values[k] - sum([q['a', i][k]*UpdVar.q_tot.values[i][k] for i in i_uds]))/a_env
-            EnvVar.θ_liq.values[k] = (GMV.θ_liq.values[k] - sum([q['a', i][k]*UpdVar.θ_liq.values[i][k] for i in i_uds]))/a_env
-            # Assuming GMV.W = 0!
-            a_env = q['a', i_env].Mid(k)
-            q['w', i_env][k] = (0.0 - sum([q['a', i][k]*UpdVar.W.values[i][k] for i in i_uds]))/a_env
         return
 
     def get_GMV_CoVar(self, grid, q, au, phi_u, psi_u, phi_e,  psi_e, covar_e, gmv_phi, gmv_psi, gmv_covar, name):
@@ -558,7 +558,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         return
 
-    def solve_updraft_velocity_area(self, grid, q, tmp, GMV, UpdVar, TS):
+    def solve_updraft_velocity_area(self, grid, q, q_tendencies, tmp, GMV, UpdVar, TS):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         k_1 = grid.first_interior(Zmin())
         kb_1 = grid.boundary(Zmin())
@@ -664,7 +664,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         return
 
-    def solve_updraft_scalars(self, grid, q, tmp, GMV, EnvVar, UpdVar, UpdMicro, TS):
+    def solve_updraft_scalars(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, TS):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         dzi = grid.dzi
         dti_ = 1.0/self.dt_upd
