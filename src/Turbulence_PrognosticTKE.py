@@ -724,13 +724,8 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def update_GMV_MF(self, grid, q, GMV, EnvVar, UpdVar, TS, tmp):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        k_1 = grid.first_interior(Zmin())
-        kb_1 = grid.boundary(Zmin())
-        tmp['mf_θ_liq'][:] = 0.0
-        tmp['mf_q_tot'][:] = 0.0
 
         for i in i_uds:
-            tmp['mf_tmp', i][kb_1] = 0.0
             for k in grid.over_elems_real(Center()):
                 tmp['mf_tmp', i][k] = ((UpdVar.W.values[i][k] - q['w', i_env].values[k] )* tmp['ρ_0'][k]
                                * UpdVar.Area.values[i].Mid(k))
@@ -843,10 +838,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.compute_covariance_rain(grid, q, tmp, TS, GMV, EnvVar, EnvThermo)
 
         self.reset_surface_covariance(grid, q, tmp, GMV, Case)
-        self.update_covariance_ED(grid, q, tmp, EnvVar.tke           , GMV, EnvVar, UpdVar, Case, TS, GMV.W    , GMV.W    , GMV.tke            , we                 , we                 , UpdVar.W    , UpdVar.W    , 'tke'           , tri_diag)
-        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_θ_liq      , GMV, EnvVar, UpdVar, Case, TS, GMV.θ_liq    , GMV.θ_liq    , GMV.cv_θ_liq       , EnvVar.θ_liq.values    , EnvVar.θ_liq.values    , UpdVar.θ_liq    , UpdVar.θ_liq    , 'cv_θ_liq'      , tri_diag)
-        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_q_tot      , GMV, EnvVar, UpdVar, Case, TS, GMV.q_tot, GMV.q_tot, GMV.cv_q_tot       , EnvVar.q_tot.values, EnvVar.q_tot.values, UpdVar.q_tot, UpdVar.q_tot, 'cv_q_tot'      , tri_diag)
-        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, GMV, EnvVar, UpdVar, Case, TS, GMV.θ_liq    , GMV.q_tot, GMV.cv_θ_liq_q_tot , EnvVar.θ_liq.values    , EnvVar.q_tot.values, UpdVar.θ_liq    , UpdVar.q_tot, 'cv_θ_liq_q_tot', tri_diag)
+        self.update_covariance_ED(grid, q, tmp, EnvVar.tke           , GMV, EnvVar, UpdVar, Case, TS, GMV.W     , GMV.W     , GMV.tke            , we                  , we                  , UpdVar.W     , UpdVar.W     , 'tke'           , tri_diag)
+        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_θ_liq      , GMV, EnvVar, UpdVar, Case, TS, GMV.θ_liq , GMV.θ_liq , GMV.cv_θ_liq       , EnvVar.θ_liq.values , EnvVar.θ_liq.values , UpdVar.θ_liq , UpdVar.θ_liq , 'cv_θ_liq'      , tri_diag)
+        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_q_tot      , GMV, EnvVar, UpdVar, Case, TS, GMV.q_tot , GMV.q_tot , GMV.cv_q_tot       , EnvVar.q_tot.values , EnvVar.q_tot.values , UpdVar.q_tot , UpdVar.q_tot , 'cv_q_tot'      , tri_diag)
+        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, GMV, EnvVar, UpdVar, Case, TS, GMV.θ_liq , GMV.q_tot , GMV.cv_θ_liq_q_tot , EnvVar.θ_liq.values , EnvVar.q_tot.values , UpdVar.θ_liq , UpdVar.q_tot , 'cv_θ_liq_q_tot', tri_diag)
         self.cleanup_covariance(grid, GMV, EnvVar, UpdVar)
         return
 
@@ -858,18 +853,18 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         us = Case.Sur.ustar
         zs = self.zi
         k_1 = grid.first_interior(Zmin())
-        Hvar_1 = GMV.cv_θ_liq.values[k_1]
-        QTvar_1 = GMV.cv_q_tot.values[k_1]
-        HQTcov_1 = GMV.cv_θ_liq_q_tot.values[k_1]
+        cv_θ_liq_1 = GMV.cv_θ_liq.values[k_1]
+        cv_q_tot_1 = GMV.cv_q_tot.values[k_1]
+        cv_θ_liq_q_tot_1 = GMV.cv_θ_liq_q_tot.values[k_1]
         self.reset_surface_covariance(grid, q, tmp, GMV, Case)
         if ws > 0.0:
             for k in grid.over_elems(Center()):
                 z = grid.z_half[k]
                 temp = ws * 1.3 * np.cbrt((us*us*us)/(ws*ws*ws) + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
                 GMV.tke.values[k] = temp
-                GMV.cv_θ_liq.values[k]   = Hvar_1 * temp
-                GMV.cv_q_tot.values[k]  = QTvar_1 * temp
-                GMV.cv_θ_liq_q_tot.values[k] = HQTcov_1 * temp
+                GMV.cv_θ_liq.values[k]       = cv_θ_liq_1 * temp
+                GMV.cv_q_tot.values[k]       = cv_q_tot_1 * temp
+                GMV.cv_θ_liq_q_tot.values[k] = cv_θ_liq_q_tot_1 * temp
             self.reset_surface_covariance(grid, q, tmp, GMV, Case)
             self.compute_mixing_length(grid, tmp, Case.Sur.obukhov_length, EnvVar)
         return
@@ -885,7 +880,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             if EnvVar.tke.values[k] < tmp_eps:                     EnvVar.tke.values[k]            = 0.0
             if EnvVar.cv_q_tot.values[k] < tmp_eps:                EnvVar.cv_q_tot.values[k]       = 0.0
             if np.fabs(EnvVar.cv_θ_liq_q_tot.values[k]) < tmp_eps: EnvVar.cv_θ_liq_q_tot.values[k] = 0.0
-
 
     def compute_covariance_shear(self, grid, q, tmp, GMV, Covar, UpdVar1, UpdVar2, EnvVar1, EnvVar2, name):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
