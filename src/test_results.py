@@ -48,7 +48,7 @@ def run_all_cases():
     # all_cases = ('Soares', 'Bomex', 'life_cycle_Tan2018', 'Rico', 'TRMM_LBA', 'ARM_SGP', 'DYCOMS_RF01', 'GABLS', 'SP')
     # all_cases = ('DYCOMS_RF01', 'GABLS', 'SP')
     tol_rel_local = 0.1
-    tol_rel = 0.05
+    score_tol = 0.05
     sol_expected = expected_solutions(all_cases)
 
     cases = ('Soares', 'Bomex')
@@ -56,7 +56,7 @@ def run_all_cases():
     # cases = all_cases
     # cases = ('Bomex', )
 
-    all_tests = [run_case(case, sol_expected[case], tol_rel_local, tol_rel) for case in cases]
+    all_tests = [run_case(case, sol_expected[case], tol_rel_local, score_tol) for case in cases]
 
     print('******************************* Summary test results:')
     for tests in all_tests:
@@ -64,7 +64,7 @@ def run_all_cases():
             print(test)
     return all_tests
 
-def run_case(case, sol_expected, tol_rel_local, tol_rel):
+def run_case(case, sol_expected, tol_rel_local, score_tol):
     tests = []
     sol = main.run(case)
 
@@ -73,22 +73,25 @@ def run_case(case, sol_expected, tol_rel_local, tol_rel):
         print('------------------------ '+vn)
         s_expected = getattr(sol_expected, vn)
         s_computed = getattr(sol, vn)
-        print('s_expected = ',s_expected)
-        print('s_computed = ',s_computed)
         assert len(s_expected)==len(s_computed)
         y_amax = np.amax(s_expected)
         abs_err = np.array([abs(x-y) for x,y in zip(s_computed, s_expected)])
         rel_err = np.array([x/y_amax for x in abs_err])
-        print('y_amax = ', y_amax)
-        print('abs_err = ', abs_err)
-        print('rel_err = ', rel_err)
         passed_per_element = [e < tol_rel_local for e in rel_err]
-        print('passed_per_element = ', passed_per_element)
         n_pass = passed_per_element.count(True)
         n_fail = passed_per_element.count(False)
-        print('n_pass = ',n_pass)
-        print('n_fail = ',n_fail)
-        passed = n_fail/n_pass < tol_rel
+        passed = n_fail/n_pass < score_tol
+        if not passed:
+            print('s_expected = ',s_expected)
+            print('s_computed = ',s_computed[:])
+            print('y_amax = ', y_amax)
+            print('abs_err = ', abs_err)
+            print('rel_err = ', rel_err)
+            print('passed_per_element = ', passed_per_element)
+            print('n_pass = ',n_pass)
+            print('n_fail = ',n_fail)
+            print('score = n_fail/n_pass = ',n_fail/n_pass)
+            print('score_tol = ',n_fail/n_pass)
         if passed:
             tests.append(('Pass: '+case+', '+vn, rel_err, passed))
         else:
