@@ -90,11 +90,11 @@ class Full(Field):
         return np.array([0.5*(self.values[k]+self.values[k+1]) for k in [key-2, key-1, key]])
 
     def surface(self, grid):
-        return self.values[grid.surface()]
+        return self.values[grid.boundary(Zmin())]
 
-    def surface_bl(self, grid):
-        k_s = grid.surface()
-        return (self.values[k_s]+self.values[k_s+1])/2.0
+    def first_interior(self, grid):
+        k_b = grid.boundary(Zmin())
+        return (self.values[k_b]+self.values[k_b+1])/2.0
 
     def extrap(self, grid):
         for k in reversed(grid.over_elems_ghost(Node(), Zmin())):
@@ -138,7 +138,7 @@ class Half(Field):
         k_i = grid.first_interior(Zmin())
         return (self.values[k_i]+self.values[k_i-1])/2.0
 
-    def surface_bl(self, grid):
+    def first_interior(self, grid):
         k_i = grid.first_interior(Zmin())
         return self.values[k_i]
 

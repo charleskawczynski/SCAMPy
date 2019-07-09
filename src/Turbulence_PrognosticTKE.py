@@ -82,7 +82,7 @@ def compute_zbl_qt_grad(grid, GMV):
 
 def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit, temp_C):
     maxgrad = 0.0
-    theta_rho_bl = temp_C.surface_bl(grid)
+    theta_rho_bl = temp_C.first_interior(grid)
     for k in grid.over_elems_real(Center()):
         q_tot = GMV.q_tot.values[k]
         q_vap = q_tot - GMV.q_liq.values[k]

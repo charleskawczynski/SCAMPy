@@ -126,7 +126,7 @@ def get_wstar(bflux, zi):
 
 # BL height
 def get_inversion(theta_rho, u, v, grid, Ri_bulk_crit):
-    theta_rho_b = theta_rho.surface_bl(grid)
+    theta_rho_b = theta_rho.first_interior(grid)
     h = 0.0
     Ri_bulk=0.0
     Ri_bulk_low = 0.0
