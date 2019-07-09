@@ -91,7 +91,7 @@ def run_case(case, sol_expected, tol_rel_local, score_tol):
             print('n_pass = ',n_pass)
             print('n_fail = ',n_fail)
             print('score = n_fail/n_pass = ',n_fail/n_pass)
-            print('score_tol = ',n_fail/n_pass)
+            print('score_tol = ', score_tol)
         if passed:
             tests.append(('Pass: '+case+', '+vn, rel_err, passed))
         else:
