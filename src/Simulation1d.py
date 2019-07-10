@@ -4,7 +4,7 @@ import numpy as np
 from Variables import GridMeanVariables
 from EDMF_Updrafts import *
 from EDMF_Environment import *
-from Turbulence_PrognosticTKE import ParameterizationFactory, compute_grid_means
+from Turbulence_PrognosticTKE import EDMF_PrognosticTKE, compute_grid_means
 from Cases import CasesFactory
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
@@ -118,7 +118,7 @@ class Simulation1d:
         self.UpdMicro  = UpdraftMicrophysics(paramlist, self.n_updrafts, self.grid)
         self.EnvThermo = EnvironmentThermodynamics(namelist, paramlist, self.grid, self.EnvVar)
 
-        self.Turb  = ParameterizationFactory(namelist, paramlist, self.grid)
+        self.Turb  = EDMF_PrognosticTKE(namelist, paramlist, self.grid)
         self.TS    = TimeStepping(namelist)
         self.Stats = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
         self.tri_diag = type('', (), {})()

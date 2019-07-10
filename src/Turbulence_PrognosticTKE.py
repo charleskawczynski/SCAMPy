@@ -473,19 +473,70 @@ def compute_tke_buoy(grid, q, GMV, EnvVar, EnvThermo, tmp):
         EnvVar.tke.buoy[k] = g / tmp['α_0_half'][k] * ae[k] * tmp['ρ_0_half'][k] * (term_1 + term_2)
     return
 
+def compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q, entr_detr_fp, wstar, tke_ed_coeff, entrainment_factor, detrainment_factor):
+    quadrature_order = 3
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    UpdVar.get_cloud_base_top_cover(grid)
+    n_updrafts = len(i_uds)
 
-def ParameterizationFactory(namelist, paramlist, grid):
-    return EDMF_PrognosticTKE(namelist, paramlist, grid)
+    input_st = type('', (), {})()
+    input_st.wstar = wstar
 
-class ParameterizationBase:
-    def __init__(self, paramlist, grid):
+    input_st.b_mean = 0
+    input_st.dz = grid.dz
+    input_st.zbl = compute_zbl_qt_grad(grid, GMV)
+    for i in i_uds:
+        input_st.zi = UpdVar.cloud_base[i]
+        for k in grid.over_elems_real(Center()):
+            input_st.quadrature_order = quadrature_order
+            input_st.z = grid.z_half[k]
+            input_st.ml = tmp['l_mix'][k]
+            input_st.b = UpdVar.B.values[i][k]
+            input_st.w = UpdVar.W.values[i].Mid(k)
+            input_st.af = UpdVar.Area.values[i][k]
+            input_st.tke = EnvVar.tke.values[k]
+            input_st.qt_env = EnvVar.q_tot.values[k]
+            input_st.q_liq_env = EnvVar.q_liq.values[k]
+            input_st.θ_liq_env = EnvVar.θ_liq.values[k]
+            input_st.b_env = EnvVar.B.values[k]
+            input_st.w_env = q['w', i_env].values[k]
+            input_st.θ_liq_up = UpdVar.θ_liq.values[i][k]
+            input_st.qt_up = UpdVar.q_tot.values[i][k]
+            input_st.q_liq_up = UpdVar.q_liq.values[i][k]
+            input_st.env_Hvar = EnvVar.cv_θ_liq.values[k]
+            input_st.env_QTvar = EnvVar.cv_q_tot.values[k]
+            input_st.env_HQTcov = EnvVar.cv_θ_liq_q_tot.values[k]
+            input_st.p0 = tmp['p_0_half'][k]
+            input_st.alpha0 = tmp['α_0_half'][k]
+            input_st.tke = EnvVar.tke.values[k]
+            input_st.tke_ed_coeff  = tke_ed_coeff
+
+            input_st.L = 20000.0 # need to define the scale of the GCM grid resolution
+            input_st.n_up = n_updrafts
+
+            w_cut = UpdVar.W.values[i].DualCut(k)
+            w_env_cut = q['w', i_env].DualCut(k)
+            a_cut = UpdVar.Area.values[i].Cut(k)
+            a_env_cut = (1.0-UpdVar.Area.values[i].Cut(k))
+            aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
+
+            input_st.dwdz = grad(aw_cut, grid)
+
+            if input_st.zbl-UpdVar.cloud_base[i] > 0.0:
+                input_st.poisson = np.random.poisson(grid.dz/((input_st.zbl-UpdVar.cloud_base[i])/10.0))
+            else:
+                input_st.poisson = 0.0
+            ret = entr_detr_fp(input_st)
+            tmp['entr_sc', i][k] = ret.entr_sc * entrainment_factor
+            tmp['detr_sc', i][k] = ret.detr_sc * detrainment_factor
+
+    return
+
+class EDMF_PrognosticTKE:
+    def __init__(self, namelist, paramlist, grid):
+
         self.prandtl_number = paramlist['turbulence']['prandtl_number']
         self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']
-        return
-
-class EDMF_PrognosticTKE(ParameterizationBase):
-    def __init__(self, namelist, paramlist, grid):
-        ParameterizationBase.__init__(self, paramlist,  grid)
 
         self.n_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
 
@@ -780,7 +831,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.set_updraft_surface_bc(grid, GMV, Case, tmp)
         self.dt_upd = np.minimum(TS.dt, 0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
         while time_elapsed < TS.dt:
-            self.compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q)
+            compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
             EnvThermo.eos_update_SA_mean(grid, EnvVar, False, tmp)
             UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
             UpdMicro.compute_sources(grid, UpdVar, tmp)
@@ -820,64 +871,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             self.w_surface_bc[i] = 0.0
             self.θ_liq_surface_bc[i] = (θ_liq_1 + self.surface_scalar_coeff[i] * np.sqrt(cv_θ_liq))
             self.q_tot_surface_bc[i] = (q_tot_1 + self.surface_scalar_coeff[i] * np.sqrt(cv_q_tot))
-        return
-
-    def compute_entrainment_detrainment(self, grid, GMV, EnvVar, UpdVar, Case, tmp, q):
-        quadrature_order = 3
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        UpdVar.get_cloud_base_top_cover(grid)
-
-        input_st = type('', (), {})()
-        input_st.wstar = self.wstar
-
-        input_st.b_mean = 0
-        input_st.dz = grid.dz
-        input_st.zbl = compute_zbl_qt_grad(grid, GMV)
-        for i in i_uds:
-            input_st.zi = UpdVar.cloud_base[i]
-            for k in grid.over_elems_real(Center()):
-                input_st.quadrature_order = quadrature_order
-                input_st.z = grid.z_half[k]
-                input_st.ml = tmp['l_mix'][k]
-                input_st.b = UpdVar.B.values[i][k]
-                input_st.w = UpdVar.W.values[i].Mid(k)
-                input_st.af = UpdVar.Area.values[i][k]
-                input_st.tke = EnvVar.tke.values[k]
-                input_st.qt_env = EnvVar.q_tot.values[k]
-                input_st.q_liq_env = EnvVar.q_liq.values[k]
-                input_st.θ_liq_env = EnvVar.θ_liq.values[k]
-                input_st.b_env = EnvVar.B.values[k]
-                input_st.w_env = q['w', i_env].values[k]
-                input_st.θ_liq_up = UpdVar.θ_liq.values[i][k]
-                input_st.qt_up = UpdVar.q_tot.values[i][k]
-                input_st.q_liq_up = UpdVar.q_liq.values[i][k]
-                input_st.env_Hvar = EnvVar.cv_θ_liq.values[k]
-                input_st.env_QTvar = EnvVar.cv_q_tot.values[k]
-                input_st.env_HQTcov = EnvVar.cv_θ_liq_q_tot.values[k]
-                input_st.p0 = tmp['p_0_half'][k]
-                input_st.alpha0 = tmp['α_0_half'][k]
-                input_st.tke = EnvVar.tke.values[k]
-                input_st.tke_ed_coeff  = self.tke_ed_coeff
-
-                input_st.L = 20000.0 # need to define the scale of the GCM grid resolution
-                input_st.n_up = self.n_updrafts
-
-                w_cut = UpdVar.W.values[i].DualCut(k)
-                w_env_cut = q['w', i_env].DualCut(k)
-                a_cut = UpdVar.Area.values[i].Cut(k)
-                a_env_cut = (1.0-UpdVar.Area.values[i].Cut(k))
-                aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
-
-                input_st.dwdz = grad(aw_cut, grid)
-
-                if input_st.zbl-UpdVar.cloud_base[i] > 0.0:
-                    input_st.poisson = np.random.poisson(grid.dz/((input_st.zbl-UpdVar.cloud_base[i])/10.0))
-                else:
-                    input_st.poisson = 0.0
-                ret = self.entr_detr_fp(input_st)
-                tmp['entr_sc', i][k] = ret.entr_sc * self.entrainment_factor
-                tmp['detr_sc', i][k] = ret.detr_sc * self.detrainment_factor
-
         return
 
     def solve_updraft_velocity_area(self, grid, q, q_tendencies, tmp, GMV, UpdVar, TS):
