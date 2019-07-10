@@ -836,10 +836,18 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         self.get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.q_tot , UpdVar.q_tot, EnvVar.q_tot.values , EnvVar.q_tot.values, EnvVar.cv_q_tot      , GMV.q_tot , GMV.q_tot , GMV.cv_q_tot      , 'cv_q_tot'      )
         self.get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.θ_liq , UpdVar.q_tot, EnvVar.θ_liq.values , EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot, GMV.θ_liq , GMV.q_tot , GMV.cv_θ_liq_q_tot, 'cv_θ_liq_q_tot')
 
-        self.update_covariance_ED(grid, q, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag)
-        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag)
-        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag)
-        self.update_covariance_ED(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag)
+        self.compute_cv_env_tendencies(grid, q, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag)
+        self.update_cv_env(grid, q, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag)
+
+        self.compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag)
+        self.update_cv_env(grid, q, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag)
+
+        self.compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag)
+        self.update_cv_env(grid, q, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag)
+
+        self.compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag)
+        self.update_cv_env(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag)
+
         self.cleanup_covariance(grid, GMV, EnvVar, UpdVar)
         return
 
@@ -973,13 +981,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             Covar.dissipation[k] = (tmp['ρ_0_half'][k] * ae[k] * Covar.values[k] * pow(tke_env, 0.5)/l_mix * self.tke_diss_coeff)
         return
 
-    def update_covariance_ED(self, grid, q, tmp, Covar, EnvVar, UpdVar, TS, name, tri_diag):
+    def compute_cv_env_tendencies(self, grid, q, tmp, Covar, EnvVar, UpdVar, TS, name, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        dzi = grid.dzi
-        dzi2 = grid.dzi**2.0
         dti = TS.dti
         k_1 = grid.first_interior(Zmin())
-        k_2 = grid.first_interior(Zmax())
 
         ae_old = Half(grid)
 
@@ -987,6 +992,28 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             ae_old[k] = 1.0 - np.sum([UpdVar.Area.old[i][k] for i in i_uds])
 
         Covar_surf = Covar.values[k_1]
+        ρ_0_half = tmp['ρ_0_half']
+
+        for k in grid.over_elems_real(Center()):
+            ρ_0_cut = ρ_0_half.Cut(k)
+            tri_diag.f[k] = (ρ_0_cut[1] * ae_old[k] * Covar.values[k] * dti
+                     + Covar.press[k]
+                     + Covar.buoy[k]
+                     + Covar.shear[k]
+                     + Covar.entr_gain[k]
+                     + Covar.rain_src[k])
+            tri_diag.f[k_1] = Covar_surf
+
+        return
+
+    def update_cv_env(self, grid, q, tmp, Covar, EnvVar, UpdVar, TS, name, tri_diag):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        dzi = grid.dzi
+        dzi2 = grid.dzi**2.0
+        dti = TS.dti
+        k_1 = grid.first_interior(Zmin())
+        k_2 = grid.first_interior(Zmax())
+
         a_env = q['a', i_env]
         w_env = q['w', i_env]
         ρ_0_half = tmp['ρ_0_half']
@@ -1013,17 +1040,9 @@ class EDMF_PrognosticTKE(ParameterizationBase):
                      + ρ_0_cut[1] * ae_cut[1] * self.tke_diss_coeff * np.sqrt(tke_env)/l_mix)
             tri_diag.c[k] = (ρ_0_cut[2] * ae_cut[2] * w_cut[2] * dzi - ρa_K_cut[1] * dzi2)
 
-            tri_diag.f[k] = (ρ_0_cut[1] * ae_old[k] * Covar.values[k] * dti
-                     + Covar.press[k]
-                     + Covar.buoy[k]
-                     + Covar.shear[k]
-                     + Covar.entr_gain[k]
-                     + Covar.rain_src[k])
-
             tri_diag.a[k_1] = 0.0
             tri_diag.b[k_1] = 1.0
             tri_diag.c[k_1] = 0.0
-            tri_diag.f[k_1] = Covar_surf
 
             tri_diag.b[k_2] += tri_diag.c[k_2]
             tri_diag.c[k_2] = 0.0
