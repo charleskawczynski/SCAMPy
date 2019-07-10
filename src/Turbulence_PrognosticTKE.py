@@ -400,10 +400,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         return
 
     def compute_eddy_diffusivities_tke(self, grid, tmp, GMV, EnvVar, Case):
+        self.compute_mixing_length(grid, tmp, Case.Sur.obukhov_length, EnvVar)
         if self.similarity_diffusivity:
             ParameterizationBase.compute_eddy_diffusivities_similarity_Siebesma2007(self, grid, GMV, Case)
         else:
-            self.compute_mixing_length(grid, tmp, Case.Sur.obukhov_length, EnvVar)
             for k in grid.over_elems_real(Center()):
                 lm = tmp['l_mix'][k]
                 K_m_k = self.tke_ed_coeff * lm * np.sqrt(np.fmax(EnvVar.tke.values[k],0.0) )
@@ -812,8 +812,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
     def compute_covariance(self, grid, q, GMV, EnvVar, UpdVar, EnvThermo, Case, TS, tmp, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        if self.similarity_diffusivity:
-            self.compute_mixing_length(grid, tmp, Case.Sur.obukhov_length, EnvVar)
         we = q['w', i_env]
         self.compute_tke_buoy(grid, q, GMV, EnvVar, EnvThermo, tmp)
         self.compute_covariance_entr(grid, q, tmp, UpdVar, EnvVar.tke, UpdVar.W, UpdVar.W, we, we, 'tke')
