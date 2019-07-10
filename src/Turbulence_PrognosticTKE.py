@@ -747,6 +747,23 @@ class EDMF_PrognosticTKE:
         Stats.write_profile_new('cv_θ_liq_q_tot_interdomain' , grid, EnvVar.cv_θ_liq_q_tot.interdomain)
         return
 
+    def set_updraft_surface_bc(self, grid, GMV, Case, tmp):
+        i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
+        k_1 = grid.first_interior(Zmin())
+        zLL = grid.z_half[k_1]
+        θ_liq_1 = GMV.θ_liq.values[k_1]
+        q_tot_1 = GMV.q_tot.values[k_1]
+        alpha0LL  = tmp['α_0_half'][k_1]
+        S = Case.Sur
+        cv_q_tot = get_surface_variance(S.rho_q_tot_flux*alpha0LL, S.rho_q_tot_flux*alpha0LL, S.ustar, zLL, S.obukhov_length)
+        cv_θ_liq = get_surface_variance(S.rho_θ_liq_flux*alpha0LL, S.rho_θ_liq_flux*alpha0LL, S.ustar, zLL, S.obukhov_length)
+        for i in i_uds:
+            self.area_surface_bc[i] = self.surface_area/self.n_updrafts
+            self.w_surface_bc[i] = 0.0
+            self.θ_liq_surface_bc[i] = (θ_liq_1 + self.surface_scalar_coeff[i] * np.sqrt(cv_θ_liq))
+            self.q_tot_surface_bc[i] = (q_tot_1 + self.surface_scalar_coeff[i] * np.sqrt(cv_q_tot))
+        return
+
     def update(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
 
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
@@ -798,6 +815,9 @@ class EDMF_PrognosticTKE:
 
         cleanup_covariance(grid, GMV, EnvVar, UpdVar)
 
+        UpdVar.set_new_with_values(grid)
+        UpdVar.set_old_with_values(grid)
+        self.set_updraft_surface_bc(grid, GMV, Case, tmp)
 
         self.compute_prognostic_updrafts(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS)
 
@@ -826,9 +846,6 @@ class EDMF_PrognosticTKE:
     def compute_prognostic_updrafts(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS):
         time_elapsed = 0.0
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        UpdVar.set_new_with_values(grid)
-        UpdVar.set_old_with_values(grid)
-        self.set_updraft_surface_bc(grid, GMV, Case, tmp)
         self.dt_upd = np.minimum(TS.dt, 0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
         while time_elapsed < TS.dt:
             compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
@@ -851,26 +868,6 @@ class EDMF_PrognosticTKE:
             decompose_environment(grid, q, GMV, EnvVar, UpdVar)
         EnvThermo.eos_update_SA_mean(grid, EnvVar, True, tmp)
         UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
-        return
-
-    def set_updraft_surface_bc(self, grid, GMV, Case, tmp):
-        i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
-        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
-        self.wstar = get_wstar(Case.Sur.bflux, self.zi)
-        k_1 = grid.first_interior(Zmin())
-        zLL = grid.z_half[k_1]
-        θ_liq_1 = GMV.θ_liq.values[k_1]
-        q_tot_1 = GMV.q_tot.values[k_1]
-        alpha0LL  = tmp['α_0_half'][k_1]
-        ustar = Case.Sur.ustar
-        oblength = Case.Sur.obukhov_length
-        cv_q_tot = get_surface_variance(Case.Sur.rho_q_tot_flux*alpha0LL, Case.Sur.rho_q_tot_flux*alpha0LL, ustar, zLL, oblength)
-        cv_θ_liq = get_surface_variance(Case.Sur.rho_θ_liq_flux*alpha0LL, Case.Sur.rho_θ_liq_flux*alpha0LL,  ustar, zLL, oblength)
-        for i in i_uds:
-            self.area_surface_bc[i] = self.surface_area/self.n_updrafts
-            self.w_surface_bc[i] = 0.0
-            self.θ_liq_surface_bc[i] = (θ_liq_1 + self.surface_scalar_coeff[i] * np.sqrt(cv_θ_liq))
-            self.q_tot_surface_bc[i] = (q_tot_1 + self.surface_scalar_coeff[i] * np.sqrt(cv_q_tot))
         return
 
     def solve_updraft_velocity_area(self, grid, q, q_tendencies, tmp, GMV, UpdVar, TS):
