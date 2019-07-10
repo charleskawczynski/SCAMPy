@@ -17,6 +17,17 @@ from funcs_thermo import  *
 from funcs_turbulence import *
 from funcs_utility import *
 
+def compute_grid_means(grid, q, tmp, GMV, EnvVar, UpdVar):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    ae = q['a', i_env]
+    au = UpdVar.Area.values
+    for k in grid.over_elems_real(Center()):
+        GMV.q_liq.values[k] = ae[k] * EnvVar.q_liq.values[k] + sum([ au[i][k] * UpdVar.q_liq.values[i][k] for i in i_uds])
+        GMV.q_rai.values[k] = ae[k] * EnvVar.q_rai.values[k] + sum([ au[i][k] * UpdVar.q_rai.values[i][k] for i in i_uds])
+        GMV.T.values[k]     = ae[k] * EnvVar.T.values[k]     + sum([ au[i][k] * UpdVar.T.values[i][k] for i in i_uds])
+        GMV.B.values[k]     = ae[k] * EnvVar.B.values[k]     + sum([ au[i][k] * UpdVar.B.values[i][k] for i in i_uds])
+    return
+
 def get_GMV_CoVar(grid, q, au, phi_u, psi_u, phi_e,  psi_e, covar_e, gmv_phi, gmv_psi, gmv_covar, name):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     tke_factor = 0.5 if name == 'tke' else 1.0
@@ -687,7 +698,45 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.q_tot.values, EnvVar.θ_liq.values, EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot.values, GMV.θ_liq.values, GMV.q_tot.values, GMV.cv_θ_liq_q_tot.values, '')
         update_GMV_MF(grid, q, GMV, EnvVar, UpdVar, TS, tmp)
         self.compute_eddy_diffusivities_tke(grid, tmp, GMV, EnvVar, Case)
-        self.compute_covariance(grid, q, GMV, EnvVar, UpdVar, EnvThermo, Case, TS, tmp, tri_diag)
+
+        we = q['w', i_env]
+        compute_tke_buoy(grid, q, GMV, EnvVar, EnvThermo, tmp)
+        compute_covariance_entr(grid, q, tmp, UpdVar, EnvVar.tke, UpdVar.W, UpdVar.W, we, we, 'tke')
+        compute_covariance_shear(grid, q, tmp, GMV, EnvVar.tke, UpdVar.W.values, UpdVar.W.values, we, we, 'tke')
+        compute_covariance_interdomain_src(grid, q, tmp, UpdVar.Area,UpdVar.W,UpdVar.W, we, we, EnvVar.tke, 'tke')
+        compute_tke_pressure(grid, tmp, q, EnvVar, UpdVar, self.pressure_buoy_coeff, self.pressure_drag_coeff, self.pressure_plume_spacing)
+        compute_covariance_entr(grid, q, tmp, UpdVar, EnvVar.cv_θ_liq,   UpdVar.θ_liq,  UpdVar.θ_liq,  EnvVar.θ_liq,  EnvVar.θ_liq, '')
+        compute_covariance_entr(grid, q, tmp, UpdVar, EnvVar.cv_q_tot,  UpdVar.q_tot, UpdVar.q_tot, EnvVar.q_tot, EnvVar.q_tot, '')
+        compute_covariance_entr(grid, q, tmp, UpdVar, EnvVar.cv_θ_liq_q_tot, UpdVar.θ_liq,  UpdVar.q_tot, EnvVar.θ_liq,  EnvVar.q_tot, '')
+        compute_covariance_shear(grid, q, tmp, GMV, EnvVar.cv_θ_liq,   UpdVar.θ_liq.values,  UpdVar.θ_liq.values,  EnvVar.θ_liq.values,  EnvVar.θ_liq.values, '')
+        compute_covariance_shear(grid, q, tmp, GMV, EnvVar.cv_q_tot,  UpdVar.q_tot.values, UpdVar.q_tot.values, EnvVar.q_tot.values, EnvVar.q_tot.values, '')
+        compute_covariance_shear(grid, q, tmp, GMV, EnvVar.cv_θ_liq_q_tot, UpdVar.θ_liq.values,  UpdVar.q_tot.values, EnvVar.θ_liq.values,  EnvVar.q_tot.values, '')
+        compute_covariance_interdomain_src(grid, q, tmp, UpdVar.Area, UpdVar.θ_liq,  UpdVar.θ_liq,  EnvVar.θ_liq,  EnvVar.θ_liq,  EnvVar.cv_θ_liq, '')
+        compute_covariance_interdomain_src(grid, q, tmp, UpdVar.Area, UpdVar.q_tot, UpdVar.q_tot, EnvVar.q_tot, EnvVar.q_tot, EnvVar.cv_q_tot, '')
+        compute_covariance_interdomain_src(grid, q, tmp, UpdVar.Area, UpdVar.θ_liq,  UpdVar.q_tot, EnvVar.θ_liq,  EnvVar.q_tot, EnvVar.cv_θ_liq_q_tot, '')
+        compute_covariance_rain(grid, q, tmp, TS, GMV, EnvVar, EnvThermo)
+
+        reset_surface_covariance(grid, q, tmp, GMV, Case, self.wstar)
+
+        get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.W     , UpdVar.W    , we                  , we                 , EnvVar.tke           , GMV.W     , GMV.W     , GMV.tke           , 'tke'           )
+        get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.θ_liq , UpdVar.θ_liq, EnvVar.θ_liq.values , EnvVar.θ_liq.values, EnvVar.cv_θ_liq      , GMV.θ_liq , GMV.θ_liq , GMV.cv_θ_liq      , 'cv_θ_liq'      )
+        get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.q_tot , UpdVar.q_tot, EnvVar.q_tot.values , EnvVar.q_tot.values, EnvVar.cv_q_tot      , GMV.q_tot , GMV.q_tot , GMV.cv_q_tot      , 'cv_q_tot'      )
+        get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.θ_liq , UpdVar.q_tot, EnvVar.θ_liq.values , EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot, GMV.θ_liq , GMV.q_tot , GMV.cv_θ_liq_q_tot, 'cv_θ_liq_q_tot')
+
+        compute_cv_env_tendencies(grid, q, tmp, EnvVar.tke           , UpdVar, TS, tri_diag)
+        update_cv_env(grid, q, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
+
+        compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_θ_liq      , UpdVar, TS, tri_diag)
+        update_cv_env(grid, q, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag, self.tke_diss_coeff)
+
+        compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_q_tot      , UpdVar, TS, tri_diag)
+        update_cv_env(grid, q, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag, self.tke_diss_coeff)
+
+        compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, UpdVar, TS, tri_diag)
+        update_cv_env(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag, self.tke_diss_coeff)
+
+        cleanup_covariance(grid, GMV, EnvVar, UpdVar)
+
 
         self.compute_prognostic_updrafts(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS)
 
@@ -996,55 +1045,3 @@ class EDMF_PrognosticTKE(ParameterizationBase):
 
         return
 
-    def compute_grid_means(self, grid, q, tmp, GMV, EnvVar, UpdVar):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        ae = q['a', i_env]
-        au = UpdVar.Area.values
-        for k in grid.over_elems_real(Center()):
-            GMV.q_liq.values[k] = ae[k] * EnvVar.q_liq.values[k] + sum([ au[i][k] * UpdVar.q_liq.values[i][k] for i in i_uds])
-            GMV.q_rai.values[k] = ae[k] * EnvVar.q_rai.values[k] + sum([ au[i][k] * UpdVar.q_rai.values[i][k] for i in i_uds])
-            GMV.T.values[k]     = ae[k] * EnvVar.T.values[k]     + sum([ au[i][k] * UpdVar.T.values[i][k] for i in i_uds])
-            GMV.B.values[k]     = ae[k] * EnvVar.B.values[k]     + sum([ au[i][k] * UpdVar.B.values[i][k] for i in i_uds])
-        return
-
-
-    def compute_covariance(self, grid, q, GMV, EnvVar, UpdVar, EnvThermo, Case, TS, tmp, tri_diag):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        we = q['w', i_env]
-        compute_tke_buoy(grid, q, GMV, EnvVar, EnvThermo, tmp)
-        compute_covariance_entr(grid, q, tmp, UpdVar, EnvVar.tke, UpdVar.W, UpdVar.W, we, we, 'tke')
-        compute_covariance_shear(grid, q, tmp, GMV, EnvVar.tke, UpdVar.W.values, UpdVar.W.values, we, we, 'tke')
-        compute_covariance_interdomain_src(grid, q, tmp, UpdVar.Area,UpdVar.W,UpdVar.W, we, we, EnvVar.tke, 'tke')
-        compute_tke_pressure(grid, tmp, q, EnvVar, UpdVar, self.pressure_buoy_coeff, self.pressure_drag_coeff, self.pressure_plume_spacing)
-        compute_covariance_entr(grid, q, tmp, UpdVar, EnvVar.cv_θ_liq,   UpdVar.θ_liq,  UpdVar.θ_liq,  EnvVar.θ_liq,  EnvVar.θ_liq, '')
-        compute_covariance_entr(grid, q, tmp, UpdVar, EnvVar.cv_q_tot,  UpdVar.q_tot, UpdVar.q_tot, EnvVar.q_tot, EnvVar.q_tot, '')
-        compute_covariance_entr(grid, q, tmp, UpdVar, EnvVar.cv_θ_liq_q_tot, UpdVar.θ_liq,  UpdVar.q_tot, EnvVar.θ_liq,  EnvVar.q_tot, '')
-        compute_covariance_shear(grid, q, tmp, GMV, EnvVar.cv_θ_liq,   UpdVar.θ_liq.values,  UpdVar.θ_liq.values,  EnvVar.θ_liq.values,  EnvVar.θ_liq.values, '')
-        compute_covariance_shear(grid, q, tmp, GMV, EnvVar.cv_q_tot,  UpdVar.q_tot.values, UpdVar.q_tot.values, EnvVar.q_tot.values, EnvVar.q_tot.values, '')
-        compute_covariance_shear(grid, q, tmp, GMV, EnvVar.cv_θ_liq_q_tot, UpdVar.θ_liq.values,  UpdVar.q_tot.values, EnvVar.θ_liq.values,  EnvVar.q_tot.values, '')
-        compute_covariance_interdomain_src(grid, q, tmp, UpdVar.Area, UpdVar.θ_liq,  UpdVar.θ_liq,  EnvVar.θ_liq,  EnvVar.θ_liq,  EnvVar.cv_θ_liq, '')
-        compute_covariance_interdomain_src(grid, q, tmp, UpdVar.Area, UpdVar.q_tot, UpdVar.q_tot, EnvVar.q_tot, EnvVar.q_tot, EnvVar.cv_q_tot, '')
-        compute_covariance_interdomain_src(grid, q, tmp, UpdVar.Area, UpdVar.θ_liq,  UpdVar.q_tot, EnvVar.θ_liq,  EnvVar.q_tot, EnvVar.cv_θ_liq_q_tot, '')
-        compute_covariance_rain(grid, q, tmp, TS, GMV, EnvVar, EnvThermo)
-
-        reset_surface_covariance(grid, q, tmp, GMV, Case, self.wstar)
-
-        get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.W     , UpdVar.W    , we                  , we                 , EnvVar.tke           , GMV.W     , GMV.W     , GMV.tke           , 'tke'           )
-        get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.θ_liq , UpdVar.θ_liq, EnvVar.θ_liq.values , EnvVar.θ_liq.values, EnvVar.cv_θ_liq      , GMV.θ_liq , GMV.θ_liq , GMV.cv_θ_liq      , 'cv_θ_liq'      )
-        get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.q_tot , UpdVar.q_tot, EnvVar.q_tot.values , EnvVar.q_tot.values, EnvVar.cv_q_tot      , GMV.q_tot , GMV.q_tot , GMV.cv_q_tot      , 'cv_q_tot'      )
-        get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.θ_liq , UpdVar.q_tot, EnvVar.θ_liq.values , EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot, GMV.θ_liq , GMV.q_tot , GMV.cv_θ_liq_q_tot, 'cv_θ_liq_q_tot')
-
-        compute_cv_env_tendencies(grid, q, tmp, EnvVar.tke           , UpdVar, TS, tri_diag)
-        update_cv_env(grid, q, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
-
-        compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_θ_liq      , UpdVar, TS, tri_diag)
-        update_cv_env(grid, q, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag, self.tke_diss_coeff)
-
-        compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_q_tot      , UpdVar, TS, tri_diag)
-        update_cv_env(grid, q, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag, self.tke_diss_coeff)
-
-        compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, UpdVar, TS, tri_diag)
-        update_cv_env(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag, self.tke_diss_coeff)
-
-        cleanup_covariance(grid, GMV, EnvVar, UpdVar)
-        return

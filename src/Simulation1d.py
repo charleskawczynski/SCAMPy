@@ -4,7 +4,7 @@ import numpy as np
 from Variables import GridMeanVariables
 from EDMF_Updrafts import *
 from EDMF_Environment import *
-from Turbulence_PrognosticTKE import ParameterizationFactory
+from Turbulence_PrognosticTKE import ParameterizationFactory, compute_grid_means
 from Cases import CasesFactory
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
@@ -161,7 +161,7 @@ class Simulation1d:
                              self.UpdThermo, self.Case, self.TS, self.tri_diag)
 
             self.TS.update()
-            self.Turb.compute_grid_means(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.UpdVar)
+            compute_grid_means(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.UpdVar)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.io()
         sol = self.package_sol()
