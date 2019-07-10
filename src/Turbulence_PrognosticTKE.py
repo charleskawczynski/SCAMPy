@@ -977,24 +977,10 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         k_1 = grid.first_interior(Zmin())
         k_2 = grid.first_interior(Zmax())
 
-        alpha0LL = tmp['α_0_half'][k_1]
-        zLL = grid.z_half[k_1]
-
         ae_old = Half(grid)
 
         for k in grid.over_elems(Center()):
             ae_old[k] = 1.0 - np.sum([UpdVar.Area.old[i][k] for i in i_uds])
-
-        S = Case.Sur
-
-        if name=='tke':
-            GmvCovar.values[k_1] = get_surface_tke(S.ustar, self.wstar, zLL, S.obukhov_length)
-        elif name=='cv_θ_liq':
-            GmvCovar.values[k_1] = get_surface_variance(S.rho_θ_liq_flux * alpha0LL, S.rho_θ_liq_flux * alpha0LL, S.ustar, zLL, S.obukhov_length)
-        elif name=='cv_q_tot':
-            GmvCovar.values[k_1] = get_surface_variance(S.rho_q_tot_flux * alpha0LL, S.rho_q_tot_flux * alpha0LL, S.ustar, zLL, S.obukhov_length)
-        elif name=='cv_θ_liq_q_tot':
-            GmvCovar.values[k_1] = get_surface_variance(S.rho_θ_liq_flux * alpha0LL, S.rho_q_tot_flux * alpha0LL, S.ustar, zLL, S.obukhov_length)
 
         self.get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar1, UpdVar2, EnvVar1, EnvVar2, Covar, GmvVar1, GmvVar2, GmvCovar, name)
 
