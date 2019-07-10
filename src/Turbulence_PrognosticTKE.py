@@ -314,6 +314,29 @@ def compute_mixing_length(grid, tmp, obukhov_length, EnvVar, zi, wstar):
         tmp['l_mix'][k] = np.fmax( 1.0/(1.0/np.fmax(l1,1e-10) + 1.0/l2), 1e-3)
     return
 
+def compute_eddy_diffusivities_tke(grid, tmp, GMV, EnvVar, Case, zi, wstar, prandtl_number, tke_ed_coeff, similarity_diffusivity):
+    compute_mixing_length(grid, tmp, Case.Sur.obukhov_length, EnvVar, zi, wstar)
+    if similarity_diffusivity:
+        compute_eddy_diffusivities_similarity_Siebesma2007(grid, GMV, Case, tmp, zi, wstar, prandtl_number)
+    else:
+        for k in grid.over_elems_real(Center()):
+            lm = tmp['l_mix'][k]
+            K_m_k = tke_ed_coeff * lm * np.sqrt(np.fmax(EnvVar.tke.values[k],0.0) )
+            tmp['K_m'][k] = K_m_k
+            tmp['K_h'][k] = K_m_k / prandtl_number
+    return
+
+def compute_eddy_diffusivities_similarity_Siebesma2007(grid, GMV, Case, tmp, zi, wstar, prandtl_number):
+    ustar = Case.Sur.ustar
+    for k in grid.over_elems_real(Center()):
+        zzi = grid.z_half[k]/zi
+        tmp['K_h'][k] = 0.0
+        tmp['K_m'][k] = 0.0
+        if zzi <= 1.0 and not (wstar<1e-6):
+            tmp['K_h'][k] = vkb * ( (ustar/wstar)**3.0 + 39.0*vkb*zzi)**(1.0/3.0) * zzi * (1.0-zzi) * (1.0-zzi) * wstar * zi
+            tmp['K_m'][k] = tmp['K_h'][k] * prandtl_number
+    return
+
 def compute_cv_env_tendencies(grid, q, tmp, Covar, UpdVar, TS, tri_diag):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     dti = TS.dti
@@ -458,19 +481,6 @@ class ParameterizationBase:
     def __init__(self, paramlist, grid):
         self.prandtl_number = paramlist['turbulence']['prandtl_number']
         self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']
-        return
-
-    def compute_eddy_diffusivities_similarity_Siebesma2007(self, grid, GMV, Case, tmp):
-        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
-        self.wstar = get_wstar(Case.Sur.bflux, self.zi)
-        ustar = Case.Sur.ustar
-        for k in grid.over_elems_real(Center()):
-            zzi = grid.z_half[k]/self.zi
-            tmp['K_h'][k] = 0.0
-            tmp['K_m'][k] = 0.0
-            if zzi <= 1.0 and not (self.wstar<1e-6):
-                tmp['K_h'][k] = vkb * ( (ustar/self.wstar)**3.0 + 39.0*vkb*zzi)**(1.0/3.0) * zzi * (1.0-zzi) * (1.0-zzi) * self.wstar * self.zi
-                tmp['K_m'][k] = tmp['K_h'][k] * self.prandtl_number
         return
 
 class EDMF_PrognosticTKE(ParameterizationBase):
@@ -697,7 +707,7 @@ class EDMF_PrognosticTKE(ParameterizationBase):
         get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.q_tot.values,  UpdVar.q_tot.values, EnvVar.q_tot.values, EnvVar.q_tot.values, EnvVar.cv_q_tot.values,       GMV.q_tot.values, GMV.q_tot.values, GMV.cv_q_tot.values      , '')
         get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.q_tot.values, EnvVar.θ_liq.values, EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot.values, GMV.θ_liq.values, GMV.q_tot.values, GMV.cv_θ_liq_q_tot.values, '')
         update_GMV_MF(grid, q, GMV, EnvVar, UpdVar, TS, tmp)
-        self.compute_eddy_diffusivities_tke(grid, tmp, GMV, EnvVar, Case)
+        compute_eddy_diffusivities_tke(grid, tmp, GMV, EnvVar, Case, self.zi, self.wstar, self.prandtl_number, self.tke_ed_coeff, self.similarity_diffusivity)
 
         we = q['w', i_env]
         compute_tke_buoy(grid, q, GMV, EnvVar, EnvThermo, tmp)
@@ -790,18 +800,6 @@ class EDMF_PrognosticTKE(ParameterizationBase):
             decompose_environment(grid, q, GMV, EnvVar, UpdVar)
         EnvThermo.eos_update_SA_mean(grid, EnvVar, True, tmp)
         UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
-        return
-
-    def compute_eddy_diffusivities_tke(self, grid, tmp, GMV, EnvVar, Case):
-        compute_mixing_length(grid, tmp, Case.Sur.obukhov_length, EnvVar, self.zi, self.wstar)
-        if self.similarity_diffusivity:
-            ParameterizationBase.compute_eddy_diffusivities_similarity_Siebesma2007(self, grid, GMV, Case)
-        else:
-            for k in grid.over_elems_real(Center()):
-                lm = tmp['l_mix'][k]
-                K_m_k = self.tke_ed_coeff * lm * np.sqrt(np.fmax(EnvVar.tke.values[k],0.0) )
-                tmp['K_m'][k] = K_m_k
-                tmp['K_h'][k] = K_m_k / self.prandtl_number
         return
 
     def set_updraft_surface_bc(self, grid, GMV, Case, tmp):
