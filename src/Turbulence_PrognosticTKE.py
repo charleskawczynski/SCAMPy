@@ -566,7 +566,7 @@ class EDMF_PrognosticTKE:
         UpdVar.initialize(GMV, tmp, q)
         return
 
-    def initialize_covariance(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, Case):
+    def initialize_vars(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
         self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         zs = self.zi
         self.wstar = get_wstar(Case.Sur.bflux, zs)
@@ -588,6 +588,7 @@ class EDMF_PrognosticTKE:
                 GMV.cv_θ_liq_q_tot.values[k] = cv_θ_liq_q_tot_1 * temp
             reset_surface_covariance(grid, q, tmp, GMV, Case, ws)
             compute_mixing_length(grid, tmp, Case.Sur.obukhov_length, EnvVar, self.zi, self.wstar)
+        self.pre_compute_vars(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag)
         return
 
     def initialize_io(self, Stats, EnvVar, UpdVar):
@@ -766,11 +767,6 @@ class EDMF_PrognosticTKE:
 
         self.pre_compute_vars(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag)
 
-        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
-        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag, self.tke_diss_coeff)
-        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag, self.tke_diss_coeff)
-        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_θ_liq_q_tot, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag, self.tke_diss_coeff)
-
         cleanup_covariance(grid, GMV, EnvVar, UpdVar)
 
         UpdVar.assign_new_to_values(grid)
@@ -778,6 +774,11 @@ class EDMF_PrognosticTKE:
         self.set_updraft_surface_bc(grid, GMV, Case, tmp)
 
         self.compute_prognostic_updrafts(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS)
+
+        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
+        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag, self.tke_diss_coeff)
+        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag, self.tke_diss_coeff)
+        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_θ_liq_q_tot, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag, self.tke_diss_coeff)
 
         update_sol_gm(grid, q, q_tendencies, GMV, TS, tmp, tri_diag)
 
