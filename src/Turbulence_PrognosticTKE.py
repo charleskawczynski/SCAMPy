@@ -344,7 +344,6 @@ def compute_cv_env_tendencies(grid, q_tendencies, Covar, name):
     for k in grid.over_elems_real(Center()):
         q_tendencies[name, i_env][k] = Covar.press[k] + Covar.buoy[k] + Covar.shear[k] + Covar.entr_gain[k] + Covar.rain_src[k]
     q_tendencies[name, i_env][k_1] = Covar.values[k_1]
-
     return
 
 def update_cv_env(grid, q, q_tendencies, tmp, Covar, EnvVar, UpdVar, TS, name, tri_diag, tke_diss_coeff):
@@ -756,15 +755,13 @@ class EDMF_PrognosticTKE:
         get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.θ_liq , UpdVar.q_tot, EnvVar.θ_liq.values , EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot, GMV.θ_liq , GMV.q_tot , GMV.cv_θ_liq_q_tot, 'cv_θ_liq_q_tot')
 
         compute_cv_env_tendencies(grid, q_tendencies, EnvVar.tke           , 'tke')
-        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
-
         compute_cv_env_tendencies(grid, q_tendencies, EnvVar.cv_θ_liq      , 'cv_θ_liq')
-        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag, self.tke_diss_coeff)
-
         compute_cv_env_tendencies(grid, q_tendencies, EnvVar.cv_q_tot      , 'cv_q_tot')
-        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag, self.tke_diss_coeff)
-
         compute_cv_env_tendencies(grid, q_tendencies, EnvVar.cv_θ_liq_q_tot, 'cv_θ_liq_q_tot')
+
+        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
+        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag, self.tke_diss_coeff)
+        update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag, self.tke_diss_coeff)
         update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_θ_liq_q_tot, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag, self.tke_diss_coeff)
 
         cleanup_covariance(grid, GMV, EnvVar, UpdVar)

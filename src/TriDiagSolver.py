@@ -46,17 +46,17 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, UpdVar, EnvVar, tri_diag, t
     return
 
 def construct_tridiag_diffusion_new_new(grid, dt, tri_diag, rho, ae):
-    k1 = grid.first_interior(Zmin())
-    k2 = grid.first_interior(Zmax())
+    k_1 = grid.first_interior(Zmin())
+    k_2 = grid.first_interior(Zmax())
     dzi = grid.dzi
     for k in grid.over_elems_real(Center()):
         ρaK_dual = tri_diag.ρaK.Dual(k)
         X = rho[k] * ae[k]/dt
         Z = ρaK_dual[0] * dzi * dzi
         Y = ρaK_dual[1] * dzi * dzi
-        if k == k1:
+        if k == k_1:
             Z = 0.0
-        elif k == k2:
+        elif k == k_2:
             Y = 0.0
         tri_diag.a[k] = - Z/X
         tri_diag.b[k] = 1.0 + Y/X + Z/X
