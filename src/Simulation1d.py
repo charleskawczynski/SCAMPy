@@ -130,6 +130,9 @@ class Simulation1d:
         self.tri_diag.b = Half(self.grid)
         self.tri_diag.c = Half(self.grid)
         self.tri_diag.f = Half(self.grid)
+        self.tri_diag.β = Half(self.grid)
+        self.tri_diag.γ = Half(self.grid)
+        self.tri_diag.xtemp = Half(self.grid)
         self.tri_diag.ρaK = Full(self.grid)
         return
 

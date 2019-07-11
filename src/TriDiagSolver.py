@@ -75,20 +75,17 @@ def tridiag_solve(nz, x, a, b, c):
         x[i] = x[i] - scratch[i] * x[i+1]
     return
 
-def tridiag_solve_wrapper(grid, x, f, a, b, c):
-    xtemp = Half(grid)
-    β = Half(grid)
-    γ = Half(grid)
+def tridiag_solve_wrapper(grid, x, f, tri_diag):
     slice_real = grid.slice_real(Center())
     tridiag_solve_new(x[slice_real],
                       f[slice_real],
-                      a[slice_real],
-                      b[slice_real],
-                      c[slice_real],
+                      tri_diag.a[slice_real],
+                      tri_diag.b[slice_real],
+                      tri_diag.c[slice_real],
                       grid.nz,
-                      xtemp[slice_real],
-                      γ[slice_real],
-                      β[slice_real])
+                      tri_diag.xtemp[slice_real],
+                      tri_diag.γ[slice_real],
+                      tri_diag.β[slice_real])
     return
 
 def tridiag_solve_wrapper_new(grid, x, tri_diag):
