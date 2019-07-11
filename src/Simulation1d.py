@@ -22,7 +22,11 @@ def plot_solutions(sol, Stats):
     props = [x for x in props if not x=='z']
     props = [x for x in props if not x=='z_half']
     for p in props:
-        plt.plot(getattr(sol, p)     , sol.z)
+        if 'T' in p:
+            n = 3
+            plt.plot(getattr(sol, p)[n:-n]     , sol.z[n:-n])
+        else:
+            plt.plot(getattr(sol, p)     , sol.z)
         file_name = nice_name(p+'.png')
         plt.savefig(Stats.figpath+file_name)
         plt.close()
