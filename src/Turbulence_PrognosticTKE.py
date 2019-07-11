@@ -566,7 +566,7 @@ class EDMF_PrognosticTKE:
         UpdVar.initialize(GMV, tmp, q)
         return
 
-    def initialize_covariance(self, grid, q, tmp, GMV, EnvVar, Case):
+    def initialize_covariance(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, Case):
         self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         zs = self.zi
         self.wstar = get_wstar(Case.Sur.bflux, zs)
@@ -719,8 +719,7 @@ class EDMF_PrognosticTKE:
             self.q_tot_surface_bc[i] = (q_tot_1 + self.surface_scalar_coeff[i] * np.sqrt(cv_q_tot))
         return
 
-    def update(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
-
+    def pre_compute_vars(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
@@ -761,6 +760,12 @@ class EDMF_PrognosticTKE:
         compute_cv_env_tendencies(grid, q_tendencies, EnvVar.cv_q_tot      , 'cv_q_tot')
         compute_cv_env_tendencies(grid, q_tendencies, EnvVar.cv_θ_liq_q_tot, 'cv_θ_liq_q_tot')
 
+        compute_tendencies_gm(grid, q_tendencies, q, GMV, UpdMicro, Case, TS, tmp, tri_diag)
+
+    def update(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
+
+        self.pre_compute_vars(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag)
+
         update_cv_env(grid, q, q_tendencies, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
         update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag, self.tke_diss_coeff)
         update_cv_env(grid, q, q_tendencies, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag, self.tke_diss_coeff)
@@ -774,7 +779,6 @@ class EDMF_PrognosticTKE:
 
         self.compute_prognostic_updrafts(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS)
 
-        compute_tendencies_gm(grid, q_tendencies, q, GMV, UpdMicro, Case, TS, tmp, tri_diag)
         update_sol_gm(grid, q, q_tendencies, GMV, TS, tmp, tri_diag)
 
         for k in grid.over_elems_real(Center()):
