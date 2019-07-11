@@ -13,6 +13,7 @@ RefactoringTasks.md
 build/
 *.txt
 src/.pytest_cache/*
+src/AutoRefactor.py
 figs/
 _static/
 _templates/
