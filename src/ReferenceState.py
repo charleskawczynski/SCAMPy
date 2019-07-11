@@ -7,7 +7,7 @@ from scipy.integrate import odeint
 from funcs_thermo import t_to_entropy_c, eos, eos_entropy, alpha_c
 from parameters import *
 
-def initialize(grid, Stats, tmp, loc, sg, Pg, Tg, qtg):
+def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, sg, Pg, Tg, qtg):
     sg = t_to_entropy_c(Pg, Tg, qtg, 0.0, 0.0)
     # Form a right hand side for integrating the hydrostatic equation to
     # determine the reference pressure
@@ -24,10 +24,6 @@ def initialize(grid, Stats, tmp, loc, sg, Pg, Tg, qtg):
 
     # We are integrating the log pressure so need to take the log of the
     # surface pressure
-    p_0 = Field.field(grid, loc)
-    α_0 = Field.field(grid, loc)
-    ρ_0 = Field.field(grid, loc)
-    p_0 = Field.field(grid, loc)
     q_liq = Field.field(grid, loc)
     q_ice = Field.field(grid, loc)
     q_vap = Field.field(grid, loc)
@@ -77,33 +73,15 @@ def initialize(grid, Stats, tmp, loc, sg, Pg, Tg, qtg):
     Stats.write_reference_profile(ρ_0_name, p_0[k_1:k_2])
     Stats.add_reference_profile(α_0_name)
     Stats.write_reference_profile(α_0_name, ρ_0[k_1:k_2])
-
-    return p_0, ρ_0, α_0
+    return
 
 
 class ReferenceState:
     def __init__(self, grid):
-        self.p_0      = Full(grid)
-        self.α_0      = Full(grid)
-        self.ρ_0      = Full(grid)
-        self.p_0_half = Half(grid)
-        self.α_0_half = Half(grid)
-        self.ρ_0_half = Half(grid)
         return
 
     def initialize(self, grid, Stats, tmp):
         self.sg = t_to_entropy_c(self.Pg, self.Tg, self.qtg, 0.0, 0.0)
-        self.p_0, self.ρ_0, self.α_0 = initialize(grid, Stats, tmp, Node(), self.sg, self.Pg, self.Tg, self.qtg)
-        self.p_0_half, self.ρ_0_half, self.α_0_half = initialize(grid, Stats, tmp, Center(), self.sg, self.Pg, self.Tg, self.qtg)
-
-        for k in grid.over_elems(Center()):
-            tmp['α_0_half'][k] = self.α_0_half[k]
-            tmp['ρ_0_half'][k] = 1.0/tmp['α_0_half'][k]
-            tmp['p_0_half'][k] = self.p_0_half[k]
-        for k in grid.over_elems(Node()):
-            tmp['α_0'][k] = self.α_0[k]
-            tmp['ρ_0'][k] = 1.0/tmp['α_0'][k]
-            tmp['p_0'][k] = self.p_0[k]
-
+        initialize_ref_state(grid, Stats, tmp['p_0']     , tmp['ρ_0']     , tmp['α_0']     , Node()  , self.sg, self.Pg, self.Tg, self.qtg)
+        initialize_ref_state(grid, Stats, tmp['p_0_half'], tmp['ρ_0_half'], tmp['α_0_half'], Center(), self.sg, self.Pg, self.Tg, self.qtg)
         return
-

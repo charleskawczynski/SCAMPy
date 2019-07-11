@@ -1,3 +1,4 @@
+import copy
 
 """
     solve_tridiag(x, f, a, b, c, n, xtemp, γ, β)
@@ -130,3 +131,17 @@ def init_β_γ(β, γ, a, b, c, n):
     γ[i] = c[i]/β[i]
   β[n-1] = b[n-1]-a[n-2]*γ[n-2]
 
+
+# ------------------------------ Deprecated
+
+def solve_tridiag_old(nz, x, a, b, c):
+    scratch = copy.deepcopy(x)
+    scratch[0] = c[0]/b[0]
+    x[0] = x[0]/b[0]
+    for i in range(1,nz):
+        m = 1.0/(b[i] - a[i] * scratch[i-1])
+        scratch[i] = c[i] * m
+        x[i] = (x[i] - a[i] * x[i-1])*m
+    for i in range(nz-2,-1,-1):
+        x[i] = x[i] - scratch[i] * x[i+1]
+    return

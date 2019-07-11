@@ -3,6 +3,7 @@ import copy
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
 from StateVec import StateVec
+from funcs_tridiagsolver import solve_tridiag, solve_tridiag_stored, init_β_γ, solve_tridiag_old
 
 def construct_tridiag_diffusion_O2(grid, q, tmp, TS, UpdVar, EnvVar, tri_diag, tke_diss_coeff):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
@@ -45,7 +46,7 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, UpdVar, EnvVar, tri_diag, t
     tri_diag.c[k_2] = 0.0
     return
 
-def construct_tridiag_diffusion_new_new(grid, dt, tri_diag, rho, ae):
+def construct_tridiag_diffusion_O1(grid, dt, tri_diag, rho, ae):
     k_1 = grid.first_interior(Zmin())
     k_2 = grid.first_interior(Zmax())
     dzi = grid.dzi
@@ -63,60 +64,23 @@ def construct_tridiag_diffusion_new_new(grid, dt, tri_diag, rho, ae):
         tri_diag.c[k] = -Y/X
     return
 
-def tridiag_solve(nz, x, a, b, c):
-    scratch = copy.deepcopy(x)
-    scratch[0] = c[0]/b[0]
-    x[0] = x[0]/b[0]
-    for i in range(1,nz):
-        m = 1.0/(b[i] - a[i] * scratch[i-1])
-        scratch[i] = c[i] * m
-        x[i] = (x[i] - a[i] * x[i-1])*m
-    for i in range(nz-2,-1,-1):
-        x[i] = x[i] - scratch[i] * x[i+1]
-    return
-
-def tridiag_solve_wrapper(grid, x, f, tri_diag):
+def solve_tridiag_wrapper(grid, x, tri_diag):
     slice_real = grid.slice_real(Center())
-    tridiag_solve_new(x[slice_real],
-                      f[slice_real],
+    solve_tridiag_old(grid.nz,
+                      tri_diag.f[slice_real],
                       tri_diag.a[slice_real],
                       tri_diag.b[slice_real],
-                      tri_diag.c[slice_real],
-                      grid.nz,
-                      tri_diag.xtemp[slice_real],
-                      tri_diag.γ[slice_real],
-                      tri_diag.β[slice_real])
-    return
-
-def tridiag_solve_wrapper_new(grid, x, tri_diag):
-    # xtemp = Half(grid)
-    # β = Half(grid)
-    # γ = Half(grid)
-    slice_real = grid.slice_real(Center())
-    tridiag_solve(grid.nz,
-                  tri_diag.f[slice_real],
-                  tri_diag.a[slice_real],
-                  tri_diag.b[slice_real],
-                  tri_diag.c[slice_real])
+                      tri_diag.c[slice_real])
     x[:] = tri_diag.f[:]
+
+    # solve_tridiag(x[slice_real],
+    #               tri_diag.f[slice_real],
+    #               tri_diag.a[slice_real],
+    #               tri_diag.b[slice_real],
+    #               tri_diag.c[slice_real],
+    #               grid.nz,
+    #               tri_diag.xtemp[slice_real],
+    #               tri_diag.γ[slice_real],
+    #               tri_diag.β[slice_real])
     return
 
-def tridiag_solve_new(x, f, a, b, c, n, xtemp, γ, β):
-  # Define coefficients:
-  β[0] = b[0]
-  γ[0] = c[0]/β[0]
-  for i in range(1, n-1):
-    β[i] = b[i]-a[i-1]*γ[i-1]
-    γ[i] = c[i]/β[i]
-  β[n-1] = b[n-1]-a[n-2]*γ[n-2]
-
-  # Forward substitution:
-  xtemp[0] = f[0]/β[0]
-  for i in range(1, n):
-    m = f[i] - a[i-1]*xtemp[i-1]
-    xtemp[i] = m/β[i]
-
-  # Backward substitution:
-  x[n-1] = xtemp[n-1]
-  for i in range(n-2,-1,-1):
-    x[i] = xtemp[i]-γ[i]*x[i+1]

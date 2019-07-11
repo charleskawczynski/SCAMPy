@@ -3,7 +3,6 @@ from scipy.sparse import diags
 import numpy as np
 import random
 import funcs_tridiagsolver as TDMA
-import TriDiagSolver as TDS
 
 def test_tridiag_solver():
   tol = 0.00000001
@@ -36,7 +35,7 @@ def test_tridiag_solver():
     dl_mod[1:] = dl
     du_mod = np.zeros(n)
     du_mod[0:-1] = du
-    TDS.tridiag_solve(n, b, dl_mod, d, du_mod)
+    TDMA.solve_tridiag_old(n, b, dl_mod, d, du_mod)
     x_TDMA = b
     err = [abs(x-y) for (x, y) in zip(x_correct, x_TDMA)]
     assert all([x<tol for x in err])

@@ -150,7 +150,8 @@ class Simulation1d:
         self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
         self.Case.update_surface(self.grid, self.GMV, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q_tendencies, self.GMV, self.TS, self.tmp)
-        self.Turb.initialize_covariance(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.Case)
+        self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.GMV,
+        self.EnvVar, self.UpdVar, self.UpdMicro, self.EnvThermo, self.UpdThermo, self.Case, self.TS, self.tri_diag)
         for k in self.grid.over_elems(Center()):
             self.EnvVar.tke.values[k]            = self.GMV.tke.values[k]
             self.EnvVar.cv_θ_liq.values[k]       = self.GMV.cv_θ_liq.values[k]
