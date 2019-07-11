@@ -353,17 +353,10 @@ def update_cv_env(grid, q, q_tendencies, tmp, Covar, EnvVar, UpdVar, TS, name, t
     k_1 = grid.first_interior(Zmin())
 
     slice_all_c = grid.slice_all(Center())
-    ae_old = Half(grid)
-    ae_old[slice_all_c] = [1.0 - np.sum([UpdVar.Area.old[i][k] for i in i_uds]) for k in grid.over_elems(Center())]
-    tri_diag.f[slice_all_c] = [tmp['ρ_0_half'][k] * ae_old[k] * Covar.values[k] * dti + q_tendencies[name, i_env][k] for k in grid.over_elems(Center())]
-    tri_diag.f[k_1] = tmp['ρ_0_half'][k_1] * ae_old[k_1] * Covar.values[k_1] * dti + Covar.values[k_1]
+    a_e = q['a', i_env]
+    tri_diag.f[slice_all_c] = [tmp['ρ_0_half'][k] * a_e[k] * Covar.values[k] * dti + q_tendencies[name, i_env][k] for k in grid.over_elems(Center())]
+    tri_diag.f[k_1] = tmp['ρ_0_half'][k_1] * a_e[k_1] * Covar.values[k_1] * dti + Covar.values[k_1]
     solve_tridiag_wrapper(grid, Covar.values, tri_diag)
-
-    for k in grid.over_elems_real(Center()):
-        if name == 'cv_θ_liq_q_tot':
-            Covar.values[k] = np.fmin(Covar.values[k],   np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
-        else:
-            Covar.values[k] = np.fmax(Covar.values[k], 0.0)
 
     return
 
@@ -762,6 +755,12 @@ class EDMF_PrognosticTKE:
         compute_cv_env_tendencies(grid, q_tendencies, EnvVar.cv_θ_liq_q_tot, 'cv_θ_liq_q_tot')
 
         compute_tendencies_gm(grid, q_tendencies, q, GMV, UpdMicro, Case, TS, tmp, tri_diag)
+
+        for k in grid.over_elems_real(Center()):
+            EnvVar.tke.values[k] = np.fmax(EnvVar.tke.values[k], 0.0)
+            EnvVar.cv_θ_liq.values[k] = np.fmax(EnvVar.cv_θ_liq.values[k], 0.0)
+            EnvVar.cv_q_tot.values[k] = np.fmax(EnvVar.cv_q_tot.values[k], 0.0)
+            EnvVar.cv_θ_liq_q_tot.values[k] = np.fmax(EnvVar.cv_θ_liq_q_tot.values[k], np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
 
     def update(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
 
