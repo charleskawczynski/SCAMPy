@@ -4,51 +4,45 @@ from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
 from StateVec import StateVec
 
-def construct_tridiag_diffusion_O2(grid, Covar, dt, tri_diag, rho, ae, rho_ae_K_m, whalf, tmp):
+def construct_tridiag_diffusion_O2(grid, q, tmp, TS, UpdVar, EnvVar, tri_diag, tke_diss_coeff):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
     dzi = grid.dzi
     dzi2 = grid.dzi**2.0
     dti = TS.dti
     k_1 = grid.first_interior(Zmin())
-    Covar_surf = Covar.values[k_1]
-    for k in grid.over_elems_real(Center()):
-        D_env = 0.0
-        ρ_0_k = tmp['ρ_0_half'][k]
-        ρ_0_kp = tmp['ρ_0_half'][k+1]
-        ae_k = ae[k]
-        ae_kp = ae[k+1]
-        w_k = whalf[k]
-        w_kp = whalf[k+1]
-        rho_ae_K_k = rho_ae_K_m[k]
-        rho_ae_K_km = rho_ae_K_m[k-1]
-        for i in i_uds:
-            wu_half = UpdVar.W.values[i].Mid(k)
-            D_env += ρ_0_k * UpdVar.Area.values[i][k] * wu_half * self.entr_sc[i][k]
+    k_2 = grid.first_interior(Zmax())
 
-        l_mix = np.fmax(self.mixing_length[k], 1.0)
+    a_env = q['a', i_env]
+    w_env = q['w', i_env]
+    ρ_0_half = tmp['ρ_0_half']
+    for k in grid.over_elems_real(Center()):
+        ρ_0_cut = ρ_0_half.Cut(k)
+        ae_cut = a_env.Cut(k)
+        w_cut = w_env.DualCut(k)
+        ρa_K_cut = a_env.DualCut(k) * tmp['K_h'].DualCut(k) * ρ_0_half.DualCut(k)
+
+        D_env = sum([ρ_0_cut[1] *
+                     UpdVar.Area.values[i][k] *
+                     UpdVar.W.values[i].Mid(k) *
+                     tmp['entr_sc', i][k] for i in i_uds])
+
+        l_mix = np.fmax(tmp['l_mix'][k], 1.0)
         tke_env = np.fmax(EnvVar.tke.values[k], 0.0)
 
-        tri_diag.a[k] = (- rho_ae_K_km * dzi2 )
-        tri_diag.b[k] = (ρ_0_k * ae_k * dti
-                 - ρ_0_k * ae_k * whalf[k] * dzi
-                 + rho_ae_K_k * dzi2 + rho_ae_K_km * dzi2
+        tri_diag.a[k] = (- ρa_K_cut[0] * dzi2 )
+        tri_diag.b[k] = (ρ_0_cut[1] * ae_cut[1] * dti
+                 - ρ_0_cut[1] * ae_cut[1] * w_cut[1] * dzi
+                 + ρa_K_cut[1] * dzi2 + ρa_K_cut[0] * dzi2
                  + D_env
-                 + ρ_0_k * ae_k * self.tke_diss_coeff * np.sqrt(tke_env)/l_mix)
-        tri_diag.c[k] = (ρ_0_kp * ae_kp * w_kp * dzi - rho_ae_K_k * dzi2)
+                 + ρ_0_cut[1] * ae_cut[1] * tke_diss_coeff * np.sqrt(tke_env)/l_mix)
+        tri_diag.c[k] = (ρ_0_cut[2] * ae_cut[2] * w_cut[2] * dzi - ρa_K_cut[1] * dzi2)
 
-        tri_diag.f[k] = (ρ_0_k * ae_old[k] * Covar.values[k] * dti
-                 + Covar.press[k]
-                 + Covar.buoy[k]
-                 + Covar.shear[k]
-                 + Covar.entr_gain[k]
-                 + Covar.rain_src[k])
+    tri_diag.a[k_1] = 0.0
+    tri_diag.b[k_1] = 1.0
+    tri_diag.c[k_1] = 0.0
 
-        tri_diag.a[k_1] = 0.0
-        tri_diag.b[k_1] = 1.0
-        tri_diag.c[k_1] = 0.0
-        tri_diag.f[k_1] = Covar_surf
-
-        tri_diag.b[k_2] += tri_diag.c[k_2]
-        tri_diag.c[k_2] = 0.0
+    tri_diag.b[k_2] += tri_diag.c[k_2]
+    tri_diag.c[k_2] = 0.0
     return
 
 def construct_tridiag_diffusion_new_new(grid, dt, tri_diag, rho, ae):
@@ -81,20 +75,17 @@ def tridiag_solve(nz, x, a, b, c):
         x[i] = x[i] - scratch[i] * x[i+1]
     return
 
-def tridiag_solve_wrapper(grid, x, f, a, b, c):
-    xtemp = Half(grid)
-    β = Half(grid)
-    γ = Half(grid)
+def tridiag_solve_wrapper(grid, x, f, tri_diag):
     slice_real = grid.slice_real(Center())
     tridiag_solve_new(x[slice_real],
                       f[slice_real],
-                      a[slice_real],
-                      b[slice_real],
-                      c[slice_real],
+                      tri_diag.a[slice_real],
+                      tri_diag.b[slice_real],
+                      tri_diag.c[slice_real],
                       grid.nz,
-                      xtemp[slice_real],
-                      γ[slice_real],
-                      β[slice_real])
+                      tri_diag.xtemp[slice_real],
+                      tri_diag.γ[slice_real],
+                      tri_diag.β[slice_real])
     return
 
 def tridiag_solve_wrapper_new(grid, x, tri_diag):
