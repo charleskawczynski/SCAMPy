@@ -769,7 +769,6 @@ class EDMF_PrognosticTKE:
         cleanup_covariance(grid, GMV, EnvVar, UpdVar)
 
         UpdVar.assign_new_to_values(grid)
-        UpdVar.assign_old_to_values(grid)
         self.set_updraft_surface_bc(grid, GMV, Case, tmp)
 
         self.compute_prognostic_updrafts(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS)

@@ -13,7 +13,6 @@ import pylab as plt
 class UpdraftVariable:
     def __init__(self, grid, nu, loc, bc):
         self.values     = [Field.field(grid, loc, bc) for i in range(nu)]
-        self.old        = [Field.field(grid, loc, bc) for i in range(nu)]
         self.new        = [Field.field(grid, loc, bc) for i in range(nu)]
 
     def set_bcs(self, grid):
@@ -91,19 +90,6 @@ class UpdraftVariables:
                 self.θ_liq.new[i][k] = self.θ_liq.values[i][k]
                 self.T.new[i][k] = self.T.values[i][k]
                 self.B.new[i][k] = self.B.values[i][k]
-        return
-
-    def assign_old_to_values(self, grid):
-        for i in range(self.n_updrafts):
-            for k in grid.over_elems(Center()):
-                self.W.old[i][k] = self.W.values[i][k]
-                self.Area.old[i][k] = self.Area.values[i][k]
-                self.q_tot.old[i][k] = self.q_tot.values[i][k]
-                self.q_liq.old[i][k] = self.q_liq.values[i][k]
-                self.q_rai.old[i][k] = self.q_rai.values[i][k]
-                self.θ_liq.old[i][k] = self.θ_liq.values[i][k]
-                self.T.old[i][k] = self.T.values[i][k]
-                self.B.old[i][k] = self.B.values[i][k]
         return
 
     def set_values_with_new(self, grid):
