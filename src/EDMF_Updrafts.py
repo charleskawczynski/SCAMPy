@@ -79,20 +79,7 @@ class UpdraftVariables:
         Stats.add_ts('updraft_cloud_top')
         return
 
-    def assign_new_to_values(self, grid):
-        for i in range(self.n_updrafts):
-            for k in grid.over_elems(Center()):
-                self.W.new[i][k] = self.W.values[i][k]
-                self.Area.new[i][k] = self.Area.values[i][k]
-                self.q_tot.new[i][k] = self.q_tot.values[i][k]
-                self.q_liq.new[i][k] = self.q_liq.values[i][k]
-                self.q_rai.new[i][k] = self.q_rai.values[i][k]
-                self.θ_liq.new[i][k] = self.θ_liq.values[i][k]
-                self.T.new[i][k] = self.T.values[i][k]
-                self.B.new[i][k] = self.B.values[i][k]
-        return
-
-    def set_values_with_new(self, grid):
+    def assign_values_to_new(self, grid):
         for i in range(self.n_updrafts):
             for k in grid.over_elems(Center()):
                 self.W.values[i][k] = self.W.new[i][k]
