@@ -337,43 +337,49 @@ def compute_eddy_diffusivities_similarity_Siebesma2007(grid, GMV, Case, tmp, zi,
             tmp['K_m'][k] = tmp['K_h'][k] * prandtl_number
     return
 
-def compute_cv_env_tendencies(grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, name, tri_diag):
+def compute_cv_env_tendencies(grid, q, tmp, Covar, UpdVar, TS, tri_diag):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    dti = TS.dti
     k_1 = grid.first_interior(Zmin())
-    Covar = getattr(EnvVar, name)
-    for k in grid.over_elems_real(Center()):
-        q_tendencies[name, i_env][k] = Covar.press[k] + Covar.buoy[k] + Covar.shear[k] + Covar.entr_gain[k] + Covar.rain_src[k]
-    q_tendencies[name, i_env][k_1] = 0.0
-    return
-
-def update_cv_env(grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, name, tri_diag, tke_diss_coeff):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    dzi = grid.dzi
-    dzi2 = grid.dzi**2.0
-    dt = TS.dt
-    k_1 = grid.first_interior(Zmin())
-    k_2 = grid.first_interior(Zmax())
-    Covar = getattr(EnvVar, name)
-
-    a_env = q['a', i_env]
-    w_env = q['w', i_env]
-    ρ_0_half = tmp['ρ_0_half']
 
     slice_all_c = grid.slice_all(Center())
     ae_old = Half(grid)
     ae_old[slice_all_c] = [1.0 - np.sum([UpdVar.Area.old[i][k] for i in i_uds]) for k in grid.over_elems(Center())]
 
-    tri_diag.f[slice_all_c] = [Covar.values[k] + TS.dt*q_tendencies[name, i_env][k] for k in grid.over_elems(Center())]
+    Covar_surf = Covar.values[k_1]
+    ρ_0_half = tmp['ρ_0_half']
 
     for k in grid.over_elems_real(Center()):
         ρ_0_cut = ρ_0_half.Cut(k)
-        ρ_0_k = ρ_0_cut[1]
+        tri_diag.f[k] = (ρ_0_cut[1] * ae_old[k] * Covar.values[k] * dti
+                 + Covar.press[k]
+                 + Covar.buoy[k]
+                 + Covar.shear[k]
+                 + Covar.entr_gain[k]
+                 + Covar.rain_src[k])
+    tri_diag.f[k_1] = Covar_surf
+
+    return
+
+def update_cv_env(grid, q, tmp, Covar, EnvVar, UpdVar, TS, name, tri_diag, tke_diss_coeff):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    dzi = grid.dzi
+    dzi2 = grid.dzi**2.0
+    dti = TS.dti
+    k_1 = grid.first_interior(Zmin())
+    k_2 = grid.first_interior(Zmax())
+
+    a_env = q['a', i_env]
+    w_env = q['w', i_env]
+    ρ_0_half = tmp['ρ_0_half']
+
+    for k in grid.over_elems_real(Center()):
+        ρ_0_cut = ρ_0_half.Cut(k)
         ae_cut = a_env.Cut(k)
         w_cut = w_env.DualCut(k)
         ρa_K_cut = a_env.DualCut(k) * tmp['K_h'].DualCut(k) * ρ_0_half.DualCut(k)
-        ρa_e_k = ρ_0_k * ae_cut[1]
 
-        D_env = sum([ρ_0_k *
+        D_env = sum([ρ_0_cut[1] *
                      UpdVar.Area.values[i][k] *
                      UpdVar.W.values[i].Mid(k) *
                      tmp['entr_sc', i][k] for i in i_uds])
@@ -381,15 +387,13 @@ def update_cv_env(grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, name, tri_diag
         l_mix = np.fmax(tmp['l_mix'][k], 1.0)
         tke_env = np.fmax(EnvVar.tke.values[k], 0.0)
 
-        tri_diag.a[k] = - dt * ρa_K_cut[0] * dzi2
-        tri_diag.b[k] = (ρa_e_k
-                 - dt * ρa_e_k * w_cut[1] * dzi
-                 + dt * ρa_K_cut[1] * dzi2
-                 + dt * ρa_K_cut[0] * dzi2
-                 + dt * D_env
-                 + dt * ρa_e_k * tke_diss_coeff * np.sqrt(tke_env)/l_mix)
-        tri_diag.c[k] = (dt * ρ_0_cut[2] * ae_cut[2] * w_cut[2] * dzi
-                       - dt * ρa_K_cut[1] * dzi2)
+        tri_diag.a[k] = (- ρa_K_cut[0] * dzi2 )
+        tri_diag.b[k] = (ρ_0_cut[1] * ae_cut[1] * dti
+                 - ρ_0_cut[1] * ae_cut[1] * w_cut[1] * dzi
+                 + ρa_K_cut[1] * dzi2 + ρa_K_cut[0] * dzi2
+                 + D_env
+                 + ρ_0_cut[1] * ae_cut[1] * tke_diss_coeff * np.sqrt(tke_env)/l_mix)
+        tri_diag.c[k] = (ρ_0_cut[2] * ae_cut[2] * w_cut[2] * dzi - ρa_K_cut[1] * dzi2)
 
     tri_diag.a[k_1] = 0.0
     tri_diag.b[k_1] = 1.0
@@ -797,17 +801,17 @@ class EDMF_PrognosticTKE:
         get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.q_tot , UpdVar.q_tot, EnvVar.q_tot.values , EnvVar.q_tot.values, EnvVar.cv_q_tot      , GMV.q_tot , GMV.q_tot , GMV.cv_q_tot      , 'cv_q_tot'      )
         get_env_covar_from_GMV(grid, q, UpdVar.Area, UpdVar.θ_liq , UpdVar.q_tot, EnvVar.θ_liq.values , EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot, GMV.θ_liq , GMV.q_tot , GMV.cv_θ_liq_q_tot, 'cv_θ_liq_q_tot')
 
-        compute_cv_env_tendencies(grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, 'tke'           , tri_diag)
-        update_cv_env(            grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
+        compute_cv_env_tendencies(grid, q, tmp, EnvVar.tke           , UpdVar, TS, tri_diag)
+        update_cv_env(grid, q, tmp, EnvVar.tke           , EnvVar, UpdVar, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
 
-        compute_cv_env_tendencies(grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag)
-        update_cv_env(            grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag, self.tke_diss_coeff)
+        compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_θ_liq      , UpdVar, TS, tri_diag)
+        update_cv_env(grid, q, tmp, EnvVar.cv_θ_liq      , EnvVar, UpdVar, TS, 'cv_θ_liq'      , tri_diag, self.tke_diss_coeff)
 
-        compute_cv_env_tendencies(grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag)
-        update_cv_env(            grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag, self.tke_diss_coeff)
+        compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_q_tot      , UpdVar, TS, tri_diag)
+        update_cv_env(grid, q, tmp, EnvVar.cv_q_tot      , EnvVar, UpdVar, TS, 'cv_q_tot'      , tri_diag, self.tke_diss_coeff)
 
-        compute_cv_env_tendencies(grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag)
-        update_cv_env(            grid, q, q_tendencies, tmp, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag, self.tke_diss_coeff)
+        compute_cv_env_tendencies(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, UpdVar, TS, tri_diag)
+        update_cv_env(grid, q, tmp, EnvVar.cv_θ_liq_q_tot, EnvVar, UpdVar, TS, 'cv_θ_liq_q_tot', tri_diag, self.tke_diss_coeff)
 
         cleanup_covariance(grid, GMV, EnvVar, UpdVar)
 
