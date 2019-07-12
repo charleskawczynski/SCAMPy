@@ -150,6 +150,7 @@ class Simulation1d:
         return
 
     def run(self):
+        i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
         self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
         self.Case.update_surface(self.grid, self.q, self.GMV, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q_tendencies, self.GMV, self.TS, self.tmp)
