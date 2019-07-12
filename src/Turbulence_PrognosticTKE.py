@@ -276,7 +276,7 @@ def compute_zbl_qt_grad(grid, GMV):
             zbl_q_tot = grid.z_half[k]
     return zbl_q_tot
 
-def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit, temp_C):
+def compute_inversion(grid, q, GMV, option, tmp, Ri_bulk_crit, temp_C):
     maxgrad = 0.0
     theta_rho_bl = temp_C.first_interior(grid)
     for k in grid.over_elems_real(Center()):
@@ -585,7 +585,7 @@ class EDMF_PrognosticTKE:
         return
 
     def initialize_vars(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
-        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
+        self.zi = compute_inversion(grid, q, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         zs = self.zi
         self.wstar = get_wstar(Case.Sur.bflux, zs)
         ws = self.wstar
@@ -740,7 +740,7 @@ class EDMF_PrognosticTKE:
 
     def pre_compute_vars(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
+        self.zi = compute_inversion(grid, q, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         decompose_environment(grid, q, GMV, EnvVar, UpdVar)
         get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.W.values,  UpdVar.W.values,  q['w', i_env],  q['w', i_env],  EnvVar.tke.values,    GMV.W.values,  GMV.W.values,  GMV.tke.values, 'tke')
