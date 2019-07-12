@@ -83,7 +83,8 @@ class GridMeanVariables:
 
         return
 
-    def satadjust(self, grid, tmp):
+    def satadjust(self, grid, q, tmp):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         for k in grid.over_elems(Center()):
             θ_liq = self.θ_liq.values[k]
             q_tot = self.q_tot.values[k]

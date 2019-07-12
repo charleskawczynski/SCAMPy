@@ -109,7 +109,7 @@ class Soares(CasesBase):
 
         GMV.θ_liq.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        GMV.satadjust(grid, q, tmp)
 
         return
 
@@ -205,7 +205,7 @@ class Bomex(CasesBase):
         GMV.q_tot.set_bcs(grid)
         GMV.θ_liq.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        GMV.satadjust(grid, q, tmp)
 
         return
     def initialize_surface(self, grid, Ref, tmp):
@@ -323,7 +323,7 @@ class life_cycle_Tan2018(CasesBase):
         GMV.q_tot.set_bcs(grid)
         GMV.θ_liq.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        GMV.satadjust(grid, q, tmp)
 
         return
     def initialize_surface(self, grid, Ref, tmp):
@@ -437,7 +437,7 @@ class Rico(CasesBase):
         GMV.q_tot.set_bcs(grid)
         GMV.θ_liq.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        GMV.satadjust(grid, q, tmp)
 
 
         return
@@ -608,7 +608,7 @@ class TRMM_LBA(CasesBase):
 
         GMV.q_tot.set_bcs(grid)
         GMV.θ_liq.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        GMV.satadjust(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -850,7 +850,7 @@ class ARM_SGP(CasesBase):
         GMV.q_tot.set_bcs(grid)
         GMV.θ_liq.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        GMV.satadjust(grid, q, tmp)
 
         return
 
@@ -983,7 +983,7 @@ class GATE_III(CasesBase):
         GMV.q_tot.set_bcs(grid)
         GMV.T.set_bcs(grid)
         GMV.θ_liq.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        GMV.satadjust(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1286,7 +1286,7 @@ class GABLS(CasesBase):
         GMV.q_tot.set_bcs(grid)
         GMV.θ_liq.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        GMV.satadjust(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1374,7 +1374,7 @@ class SP(CasesBase):
         GMV.q_tot.set_bcs(grid)
         GMV.θ_liq.set_bcs(grid)
         GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        GMV.satadjust(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):

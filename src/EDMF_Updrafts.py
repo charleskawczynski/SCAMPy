@@ -116,15 +116,6 @@ class UpdraftThermodynamics:
         self.n_updrafts = n_updrafts
         return
 
-    def satadjust(self, grid, UpdVar, tmp):
-        i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
-        for i in i_uds:
-            for k in grid.over_elems(Center()):
-                T, q_liq = eos(tmp['p_0_half'][k], UpdVar.q_tot.values[i][k], UpdVar.θ_liq.values[i][k])
-                UpdVar.q_liq.values[i][k] = q_liq
-                UpdVar.T.values[i][k] = T
-        return
-
     def buoyancy(self, grid, q, tmp, UpdVar, EnvVar, GMV):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         for i in i_uds:
