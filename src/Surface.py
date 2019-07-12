@@ -19,7 +19,7 @@ class SurfaceBase:
 
     def update(self, GMV):
         return
-    def free_convection_windspeed(self, grid, GMV, tmp):
+    def free_convection_windspeed(self, grid, q, GMV, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         theta_rho = Half(grid)
         for k in grid.over_elems(Center()):
@@ -71,7 +71,7 @@ class SurfaceFixedFlux(SurfaceBase):
             # Value 1.2 is empirical, but should be O(1)
             if self.windspeed < 0.1:  # Limit here is heuristic
                 if self.bflux > 0.0:
-                   self.free_convection_windspeed(grid, GMV, tmp)
+                   self.free_convection_windspeed(grid, q, GMV, tmp)
                 else:
                     print('WARNING: Low windspeed + stable conditions, need to check ustar computation')
                     print('self.bflux ==>', self.bflux)
