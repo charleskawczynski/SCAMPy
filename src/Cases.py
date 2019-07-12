@@ -84,6 +84,7 @@ class Soares(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         theta = Half(grid)
         q_liq = 0.0
         q_ice = 0.0
