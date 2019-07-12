@@ -486,7 +486,7 @@ def compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q, ent
 
     return
 
-def assign_new_to_values(grid, q, UpdVar):
+def assign_new_to_values(grid, q, tmp, UpdVar):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for i in i_uds:
         for k in grid.over_elems(Center()):
@@ -802,7 +802,7 @@ class EDMF_PrognosticTKE:
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         self.pre_compute_vars(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag)
 
-        assign_new_to_values(grid, q, UpdVar)
+        assign_new_to_values(grid, q, tmp, UpdVar)
 
         self.compute_prognostic_updrafts(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS)
 
