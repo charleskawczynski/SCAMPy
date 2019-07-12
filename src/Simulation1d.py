@@ -72,7 +72,20 @@ class Simulation1d:
                      ('K_m'           , Center() , Neumann(), 1),
                      ('K_h'           , Center() , Neumann(), 1),
                      ('l_mix'         , Center() , Neumann(), 1),
+                     ('q_tot_dry'             , Center(), Neumann(), 1),
+                     ('θ_dry'                 , Center(), Neumann(), 1),
+                     ('t_cloudy'              , Center(), Neumann(), 1),
+                     ('q_vap_cloudy'          , Center(), Neumann(), 1),
+                     ('q_tot_cloudy'          , Center(), Neumann(), 1),
+                     ('θ_cloudy'              , Center(), Neumann(), 1),
+                     ('cv_θ_liq_rain_dt'      , Center(), Neumann(), 1),
+                     ('cv_q_tot_rain_dt'      , Center(), Neumann(), 1),
+                     ('cv_θ_liq_q_tot_rain_dt', Center(), Neumann(), 1),
+                     ('entr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
+                     ('detr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
                      ('q_liq'         , Center() , Neumann(), N_sd),
+                     ('prec_src_θ_liq', Center() , Neumann(), N_sd),
+                     ('prec_src_q_tot', Center() , Neumann(), N_sd),
                      ('CF'            , Center() , Neumann(), N_sd),
                      ('T'             , Center() , Neumann(), N_sd),
                      ('B'             , Center() , Neumann(), N_sd),
@@ -81,8 +94,6 @@ class Simulation1d:
                      ('mf_tend_θ_liq' , Node() , Neumann(), N_sd),
                      ('mf_tend_q_tot' , Node() , Neumann(), N_sd),
                      ('mf_tmp'        , Node() , Neumann(), N_sd),
-                     ('entr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
-                     ('detr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
                      ('ρaK_m'         , Node()   , Neumann(), N_sd),
                      ('ρaK_h'         , Node()   , Neumann(), N_sd),
                      )
