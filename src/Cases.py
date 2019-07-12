@@ -163,6 +163,7 @@ class Bomex(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq = 0.0
         q_ice = 0.0 # IC of Bomex is cloud-free
@@ -280,6 +281,7 @@ class life_cycle_Tan2018(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq = 0.0
         q_ice = 0.0 # IC of Bomex is cloud-free
@@ -404,6 +406,7 @@ class Rico(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq = 0.0
         q_ice = 0.0 # IC of Rico is cloud-free
@@ -514,6 +517,7 @@ class TRMM_LBA(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         p_1 = Half(grid)
 
         # TRMM_LBA inputs from Grabowski et al. 2006
@@ -820,6 +824,7 @@ class ARM_SGP(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         p_1 = Half(grid)
 
         # ARM_SGP inputs
@@ -938,6 +943,7 @@ class GATE_III(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         q_tot = Half(grid)
         T = Half(grid)
         U = Half(grid)
@@ -1116,6 +1122,7 @@ class DYCOMS_RF01(CasesBase):
             return t_2, ql_2
 
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq     = Half(grid)
         q_ice     = 0.0                                             # no ice
@@ -1251,6 +1258,7 @@ class GABLS(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq = 0.0
         q_ice = 0.0 # IC of GABLS cloud-free
@@ -1337,6 +1345,7 @@ class SP(CasesBase):
         return
 
     def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq = 0.0
         q_ice = 0.0 # IC of SP cloud-free
