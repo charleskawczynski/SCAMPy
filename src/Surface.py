@@ -48,7 +48,7 @@ class SurfaceFixedFlux(SurfaceBase):
     def initialize(self):
         return
 
-    def update(self, grid, GMV, tmp):
+    def update(self, grid, q, GMV, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         k_1 = grid.first_interior(Zmin())
         z_1 = grid.z_half[k_1]
@@ -101,7 +101,7 @@ class SurfaceFixedCoeffs(SurfaceBase):
         self.s_surface = (1.0-self.qsurface) * sd_c(pdg, self.Tsurface) + self.qsurface * sv_c(pvg,self.Tsurface)
         return
 
-    def update(self, grid, GMV, tmp):
+    def update(self, grid, q, GMV, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         k_1 = grid.first_interior(Zmin())
         ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
@@ -135,7 +135,7 @@ class SurfaceMoninObukhov(SurfaceBase):
         return
     def initialize(self):
         return
-    def update(self, grid, GMV, tmp):
+    def update(self, grid, q, GMV, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         k_1 = grid.first_interior(Zmin())
         z_1 = grid.z_half[k_1]
@@ -183,7 +183,7 @@ class SurfaceSullivanPatton(SurfaceBase):
         return
     def initialize(self):
         return
-    def update(self, grid, GMV, tmp):
+    def update(self, grid, q, GMV, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         k_1 = grid.first_interior(Zmin())
         z_1 = grid.z_half[k_1]
