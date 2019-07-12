@@ -729,7 +729,7 @@ class EDMF_PrognosticTKE:
         Stats.write_profile_new('cv_θ_liq_q_tot_interdomain' , grid, EnvVar.cv_θ_liq_q_tot.interdomain)
         return
 
-    def set_updraft_surface_bc(self, grid, GMV, Case, tmp):
+    def set_updraft_surface_bc(self, grid, q, GMV, Case, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         k_1 = grid.first_interior(Zmin())
         zLL = grid.z_half[k_1]
@@ -795,7 +795,7 @@ class EDMF_PrognosticTKE:
             EnvVar.cv_q_tot.values[k] = np.fmax(EnvVar.cv_q_tot.values[k], 0.0)
             EnvVar.cv_θ_liq_q_tot.values[k] = np.fmax(EnvVar.cv_θ_liq_q_tot.values[k], np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
         cleanup_covariance(grid, q, GMV, EnvVar, UpdVar)
-        self.set_updraft_surface_bc(grid, GMV, Case, tmp)
+        self.set_updraft_surface_bc(grid, q, GMV, Case, tmp)
 
     def update(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
 
