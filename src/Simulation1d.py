@@ -74,6 +74,7 @@ class Simulation1d:
                      ('l_mix'         , Center() , Neumann(), 1),
                      ('q_liq'         , Center() , Neumann(), N_sd),
                      ('T'             , Center() , Neumann(), N_sd),
+                     ('B'             , Center() , Neumann(), N_sd),
                      ('mf_θ_liq'      , Node() , Neumann(), N_sd),
                      ('mf_q_tot'      , Node() , Neumann(), N_sd),
                      ('mf_tend_θ_liq' , Node() , Neumann(), N_sd),
