@@ -72,7 +72,21 @@ class Simulation1d:
                      ('K_m'           , Center() , Neumann(), 1),
                      ('K_h'           , Center() , Neumann(), 1),
                      ('l_mix'         , Center() , Neumann(), 1),
+                     ('q_tot_dry'             , Center(), Neumann(), 1),
+                     ('θ_dry'                 , Center(), Neumann(), 1),
+                     ('t_cloudy'              , Center(), Neumann(), 1),
+                     ('q_vap_cloudy'          , Center(), Neumann(), 1),
+                     ('q_tot_cloudy'          , Center(), Neumann(), 1),
+                     ('θ_cloudy'              , Center(), Neumann(), 1),
+                     ('cv_θ_liq_rain_dt'      , Center(), Neumann(), 1),
+                     ('cv_q_tot_rain_dt'      , Center(), Neumann(), 1),
+                     ('cv_θ_liq_q_tot_rain_dt', Center(), Neumann(), 1),
+                     ('CF'            , Center() , Neumann(), 1),
+                     ('entr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
+                     ('detr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
                      ('q_liq'         , Center() , Neumann(), N_sd),
+                     ('prec_src_θ_liq', Center() , Neumann(), N_sd),
+                     ('prec_src_q_tot', Center() , Neumann(), N_sd),
                      ('T'             , Center() , Neumann(), N_sd),
                      ('B'             , Center() , Neumann(), N_sd),
                      ('mf_θ_liq'      , Node() , Neumann(), N_sd),
@@ -80,8 +94,6 @@ class Simulation1d:
                      ('mf_tend_θ_liq' , Node() , Neumann(), N_sd),
                      ('mf_tend_q_tot' , Node() , Neumann(), N_sd),
                      ('mf_tmp'        , Node() , Neumann(), N_sd),
-                     ('entr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
-                     ('detr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
                      ('ρaK_m'         , Node()   , Neumann(), N_sd),
                      ('ρaK_h'         , Node()   , Neumann(), N_sd),
                      )
@@ -153,7 +165,7 @@ class Simulation1d:
         i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
         self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
         self.Case.update_surface(self.grid, self.q, self.GMV, self.TS, self.tmp)
-        self.Case.update_forcing(self.grid, self.q_tendencies, self.GMV, self.TS, self.tmp)
+        self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.GMV, self.TS, self.tmp)
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.GMV,
         self.EnvVar, self.UpdVar, self.UpdMicro, self.EnvThermo, self.UpdThermo, self.Case, self.TS, self.tri_diag)
         for k in self.grid.over_elems(Center()):
@@ -167,7 +179,7 @@ class Simulation1d:
                 print('Percent complete: ', self.TS.t/self.TS.t_max*100)
             self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
             self.Case.update_surface(self.grid, self.q, self.GMV, self.TS, self.tmp)
-            self.Case.update_forcing(self.grid, self.q_tendencies, self.GMV, self.TS, self.tmp)
+            self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.GMV, self.TS, self.tmp)
             self.Turb.update(self.grid, self.q, self.q_tendencies, self.tmp, self.GMV, self.EnvVar,
                              self.UpdVar, self.UpdMicro, self.EnvThermo,
                              self.UpdThermo, self.Case, self.TS, self.tri_diag)

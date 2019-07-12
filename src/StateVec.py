@@ -52,7 +52,7 @@ class StateVec:
         return
 
     def __getitem__(self, tup):
-        if len(tup)==2:
+        if isinstance(tup, tuple):
             name, i = tup
         else:
             name = tup
