@@ -74,6 +74,7 @@ class Simulation1d:
                      ('l_mix'         , Center() , Neumann(), 1),
                      ('q_liq'         , Center() , Neumann(), N_sd),
                      ('T'             , Center() , Neumann(), N_sd),
+                     ('B'             , Center() , Neumann(), N_sd),
                      ('mf_θ_liq'      , Node() , Neumann(), N_sd),
                      ('mf_q_tot'      , Node() , Neumann(), N_sd),
                      ('mf_tend_θ_liq' , Node() , Neumann(), N_sd),
@@ -149,6 +150,7 @@ class Simulation1d:
         return
 
     def run(self):
+        i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
         self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
         self.Case.update_surface(self.grid, self.q, self.GMV, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q_tendencies, self.GMV, self.TS, self.tmp)

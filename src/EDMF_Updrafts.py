@@ -157,7 +157,7 @@ class UpdraftMicrophysics:
         self.prec_src_q_tot_tot = Half(grid)
         return
 
-    def compute_sources(self, grid, UpdVar, tmp):
+    def compute_sources(self, grid, q, UpdVar, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         for i in i_uds:
             for k in grid.over_elems(Center()):
@@ -174,8 +174,9 @@ class UpdraftMicrophysics:
 
         return
 
-    def update_updraftvars(self, grid, UpdVar):
-        for i in range(self.n_updrafts):
+    def update_updraftvars(self, grid, q, tmp, UpdVar):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        for i in i_uds:
             for k in grid.over_elems(Center()):
                 s = self.prec_src_q_tot[i][k]
                 UpdVar.q_tot.values[i][k] += s
