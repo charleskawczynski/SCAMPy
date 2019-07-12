@@ -27,7 +27,7 @@ class ForcingBase:
         return
     def initialize_io(self, Stats):
         return
-    def io(self, grid, Stats):
+    def export_data(self, grid, Stats):
         return
 
 
@@ -44,7 +44,7 @@ class ForcingNone(ForcingBase):
         return
     def initialize_io(self, Stats):
         return
-    def io(self, grid, Stats):
+    def export_data(self, grid, Stats):
         return
 
 class ForcingStandard(ForcingBase):
@@ -80,7 +80,7 @@ class ForcingStandard(ForcingBase):
         return
     def initialize_io(self, Stats):
         return
-    def io(self, grid, Stats):
+    def export_data(self, grid, Stats):
         return
 
 # class ForcingRadiative(ForcingBase): # yair - added to avoid zero subsidence
@@ -108,7 +108,7 @@ class ForcingStandard(ForcingBase):
 #         return
 #     def initialize_io(self, Stats):
 #         return
-#     def io(self, grid, Stats):
+#     def export_data(self, grid, Stats):
 #         return
 
 
@@ -214,7 +214,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         Stats.add_profile('rad_flux')
         return
 
-    def io(self, grid, Stats):
+    def export_data(self, grid, Stats):
         Stats.write_profile_new('rad_dTdt', grid, self.dTdt.values)
         Stats.write_profile_new('rad_flux', grid, self.f_rad.values)
         return

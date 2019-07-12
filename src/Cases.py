@@ -56,7 +56,7 @@ class CasesBase:
         Stats.add_ts('lhf')
         Stats.add_ts('ustar')
         return
-    def io(self, Stats):
+    def export_data(self, Stats):
         Stats.write_ts('Tsurface', self.Sur.Tsurface)
         Stats.write_ts('shf', self.Sur.shf)
         Stats.write_ts('lhf', self.Sur.lhf)
@@ -135,8 +135,8 @@ class Soares(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self, Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self, Stats)
         return
 
     def update_surface(self, grid, q, GMV, TS, tmp):
@@ -250,8 +250,8 @@ class Bomex(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
     def update_surface(self, grid, q, GMV, TS, tmp):
         self.Sur.update(grid, q, GMV, tmp)
@@ -371,8 +371,8 @@ class life_cycle_Tan2018(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
     def update_surface(self, grid, q, GMV, TS, tmp):
         weight_factor = 0.01 + 0.99 *(np.cos(2.0*pi * TS.t /3600.0) + 1.0)/2.0
@@ -487,8 +487,8 @@ class Rico(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
     def update_surface(self, grid, q, GMV, TS, tmp):
         self.Sur.update(grid, q, GMV, tmp)
@@ -764,8 +764,8 @@ class TRMM_LBA(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
 
     def update_surface(self, grid, q, GMV, TS, tmp):
@@ -880,8 +880,8 @@ class ARM_SGP(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
 
     def update_surface(self, grid, q, GMV, TS, tmp):
@@ -1033,8 +1033,8 @@ class GATE_III(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
 
     def update_surface(self, grid, q, GMV, TS, tmp):
@@ -1225,9 +1225,9 @@ class DYCOMS_RF01(CasesBase):
         self.Fo.initialize_io(Stats)
         return
 
-    def io(self, Stats):
-        CasesBase.io(self, Stats)
-        self.Fo.io(Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self, Stats)
+        self.Fo.export_data(Stats)
         return
 
     def update_surface(self, grid, q, GMV, TS, tmp):
@@ -1311,8 +1311,8 @@ class GABLS(CasesBase):
         CasesBase.initialize_io(self, Stats)
         return
 
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
 
     def update_surface(self, grid, q, GMV, TS, tmp):
@@ -1405,8 +1405,8 @@ class SP(CasesBase):
         CasesBase.initialize_io(self, Stats)
         return
 
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
 
     def update_surface(self, grid, q, GMV, TS, tmp):

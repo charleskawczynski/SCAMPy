@@ -92,14 +92,14 @@ class UpdraftVariables:
                 self.B.values[i][k] = self.B.new[i][k]
         return
 
-    def io(self, grid, Stats):
-        self.get_cloud_base_top_cover(grid)
+    def export_data(self, grid, q, tmp, Stats):
+        self.get_cloud_base_top_cover(grid, q, tmp)
         Stats.write_ts('updraft_cloud_cover', np.sum(self.cloud_cover))
         Stats.write_ts('updraft_cloud_base' , np.amin(self.cloud_base))
         Stats.write_ts('updraft_cloud_top'  , np.amax(self.cloud_top))
         return
 
-    def get_cloud_base_top_cover(self, grid):
+    def get_cloud_base_top_cover(self, grid, q, tmp):
         for i in range(self.n_updrafts):
             self.cloud_base[i] = grid.z_half[grid.nzg-grid.gw-1]
             self.cloud_top[i] = 0.0

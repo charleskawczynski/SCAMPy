@@ -61,7 +61,7 @@ class EnvironmentVariables:
         Stats.add_profile('env_cv_θ_liq_q_tot')
         return
 
-    def io(self, grid, Stats):
+    def export_data(self, grid, q, tmp, Stats):
         Stats.write_profile_new('env_W'              , grid, self.W.values)
         Stats.write_profile_new('env_q_tot'          , grid, self.q_tot.values)
         Stats.write_profile_new('env_q_liq'          , grid, self.q_liq.values)

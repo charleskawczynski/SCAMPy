@@ -158,7 +158,7 @@ class Simulation1d:
         self.Case.initialize_forcing(self.grid, self.Ref, self.GMV, self.tmp)
         self.UpdVar.initialize(self.grid, self.GMV, self.tmp, self.q)
         self.initialize_io()
-        self.io()
+        self.export_data()
         return
 
     def run(self):
@@ -187,7 +187,7 @@ class Simulation1d:
             self.TS.update()
             compute_grid_means(self.grid, self.q, self.tmp, self.GMV, self.EnvVar, self.UpdVar)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
-                self.io()
+                self.export_data()
         sol = self.package_sol()
         return sol
 
@@ -236,12 +236,12 @@ class Simulation1d:
         self.Turb.initialize_io(self.Stats, self.EnvVar, self.UpdVar)
         return
 
-    def io(self):
+    def export_data(self):
         self.Stats.open_files()
         self.Stats.write_simulation_time(self.TS.t)
-        self.GMV.io(self.grid, self.Stats, self.tmp)
-        self.Case.io(self.Stats)
-        self.Turb.io(self.grid, self.q, self.tmp, self.Stats, self.EnvVar, self.UpdVar, self.UpdMicro)
+        self.GMV.export_data(self.grid, self.Stats, self.tmp)
+        self.Case.export_data(self.Stats)
+        self.Turb.export_data(self.grid, self.q, self.tmp, self.Stats, self.EnvVar, self.UpdVar, self.UpdMicro)
         self.Stats.close_files()
         return
 

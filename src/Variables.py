@@ -62,7 +62,7 @@ class GridMeanVariables:
         Stats.add_ts('lwp')
         return
 
-    def io(self, grid, Stats, tmp):
+    def export_data(self, grid, Stats, tmp):
         lwp = 0.0
         Stats.write_profile_new('U_mean'              , grid, self.U.values)
         Stats.write_profile_new('V_mean'              , grid, self.V.values)

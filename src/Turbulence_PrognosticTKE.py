@@ -430,7 +430,7 @@ def compute_tke_buoy(grid, q, GMV, EnvVar, EnvThermo, tmp):
 def compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q, entr_detr_fp, wstar, tke_ed_coeff, entrainment_factor, detrainment_factor):
     quadrature_order = 3
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    UpdVar.get_cloud_base_top_cover(grid)
+    UpdVar.get_cloud_base_top_cover(grid, q, tmp)
     n_updrafts = len(i_uds)
 
     input_st = type('', (), {})()
@@ -663,11 +663,11 @@ class EDMF_PrognosticTKE:
         Stats.add_profile('cv_θ_liq_q_tot_interdomain')
         return
 
-    def io(self, grid, q, tmp, Stats, EnvVar, UpdVar, UpdMicro):
+    def export_data(self, grid, q, tmp, Stats, EnvVar, UpdVar, UpdMicro):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
 
-        UpdVar.io(grid, Stats)
-        EnvVar.io(grid, Stats)
+        UpdVar.export_data(grid, q, tmp, Stats)
+        EnvVar.export_data(grid, q, tmp, Stats)
 
         Stats.write_profile_new('eddy_viscosity'  , grid, tmp['K_m'])
         Stats.write_profile_new('eddy_diffusivity', grid, tmp['K_h'])
