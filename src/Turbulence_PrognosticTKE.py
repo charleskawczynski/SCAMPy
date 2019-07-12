@@ -276,7 +276,7 @@ def compute_zbl_qt_grad(grid, GMV):
             zbl_q_tot = grid.z_half[k]
     return zbl_q_tot
 
-def compute_inversion(grid, GMV, option, tmp, Ri_bulk_crit, temp_C):
+def compute_inversion(grid, q, GMV, option, tmp, Ri_bulk_crit, temp_C):
     maxgrad = 0.0
     theta_rho_bl = temp_C.first_interior(grid)
     for k in grid.over_elems_real(Center()):
@@ -480,6 +480,31 @@ def compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q, ent
 
     return
 
+def assign_new_to_values(grid, q, UpdVar):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    for i in i_uds:
+        for k in grid.over_elems(Center()):
+            UpdVar.W.new[i][k] = UpdVar.W.values[i][k]
+            UpdVar.Area.new[i][k] = UpdVar.Area.values[i][k]
+            UpdVar.q_tot.new[i][k] = UpdVar.q_tot.values[i][k]
+            UpdVar.q_liq.new[i][k] = UpdVar.q_liq.values[i][k]
+            UpdVar.q_rai.new[i][k] = UpdVar.q_rai.values[i][k]
+            UpdVar.θ_liq.new[i][k] = UpdVar.θ_liq.values[i][k]
+            UpdVar.T.new[i][k] = UpdVar.T.values[i][k]
+            UpdVar.B.new[i][k] = UpdVar.B.values[i][k]
+    return
+
+def apply_bcs(grid, q, GMV, UpdVar, EnvVar):
+    GMV.U.set_bcs(grid)
+    GMV.V.set_bcs(grid)
+    GMV.θ_liq.set_bcs(grid)
+    GMV.q_tot.set_bcs(grid)
+    GMV.q_rai.set_bcs(grid)
+    GMV.tke.set_bcs(grid)
+    GMV.cv_q_tot.set_bcs(grid)
+    GMV.cv_θ_liq.set_bcs(grid)
+    GMV.cv_θ_liq_q_tot.set_bcs(grid)
+
 class EDMF_PrognosticTKE:
     def __init__(self, namelist, paramlist, grid):
 
@@ -525,12 +550,12 @@ class EDMF_PrognosticTKE:
 
         # Get values from paramlist
         # set defaults at some point?
-        self.surface_area = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
-        self.max_area_factor = paramlist['turbulence']['EDMF_PrognosticTKE']['max_area_factor']
-        self.entrainment_factor = paramlist['turbulence']['EDMF_PrognosticTKE']['entrainment_factor']
-        self.detrainment_factor = paramlist['turbulence']['EDMF_PrognosticTKE']['detrainment_factor']
-        self.pressure_buoy_coeff = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_buoy_coeff']
-        self.pressure_drag_coeff = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_drag_coeff']
+        self.surface_area           = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
+        self.max_area_factor        = paramlist['turbulence']['EDMF_PrognosticTKE']['max_area_factor']
+        self.entrainment_factor     = paramlist['turbulence']['EDMF_PrognosticTKE']['entrainment_factor']
+        self.detrainment_factor     = paramlist['turbulence']['EDMF_PrognosticTKE']['detrainment_factor']
+        self.pressure_buoy_coeff    = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_buoy_coeff']
+        self.pressure_drag_coeff    = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_drag_coeff']
         self.pressure_plume_spacing = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_plume_spacing']
         self.vel_pressure_coeff = self.pressure_drag_coeff/self.pressure_plume_spacing
         self.vel_buoy_coeff = 1.0-self.pressure_buoy_coeff
@@ -549,10 +574,10 @@ class EDMF_PrognosticTKE:
                                                                        1.0-self.surface_area + (i+1)*a_ , 1000)
 
         # Near-surface BC of updraft area fraction
-        self.area_surface_bc = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
-        self.w_surface_bc    = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
-        self.θ_liq_surface_bc    = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
-        self.q_tot_surface_bc   = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
+        self.area_surface_bc  = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
+        self.w_surface_bc     = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
+        self.θ_liq_surface_bc = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
+        self.q_tot_surface_bc = np.zeros((self.n_updrafts,),dtype=np.double, order='c')
         return
 
     def initialize(self, GMV, UpdVar, tmp, q):
@@ -560,7 +585,7 @@ class EDMF_PrognosticTKE:
         return
 
     def initialize_vars(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
-        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
+        self.zi = compute_inversion(grid, q, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         zs = self.zi
         self.wstar = get_wstar(Case.Sur.bflux, zs)
         ws = self.wstar
@@ -715,7 +740,7 @@ class EDMF_PrognosticTKE:
 
     def pre_compute_vars(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        self.zi = compute_inversion(grid, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
+        self.zi = compute_inversion(grid, q, GMV, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         decompose_environment(grid, q, GMV, EnvVar, UpdVar)
         get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.W.values,  UpdVar.W.values,  q['w', i_env],  q['w', i_env],  EnvVar.tke.values,    GMV.W.values,  GMV.W.values,  GMV.tke.values, 'tke')
@@ -761,15 +786,14 @@ class EDMF_PrognosticTKE:
             EnvVar.cv_θ_liq.values[k] = np.fmax(EnvVar.cv_θ_liq.values[k], 0.0)
             EnvVar.cv_q_tot.values[k] = np.fmax(EnvVar.cv_q_tot.values[k], 0.0)
             EnvVar.cv_θ_liq_q_tot.values[k] = np.fmax(EnvVar.cv_θ_liq_q_tot.values[k], np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
+        cleanup_covariance(grid, GMV, EnvVar, UpdVar)
+        self.set_updraft_surface_bc(grid, GMV, Case, tmp)
 
     def update(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
 
         self.pre_compute_vars(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag)
 
-        cleanup_covariance(grid, GMV, EnvVar, UpdVar)
-
-        UpdVar.assign_new_to_values(grid)
-        self.set_updraft_surface_bc(grid, GMV, Case, tmp)
+        assign_new_to_values(grid, q, UpdVar)
 
         self.compute_prognostic_updrafts(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS)
 
@@ -787,15 +811,7 @@ class EDMF_PrognosticTKE:
             GMV.q_tot.values[k] = GMV.q_tot.new[k]
             GMV.q_rai.values[k] = GMV.q_rai.new[k]
 
-        GMV.U.set_bcs(grid)
-        GMV.V.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.q_rai.set_bcs(grid)
-        GMV.tke.set_bcs(grid)
-        GMV.cv_q_tot.set_bcs(grid)
-        GMV.cv_θ_liq.set_bcs(grid)
-        GMV.cv_θ_liq_q_tot.set_bcs(grid)
+        apply_bcs(grid, q, GMV, UpdVar, EnvVar)
 
         return
 
@@ -818,7 +834,7 @@ class EDMF_PrognosticTKE:
             q['w', i_env].apply_bc(grid, 0.0)
             EnvVar.θ_liq.set_bcs(grid)
             EnvVar.q_tot.set_bcs(grid)
-            UpdVar.set_values_with_new(grid)
+            UpdVar.assign_values_to_new(grid)
             time_elapsed += self.dt_upd
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
             decompose_environment(grid, q, GMV, EnvVar, UpdVar)
