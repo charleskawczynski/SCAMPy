@@ -843,7 +843,7 @@ class EDMF_PrognosticTKE:
             q['w', i_env].apply_bc(grid, 0.0)
             EnvVar.θ_liq.set_bcs(grid)
             EnvVar.q_tot.set_bcs(grid)
-            UpdVar.assign_values_to_new(grid)
+            UpdVar.assign_values_to_new(grid, q, tmp)
             time_elapsed += self.dt_upd
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
             decompose_environment(grid, q, GMV, EnvVar, UpdVar)

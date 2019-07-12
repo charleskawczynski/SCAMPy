@@ -79,8 +79,9 @@ class UpdraftVariables:
         Stats.add_ts('updraft_cloud_top')
         return
 
-    def assign_values_to_new(self, grid):
-        for i in range(self.n_updrafts):
+    def assign_values_to_new(self, grid, q, tmp):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        for i in i_uds:
             for k in grid.over_elems(Center()):
                 self.W.values[i][k] = self.W.new[i][k]
                 self.Area.values[i][k] = self.Area.new[i][k]
@@ -100,7 +101,8 @@ class UpdraftVariables:
         return
 
     def get_cloud_base_top_cover(self, grid, q, tmp):
-        for i in range(self.n_updrafts):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        for i in i_uds:
             self.cloud_base[i] = grid.z_half[grid.nzg-grid.gw-1]
             self.cloud_top[i] = 0.0
             self.cloud_cover[i] = 0.0
