@@ -157,7 +157,8 @@ def compute_tke_pressure(grid, tmp, q, EnvVar, UpdVar, pressure_buoy_coeff, pres
             EnvVar.tke.press[k] += (we_half - wu_half) * (press_buoy + press_drag)
     return
 
-def cleanup_covariance(grid, GMV, EnvVar, UpdVar):
+def cleanup_covariance(grid, q, GMV, EnvVar, UpdVar):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
     tmp_eps = 1e-18
     for k in grid.over_elems_real(Center()):
         if GMV.tke.values[k] < tmp_eps:                        GMV.tke.values[k]               = 0.0
@@ -200,6 +201,7 @@ def get_env_covar_from_GMV(grid, q, au, phi_u, psi_u, phi_e, psi_e, covar_e, gmv
 
 
 def reset_surface_covariance(grid, q, tmp, GMV, Case, wstar):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
     flux1 = Case.Sur.rho_θ_liq_flux
     flux2 = Case.Sur.rho_q_tot_flux
     k_1 = grid.first_interior(Zmin())
@@ -792,7 +794,7 @@ class EDMF_PrognosticTKE:
             EnvVar.cv_θ_liq.values[k] = np.fmax(EnvVar.cv_θ_liq.values[k], 0.0)
             EnvVar.cv_q_tot.values[k] = np.fmax(EnvVar.cv_q_tot.values[k], 0.0)
             EnvVar.cv_θ_liq_q_tot.values[k] = np.fmax(EnvVar.cv_θ_liq_q_tot.values[k], np.sqrt(EnvVar.cv_θ_liq.values[k]*EnvVar.cv_q_tot.values[k]))
-        cleanup_covariance(grid, GMV, EnvVar, UpdVar)
+        cleanup_covariance(grid, q, GMV, EnvVar, UpdVar)
         self.set_updraft_surface_bc(grid, GMV, Case, tmp)
 
     def update(self, grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag):
