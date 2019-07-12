@@ -97,7 +97,7 @@ class EnvironmentThermodynamics:
         EnvVar.B.values[k]   = buoyancy_c(tmp['α_0_half'][k], alpha)
         return
 
-    def update_cloud_dry(self, k, EnvVar, T, θ, q_tot, q_liq, q_vap):
+    def update_cloud_dry(self, k, EnvVar, T, θ, q_tot, q_liq, q_vap, tmp):
         if q_liq > 0.0:
             EnvVar.CF.values[k] = 1.
             self.θ_cloudy[k]     = θ
@@ -110,11 +110,11 @@ class EnvironmentThermodynamics:
             self.q_tot_dry[k] = q_tot
         return
 
-    def eos_update_SA_mean(self, grid, EnvVar, in_Env, tmp):
+    def eos_update_SA_mean(self, grid, q, EnvVar, in_Env, tmp):
         for k in grid.over_elems_real(Center()):
             p_0_k = tmp['p_0_half'][k]
             T, q_liq  = eos(p_0_k, EnvVar.q_tot.values[k], EnvVar.θ_liq.values[k])
             mph = microphysics(T, q_liq, p_0_k, EnvVar.q_tot.values[k], self.max_supersaturation, in_Env)
             self.update_EnvVar(tmp, k, EnvVar, mph.T, mph.θ_liq, mph.q_tot, mph.q_liq, mph.q_rai, mph.alpha)
-            self.update_cloud_dry(k, EnvVar, mph.T, mph.θ,  mph.q_tot, mph.q_liq, mph.q_vap)
+            self.update_cloud_dry(k, EnvVar, mph.T, mph.θ,  mph.q_tot, mph.q_liq, mph.q_vap, tmp)
         return

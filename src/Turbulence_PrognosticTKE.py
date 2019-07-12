@@ -830,7 +830,7 @@ class EDMF_PrognosticTKE:
         self.dt_upd = np.minimum(TS.dt, 0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
         while time_elapsed < TS.dt:
             compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
-            EnvThermo.eos_update_SA_mean(grid, EnvVar, False, tmp)
+            EnvThermo.eos_update_SA_mean(grid, q, EnvVar, False, tmp)
             UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
             UpdMicro.compute_sources(grid, UpdVar, tmp)
             UpdMicro.update_updraftvars(grid, UpdVar)
@@ -847,7 +847,7 @@ class EDMF_PrognosticTKE:
             time_elapsed += self.dt_upd
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
             decompose_environment(grid, q, GMV, EnvVar, UpdVar)
-        EnvThermo.eos_update_SA_mean(grid, EnvVar, True, tmp)
+        EnvThermo.eos_update_SA_mean(grid, q, EnvVar, True, tmp)
         UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
         return
 
