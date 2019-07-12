@@ -832,8 +832,8 @@ class EDMF_PrognosticTKE:
             compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
             EnvThermo.eos_update_SA_mean(grid, q, EnvVar, False, tmp)
             UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
-            UpdMicro.compute_sources(grid, UpdVar, tmp)
-            UpdMicro.update_updraftvars(grid, UpdVar)
+            UpdMicro.compute_sources(grid, q, UpdVar, tmp)
+            UpdMicro.update_updraftvars(grid, q, tmp, UpdVar)
 
             self.solve_updraft_velocity_area(grid, q, q_tendencies, tmp, GMV, UpdVar, TS)
             self.solve_updraft_scalars(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, TS)

@@ -88,7 +88,8 @@ class EnvironmentThermodynamics:
         self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
         return
 
-    def update_EnvVar(self, tmp, k, EnvVar, T, θ_liq, q_tot, q_liq, q_rai, alpha):
+    def update_EnvVar(self, q, tmp, k, EnvVar, T, θ_liq, q_tot, q_liq, q_rai, alpha):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         EnvVar.T.values[k]      = T
         EnvVar.θ_liq.values[k]  = θ_liq
         EnvVar.q_tot.values[k]  = q_tot
@@ -98,6 +99,7 @@ class EnvironmentThermodynamics:
         return
 
     def update_cloud_dry(self, k, EnvVar, T, θ, q_tot, q_liq, q_vap, tmp):
+        i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         if q_liq > 0.0:
             EnvVar.CF.values[k] = 1.
             self.θ_cloudy[k]     = θ
@@ -111,10 +113,11 @@ class EnvironmentThermodynamics:
         return
 
     def eos_update_SA_mean(self, grid, q, EnvVar, in_Env, tmp):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
         for k in grid.over_elems_real(Center()):
             p_0_k = tmp['p_0_half'][k]
             T, q_liq  = eos(p_0_k, EnvVar.q_tot.values[k], EnvVar.θ_liq.values[k])
             mph = microphysics(T, q_liq, p_0_k, EnvVar.q_tot.values[k], self.max_supersaturation, in_Env)
-            self.update_EnvVar(tmp, k, EnvVar, mph.T, mph.θ_liq, mph.q_tot, mph.q_liq, mph.q_rai, mph.alpha)
+            self.update_EnvVar(q, tmp, k, EnvVar, mph.T, mph.θ_liq, mph.q_tot, mph.q_liq, mph.q_rai, mph.alpha)
             self.update_cloud_dry(k, EnvVar, mph.T, mph.θ,  mph.q_tot, mph.q_liq, mph.q_vap, tmp)
         return
