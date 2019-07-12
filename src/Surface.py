@@ -30,8 +30,8 @@ class SurfaceBase:
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
         return
 
-def compute_windspeed(grid, tmp, GMV, windspeed_min):
-    i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
+def compute_windspeed(grid, q, GMV, windspeed_min):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
     return np.maximum(np.sqrt(GMV.U.values[k_1]**2.0 + GMV.V.values[k_1]**2.0), windspeed_min)
 
@@ -61,7 +61,7 @@ class SurfaceFixedFlux(SurfaceBase):
         U_1 = GMV.U.values[k_1]
 
         rho_tflux =  self.shf /(cpm_c(self.qsurface))
-        self.windspeed = compute_windspeed(grid, tmp, GMV, 0.0)
+        self.windspeed = compute_windspeed(grid, q, GMV, 0.0)
         self.rho_q_tot_flux = self.lhf/(latent_heat(self.Tsurface))
         self.rho_θ_liq_flux = rho_tflux / exner_c(self.Ref.Pg)
         self.bflux = buoyancy_flux(self.shf, self.lhf, T_1, q_tot_1, α_0_surf)
@@ -114,7 +114,7 @@ class SurfaceFixedCoeffs(SurfaceBase):
 
         cp_ = cpm_c(q_tot_1)
         lv = latent_heat(T_1)
-        windspeed = compute_windspeed(grid, tmp, GMV, 0.01)
+        windspeed = compute_windspeed(grid, q, GMV, 0.01)
         self.rho_q_tot_flux = -self.cq * windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
         self.rho_θ_liq_flux = -self.ch * windspeed * (θ_liq_1 - self.Tsurface/exner_c(self.Ref.Pg)) * ρ_0_surf
 
@@ -155,7 +155,7 @@ class SurfaceMoninObukhov(SurfaceBase):
 
         θ_liq_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
 
-        self.windspeed = compute_windspeed(grid, tmp, GMV, 0.0)
+        self.windspeed = compute_windspeed(grid, q, GMV, 0.0)
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/z_1
         Ri = Nb2 * z_1 * z_1/(self.windspeed * self.windspeed)
 
@@ -207,7 +207,7 @@ class SurfaceSullivanPatton(SurfaceBase):
 
         θ_liq_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
 
-        self.windspeed = compute_windspeed(grid, tmp, GMV, 0.0)
+        self.windspeed = compute_windspeed(grid, q, GMV, 0.0)
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/z_1
         Ri = Nb2 * z_1 * z_1/(self.windspeed * self.windspeed)
 
