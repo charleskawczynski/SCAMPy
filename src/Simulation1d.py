@@ -81,12 +81,12 @@ class Simulation1d:
                      ('cv_θ_liq_rain_dt'      , Center(), Neumann(), 1),
                      ('cv_q_tot_rain_dt'      , Center(), Neumann(), 1),
                      ('cv_θ_liq_q_tot_rain_dt', Center(), Neumann(), 1),
+                     ('CF'            , Center() , Neumann(), 1),
                      ('entr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
                      ('detr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
                      ('q_liq'         , Center() , Neumann(), N_sd),
                      ('prec_src_θ_liq', Center() , Neumann(), N_sd),
                      ('prec_src_q_tot', Center() , Neumann(), N_sd),
-                     ('CF'            , Center() , Neumann(), N_sd),
                      ('T'             , Center() , Neumann(), N_sd),
                      ('B'             , Center() , Neumann(), N_sd),
                      ('mf_θ_liq'      , Node() , Neumann(), N_sd),
