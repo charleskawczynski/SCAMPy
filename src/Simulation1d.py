@@ -166,7 +166,7 @@ class Simulation1d:
         self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
         self.Case.update_surface(self.grid, self.q, self.GMV, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.GMV, self.TS, self.tmp)
-        self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.GMV,
+        self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2, self.GMV,
         self.EnvVar, self.UpdVar, self.UpdMicro, self.EnvThermo, self.UpdThermo, self.Case, self.TS, self.tri_diag)
         for k in self.grid.over_elems(Center()):
             self.EnvVar.tke.values[k]            = self.GMV.tke.values[k]
@@ -180,7 +180,7 @@ class Simulation1d:
             self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
             self.Case.update_surface(self.grid, self.q, self.GMV, self.TS, self.tmp)
             self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.GMV, self.TS, self.tmp)
-            self.Turb.update(self.grid, self.q, self.q_tendencies, self.tmp, self.GMV, self.EnvVar,
+            self.Turb.update(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2, self.GMV, self.EnvVar,
                              self.UpdVar, self.UpdMicro, self.EnvThermo,
                              self.UpdThermo, self.Case, self.TS, self.tri_diag)
 
@@ -241,7 +241,7 @@ class Simulation1d:
         self.Stats.write_simulation_time(self.TS.t)
         self.GMV.export_data(self.grid, self.Stats, self.tmp)
         self.Case.export_data(self.Stats)
-        self.Turb.export_data(self.grid, self.q, self.tmp, self.Stats, self.EnvVar, self.UpdVar, self.UpdMicro)
+        self.Turb.export_data(self.grid, self.q, self.tmp, self.tmp_O2, self.Stats, self.EnvVar, self.UpdVar, self.UpdMicro)
         self.Stats.close_files()
         return
 
