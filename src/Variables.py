@@ -9,6 +9,20 @@ from NetCDFIO import NetCDFIO_Stats
 from funcs_thermo import eos, t_to_entropy_c, t_to_thetali_c, \
     alpha_c, buoyancy_c
 
+def satadjust(grid, q, tmp, GMV):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    for k in grid.over_elems(Center()):
+        θ_liq = GMV.θ_liq.values[k]
+        q_tot = GMV.q_tot.values[k]
+        p_0 = tmp['p_0_half'][k]
+        T, q_liq = eos(p_0, q_tot, θ_liq)
+        GMV.q_liq.values[k] = q_liq
+        GMV.T.values[k] = T
+        q_vap = q_tot - q_liq
+        alpha = alpha_c(p_0, T, q_tot, q_vap)
+        GMV.B.values[k] = buoyancy_c(tmp['α_0_half'][k], alpha)
+    return
+
 class VariablePrognostic:
     def __init__(self, grid, loc, bc):
         self.values     = Field.field(grid, loc, bc)
@@ -81,18 +95,4 @@ class GridMeanVariables:
             lwp += tmp['ρ_0_half'][k]*self.q_liq.values[k]*grid.dz
         Stats.write_ts('lwp', lwp)
 
-        return
-
-    def satadjust(self, grid, q, tmp):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        for k in grid.over_elems(Center()):
-            θ_liq = self.θ_liq.values[k]
-            q_tot = self.q_tot.values[k]
-            p_0 = tmp['p_0_half'][k]
-            T, q_liq = eos(p_0, q_tot, θ_liq)
-            self.q_liq.values[k] = q_liq
-            self.T.values[k] = T
-            q_vap = q_tot - q_liq
-            alpha = alpha_c(p_0, T, q_tot, q_vap)
-            self.B.values[k] = buoyancy_c(tmp['α_0_half'][k], alpha)
         return

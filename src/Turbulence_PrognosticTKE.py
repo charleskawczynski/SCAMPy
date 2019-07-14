@@ -435,7 +435,7 @@ def compute_tke_buoy(grid, q, tmp, tmp_O2, GMV, EnvVar, EnvThermo, cv):
 def compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q, entr_detr_fp, wstar, tke_ed_coeff, entrainment_factor, detrainment_factor):
     quadrature_order = 3
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    UpdVar.get_cloud_base_top_cover(grid, q, tmp)
+    get_cloud_base_top_cover(grid, q, tmp, UpdVar)
     n_updrafts = len(i_uds)
 
     input_st = type('', (), {})()
@@ -838,10 +838,10 @@ class EDMF_PrognosticTKE:
         self.dt_upd = np.minimum(TS.dt, 0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
         while time_elapsed < TS.dt:
             compute_entrainment_detrainment(grid, GMV, EnvVar, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
-            EnvThermo.eos_update_SA_mean(grid, q, EnvVar, False, tmp)
-            UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
-            UpdMicro.compute_sources(grid, q, UpdVar, tmp)
-            UpdMicro.update_updraftvars(grid, q, tmp, UpdVar)
+            eos_update_SA_mean(grid, q, EnvVar, EnvThermo, False, tmp)
+            buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
+            compute_sources(grid, q, tmp, UpdVar, UpdMicro)
+            update_updraftvars(grid, q, tmp, UpdVar, UpdMicro)
 
             self.solve_updraft_velocity_area(grid, q, q_tendencies, tmp, GMV, UpdVar, TS)
             self.solve_updraft_scalars(grid, q, q_tendencies, tmp, GMV, EnvVar, UpdVar, UpdMicro, TS)
@@ -851,12 +851,12 @@ class EDMF_PrognosticTKE:
             q['w', i_env].apply_bc(grid, 0.0)
             EnvVar.θ_liq.set_bcs(grid)
             EnvVar.q_tot.set_bcs(grid)
-            UpdVar.assign_values_to_new(grid, q, tmp)
+            assign_values_to_new(grid, q, tmp, UpdVar)
             time_elapsed += self.dt_upd
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
             decompose_environment(grid, q, GMV, EnvVar, UpdVar)
-        EnvThermo.eos_update_SA_mean(grid, q, EnvVar, True, tmp)
-        UpdThermo.buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
+        eos_update_SA_mean(grid, q, EnvVar, EnvThermo, True, tmp)
+        buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV)
         return
 
     def solve_updraft_velocity_area(self, grid, q, q_tendencies, tmp, GMV, UpdVar, TS):
@@ -1014,10 +1014,10 @@ class EDMF_PrognosticTKE:
                                 UpdVar.q_tot.new[i][k],
                                 UpdVar.θ_liq.new[i][k])
                     UpdVar.T.new[i][k], UpdVar.q_liq.new[i][k] = T, q_liq
-                    UpdMicro.compute_update_combined_local_thetal(tmp['p_0_half'], UpdVar.T.new,
-                                                                  UpdVar.q_tot.new, UpdVar.q_liq.new,
-                                                                  UpdVar.q_rai.new, UpdVar.θ_liq.new,
-                                                                  i, k)
+                    compute_update_combined_local_thetal(tmp['p_0_half'], UpdVar.T.new,
+                                                         UpdVar.q_tot.new, UpdVar.q_liq.new,
+                                                         UpdVar.q_rai.new, UpdVar.θ_liq.new,
+                                                         i, k, UpdMicro)
                 UpdVar.q_rai.new[i][k_1] = 0.0
 
         return

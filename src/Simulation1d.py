@@ -160,7 +160,7 @@ class Simulation1d:
         self.Case.initialize_profiles(self.grid, self.GMV, self.Ref, self.tmp, self.q)
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.GMV, self.tmp)
-        self.UpdVar.initialize(self.grid, self.GMV, self.tmp, self.q)
+        initialize(self.grid, self.GMV, self.tmp, self.q, self.UpdVar)
         self.initialize_io()
         self.export_data()
         return
