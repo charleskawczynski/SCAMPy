@@ -27,7 +27,11 @@ def plot_solutions(sol, Stats):
             plt.plot(getattr(sol, p)[n:-n]     , sol.z[n:-n])
         else:
             plt.plot(getattr(sol, p)     , sol.z)
-        file_name = nice_name(p+'.png')
+        p_nice = nice_name(p)
+        file_name = p_nice+'.png'
+        plt.title(p_nice+' vs z')
+        plt.xlabel(p_nice)
+        plt.ylabel('z')
         plt.savefig(Stats.figpath+file_name)
         plt.close()
 
