@@ -28,12 +28,13 @@ def compute_grid_means(grid, q, tmp, GMV, EnvVar, UpdVar):
         GMV.B.values[k]     = ae[k] * EnvVar.B.values[k]     + sum([ au[i][k] * UpdVar.B.values[i][k] for i in i_uds])
     return
 
-def get_GMV_CoVar(grid, q, au, phi_u, psi_u, phi_e,  psi_e, covar_e, gmv_phi, gmv_psi, gmv_covar, name):
+def get_GMV_CoVar(grid, q, au, phi_u, psi_u, phi_e,  psi_e, covar_e, gmv_phi, gmv_psi, gmv_covar, cv):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    tke_factor = 0.5 if name == 'tke' else 1.0
+    is_tke = cv=='tke'
+    tke_factor = 0.5 if is_tke else 1.0
     ae = q['a', i_env]
     for k in grid.over_elems(Center()):
-        if name == 'tke':
+        if is_tke:
             phi_diff = phi_e.Mid(k) - gmv_phi.Mid(k)
             psi_diff = psi_e.Mid(k) - gmv_psi.Mid(k)
         else:
@@ -42,7 +43,7 @@ def get_GMV_CoVar(grid, q, au, phi_u, psi_u, phi_e,  psi_e, covar_e, gmv_phi, gm
 
         gmv_covar[k] = tke_factor * ae[k] * phi_diff * psi_diff + ae[k] * covar_e[k]
         for i in i_uds:
-            if name == 'tke':
+            if is_tke:
                 phi_diff = phi_u[i].Mid(k) - gmv_phi.Mid(k)
                 psi_diff = psi_u[i].Mid(k) - gmv_psi.Mid(k)
             else:
@@ -347,16 +348,16 @@ def compute_eddy_diffusivities_similarity_Siebesma2007(grid, Case, tmp, zi, wsta
             tmp['K_m'][k] = tmp['K_h'][k] * prandtl_number
     return
 
-def compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, Covar, name):
+def compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, Covar, cv):
     i_gm, i_env, i_uds, i_sd = q_tendencies.domain_idx()
     k_1 = grid.first_interior(Zmin())
 
     for k in grid.over_elems_real(Center()):
-        q_tendencies[name, i_env][k] = Covar.press[k] + Covar.buoy[k] + Covar.shear[k] + Covar.entr_gain[k] + Covar.rain_src[k]
-    q_tendencies[name, i_env][k_1] = 0.0
+        q_tendencies[cv, i_env][k] = Covar.press[k] + Covar.buoy[k] + Covar.shear[k] + Covar.entr_gain[k] + Covar.rain_src[k]
+    q_tendencies[cv, i_env][k_1] = 0.0
     return
 
-def update_cv_env(grid, q, q_tendencies, tmp, tmp_O2, Covar, EnvVar, UpdVar, TS, name, tri_diag, tke_diss_coeff):
+def update_cv_env(grid, q, q_tendencies, tmp, tmp_O2, Covar, EnvVar, UpdVar, TS, cv, tri_diag, tke_diss_coeff):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     construct_tridiag_diffusion_O2(grid, q, tmp, TS, UpdVar, EnvVar, tri_diag, tke_diss_coeff)
     dti = TS.dti
@@ -364,7 +365,7 @@ def update_cv_env(grid, q, q_tendencies, tmp, tmp_O2, Covar, EnvVar, UpdVar, TS,
 
     slice_all_c = grid.slice_all(Center())
     a_e = q['a', i_env]
-    tri_diag.f[slice_all_c] = [tmp['ρ_0_half'][k] * a_e[k] * Covar.values[k] * dti + q_tendencies[name, i_env][k] for k in grid.over_elems(Center())]
+    tri_diag.f[slice_all_c] = [tmp['ρ_0_half'][k] * a_e[k] * Covar.values[k] * dti + q_tendencies[cv, i_env][k] for k in grid.over_elems(Center())]
     tri_diag.f[k_1] = tmp['ρ_0_half'][k_1] * a_e[k_1] * Covar.values[k_1] * dti + Covar.values[k_1]
     solve_tridiag_wrapper(grid, Covar.values, tri_diag)
 
