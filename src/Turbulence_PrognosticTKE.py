@@ -757,9 +757,9 @@ class EDMF_PrognosticTKE:
         self.wstar = get_wstar(Case.Sur.bflux, self.zi)
         decompose_environment(grid, q, GMV, EnvVar, UpdVar)
         get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.W.values,  UpdVar.W.values,  q['w', i_env],  q['w', i_env],  EnvVar.tke.values,    GMV.W.values,  GMV.W.values,  GMV.tke.values, 'tke')
-        get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.θ_liq.values, EnvVar.θ_liq.values, EnvVar.θ_liq.values, EnvVar.cv_θ_liq.values,       GMV.θ_liq.values, GMV.θ_liq.values, GMV.cv_θ_liq.values      , '')
-        get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.q_tot.values,  UpdVar.q_tot.values, EnvVar.q_tot.values, EnvVar.q_tot.values, EnvVar.cv_q_tot.values,       GMV.q_tot.values, GMV.q_tot.values, GMV.cv_q_tot.values      , '')
-        get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.q_tot.values, EnvVar.θ_liq.values, EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot.values, GMV.θ_liq.values, GMV.q_tot.values, GMV.cv_θ_liq_q_tot.values, '')
+        get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.θ_liq.values, EnvVar.θ_liq.values, EnvVar.θ_liq.values, EnvVar.cv_θ_liq.values,       GMV.θ_liq.values, GMV.θ_liq.values, GMV.cv_θ_liq.values      , 'cv_θ_liq')
+        get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.q_tot.values,  UpdVar.q_tot.values, EnvVar.q_tot.values, EnvVar.q_tot.values, EnvVar.cv_q_tot.values,       GMV.q_tot.values, GMV.q_tot.values, GMV.cv_q_tot.values      , 'cv_q_tot')
+        get_GMV_CoVar(grid, q, UpdVar.Area.values, UpdVar.θ_liq.values,  UpdVar.q_tot.values, EnvVar.θ_liq.values, EnvVar.q_tot.values, EnvVar.cv_θ_liq_q_tot.values, GMV.θ_liq.values, GMV.q_tot.values, GMV.cv_θ_liq_q_tot.values, 'cv_θ_liq_q_tot')
         update_GMV_MF(grid, q, GMV, EnvVar, UpdVar, TS, tmp)
         compute_eddy_diffusivities_tke(grid, q, tmp, GMV, EnvVar, Case, self.zi, self.wstar, self.prandtl_number, self.tke_ed_coeff, self.similarity_diffusivity)
 
