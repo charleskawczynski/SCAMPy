@@ -145,7 +145,7 @@ def compute_covariance_dissipation(grid, q, tmp, tmp_O2, Covar, EnvVar, tke_diss
         Covar.dissipation[k] = (tmp['ρ_0_half'][k] * ae[k] * Covar.values[k] * pow(tke_env, 0.5)/l_mix * tke_diss_coeff)
     return
 
-def compute_tke_pressure(grid, tmp, q, EnvVar, UpdVar, pressure_buoy_coeff, pressure_drag_coeff, pressure_plume_spacing, cv):
+def compute_tke_pressure(grid, q, tmp, tmp_O2, EnvVar, UpdVar, pressure_buoy_coeff, pressure_drag_coeff, pressure_plume_spacing, cv):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for k in grid.over_elems_real(Center()):
         EnvVar.tke.press[k] = 0.0
@@ -386,7 +386,7 @@ def update_GMV_MF(grid, q, GMV, EnvVar, UpdVar, TS, tmp):
     tmp['mf_tend_q_tot'][slice_all_c] = [-tmp['α_0_half'][k]*grad(tmp['mf_q_tot'].Dual(k), grid) for k in grid.over_elems_real(Center())]
     return
 
-def compute_tke_buoy(grid, q, GMV, EnvVar, EnvThermo, tmp):
+def compute_tke_buoy(grid, q, tmp, tmp_O2, GMV, EnvVar, EnvThermo, cv):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     ae = q['a', i_env]
 
@@ -763,11 +763,11 @@ class EDMF_PrognosticTKE:
         compute_eddy_diffusivities_tke(grid, q, tmp, GMV, EnvVar, Case, self.zi, self.wstar, self.prandtl_number, self.tke_ed_coeff, self.similarity_diffusivity)
 
         we = q['w', i_env]
-        compute_tke_buoy(grid, q, GMV, EnvVar, EnvThermo, tmp)
+        compute_tke_buoy(grid, q, tmp, tmp_O2, GMV, EnvVar, EnvThermo, 'tke')
         compute_covariance_entr(grid, q, tmp, tmp_O2, UpdVar, EnvVar.tke, UpdVar.W, UpdVar.W, we, we, 'tke')
         compute_covariance_shear(grid, q, tmp, tmp_O2, GMV, EnvVar.tke, UpdVar.W.values, UpdVar.W.values, we, we, 'tke')
         compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, UpdVar.Area,UpdVar.W,UpdVar.W, we, we, EnvVar.tke, 'tke')
-        compute_tke_pressure(grid, tmp, q, EnvVar, UpdVar, self.pressure_buoy_coeff, self.pressure_drag_coeff, self.pressure_plume_spacing, 'tke')
+        compute_tke_pressure(grid, q, tmp, tmp_O2, EnvVar, UpdVar, self.pressure_buoy_coeff, self.pressure_drag_coeff, self.pressure_plume_spacing, 'tke')
         compute_covariance_entr(grid, q, tmp, tmp_O2, UpdVar, EnvVar.cv_θ_liq,   UpdVar.θ_liq,  UpdVar.θ_liq,  EnvVar.θ_liq,  EnvVar.θ_liq, 'cv_θ_liq')
         compute_covariance_entr(grid, q, tmp, tmp_O2, UpdVar, EnvVar.cv_q_tot,  UpdVar.q_tot, UpdVar.q_tot, EnvVar.q_tot, EnvVar.q_tot, 'cv_q_tot')
         compute_covariance_entr(grid, q, tmp, tmp_O2, UpdVar, EnvVar.cv_θ_liq_q_tot, UpdVar.θ_liq,  UpdVar.q_tot, EnvVar.θ_liq,  EnvVar.q_tot, 'cv_θ_liq_q_tot')
