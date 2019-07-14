@@ -61,36 +61,11 @@ class GridMeanVariables:
         return
 
     def initialize_io(self, Stats):
-        Stats.add_profile('U_mean')
-        Stats.add_profile('V_mean')
-        Stats.add_profile('q_tot_mean')
-        Stats.add_profile('q_liq_mean')
-        Stats.add_profile('q_rai_mean')
-        Stats.add_profile('T_mean')
-        Stats.add_profile('B_mean')
-        Stats.add_profile('θ_liq_mean')
-        Stats.add_profile('tke_mean')
-        Stats.add_profile('cv_θ_liq_mean')
-        Stats.add_profile('cv_q_tot_mean')
-        Stats.add_profile('cv_θ_liq_q_tot_mean')
         Stats.add_ts('lwp')
         return
 
     def export_data(self, grid, Stats, tmp):
         lwp = 0.0
-        Stats.write_profile_new('U_mean'              , grid, self.U.values)
-        Stats.write_profile_new('V_mean'              , grid, self.V.values)
-        Stats.write_profile_new('q_tot_mean'          , grid, self.q_tot.values)
-        Stats.write_profile_new('q_liq_mean'          , grid, self.q_liq.values)
-        Stats.write_profile_new('q_rai_mean'          , grid, self.q_rai.values)
-        Stats.write_profile_new('T_mean'              , grid, self.T.values)
-        Stats.write_profile_new('B_mean'              , grid, self.B.values)
-        Stats.write_profile_new('θ_liq_mean'          , grid, self.θ_liq.values)
-        Stats.write_profile_new('tke_mean'            , grid, self.tke.values)
-        Stats.write_profile_new('cv_θ_liq_mean'       , grid, self.cv_θ_liq.values)
-        Stats.write_profile_new('cv_q_tot_mean'       , grid, self.cv_q_tot.values)
-        Stats.write_profile_new('cv_θ_liq_q_tot_mean' , grid, self.cv_θ_liq_q_tot.values)
-
         for k in grid.over_elems_real(Center()):
             lwp += tmp['ρ_0_half'][k]*self.q_liq.values[k]*grid.dz
         Stats.write_ts('lwp', lwp)

@@ -622,60 +622,8 @@ class EDMF_PrognosticTKE:
         self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, GMV, EnvVar, UpdVar, UpdMicro, EnvThermo, UpdThermo, Case, TS, tri_diag)
         return
 
-    def initialize_io(self, Stats, EnvVar, UpdVar):
-
-        UpdVar.initialize_io(Stats)
-        EnvVar.initialize_io(Stats)
-
-        Stats.add_profile('eddy_viscosity')
-        Stats.add_profile('eddy_diffusivity')
-        Stats.add_profile('mean_entr_sc')
-        Stats.add_profile('mean_detr_sc')
-        Stats.add_profile('massflux_half')
-        Stats.add_profile('mf_θ_liq_half')
-        Stats.add_profile('mf_q_tot_half')
-        Stats.add_profile('mf_tend_θ_liq')
-        Stats.add_profile('mf_tend_q_tot')
-        Stats.add_profile('l_mix')
-        Stats.add_profile('updraft_q_tot_precip')
-        Stats.add_profile('updraft_θ_liq_precip')
-
-        Stats.add_profile('tke_dissipation')
-        Stats.add_profile('tke_entr_gain')
-        Stats.add_profile('tke_detr_loss')
-        Stats.add_profile('tke_shear')
-        Stats.add_profile('tke_buoy')
-        Stats.add_profile('tke_press')
-        Stats.add_profile('tke_interdomain')
-
-        Stats.add_profile('cv_θ_liq_dissipation')
-        Stats.add_profile('cv_q_tot_dissipation')
-        Stats.add_profile('cv_θ_liq_q_tot_dissipation')
-        Stats.add_profile('cv_θ_liq_entr_gain')
-        Stats.add_profile('cv_q_tot_entr_gain')
-        Stats.add_profile('cv_θ_liq_q_tot_entr_gain')
-        Stats.add_profile('cv_θ_liq_detr_loss')
-        Stats.add_profile('cv_q_tot_detr_loss')
-        Stats.add_profile('cv_θ_liq_q_tot_detr_loss')
-        Stats.add_profile('cv_θ_liq_shear')
-        Stats.add_profile('cv_q_tot_shear')
-        Stats.add_profile('cv_θ_liq_q_tot_shear')
-        Stats.add_profile('cv_θ_liq_rain_src')
-        Stats.add_profile('cv_q_tot_rain_src')
-        Stats.add_profile('cv_θ_liq_q_tot_rain_src')
-        Stats.add_profile('cv_θ_liq_interdomain')
-        Stats.add_profile('cv_q_tot_interdomain')
-        Stats.add_profile('cv_θ_liq_q_tot_interdomain')
-        return
-
-    def export_data(self, grid, q, tmp, tmp_O2, Stats, EnvVar, UpdVar, UpdMicro):
+    def pre_export_data_compute(self, grid, q, tmp, tmp_O2, Stats, EnvVar, UpdVar, UpdMicro):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-
-        UpdVar.export_data(grid, q, tmp, Stats)
-        EnvVar.export_data(grid, q, tmp, Stats)
-
-        Stats.write_profile_new('eddy_viscosity'  , grid, tmp['K_m'])
-        Stats.write_profile_new('eddy_diffusivity', grid, tmp['K_h'])
         for k in grid.over_elems_real(Center()):
             tmp['mf_θ_liq_half'][k] = tmp['mf_θ_liq'].Mid(k)
             tmp['mf_q_tot_half'][k] = tmp['mf_q_tot'].Mid(k)
@@ -695,43 +643,15 @@ class EDMF_PrognosticTKE:
         compute_covariance_detr(grid, q, tmp, tmp_O2, EnvVar.cv_q_tot, UpdVar, 'cv_q_tot')
         compute_covariance_detr(grid, q, tmp, tmp_O2, EnvVar.cv_θ_liq_q_tot, UpdVar, 'cv_θ_liq_q_tot')
 
-        Stats.write_profile_new('mean_entr_sc'  , grid, tmp['mean_entr_sc'])
-        Stats.write_profile_new('mean_detr_sc'  , grid, tmp['mean_detr_sc'])
-        Stats.write_profile_new('massflux_half' , grid, tmp['massflux_half'])
-        Stats.write_profile_new('mf_θ_liq_half' , grid, tmp['mf_θ_liq_half'])
-        Stats.write_profile_new('mf_q_tot_half' , grid, tmp['mf_q_tot_half'])
-        Stats.write_profile_new('mf_tend_θ_liq' , grid, tmp['mf_tend_θ_liq'])
-        Stats.write_profile_new('mf_tend_q_tot' , grid, tmp['mf_tend_q_tot'])
-        Stats.write_profile_new('l_mix'         , grid, tmp['l_mix'])
-        Stats.write_profile_new('updraft_q_tot_precip' , grid, UpdMicro.prec_src_q_tot_tot)
-        Stats.write_profile_new('updraft_θ_liq_precip' , grid, UpdMicro.prec_src_θ_liq_tot)
+    def initialize_io(self, Stats, EnvVar, UpdVar):
+        UpdVar.initialize_io(Stats)
+        EnvVar.initialize_io(Stats)
+        return
 
-        Stats.write_profile_new('tke_dissipation' , grid, EnvVar.tke.dissipation)
-        Stats.write_profile_new('tke_entr_gain'   , grid, EnvVar.tke.entr_gain)
-        Stats.write_profile_new('tke_detr_loss'   , grid, EnvVar.tke.detr_loss)
-        Stats.write_profile_new('tke_shear'       , grid, EnvVar.tke.shear)
-        Stats.write_profile_new('tke_buoy'        , grid, EnvVar.tke.buoy)
-        Stats.write_profile_new('tke_press'       , grid, EnvVar.tke.press)
-        Stats.write_profile_new('tke_interdomain' , grid, EnvVar.tke.interdomain)
-
-        Stats.write_profile_new('cv_θ_liq_dissipation'       , grid, EnvVar.cv_θ_liq.dissipation)
-        Stats.write_profile_new('cv_q_tot_dissipation'       , grid, EnvVar.cv_q_tot.dissipation)
-        Stats.write_profile_new('cv_θ_liq_q_tot_dissipation' , grid, EnvVar.cv_θ_liq_q_tot.dissipation)
-        Stats.write_profile_new('cv_θ_liq_entr_gain'         , grid, EnvVar.cv_θ_liq.entr_gain)
-        Stats.write_profile_new('cv_q_tot_entr_gain'         , grid, EnvVar.cv_q_tot.entr_gain)
-        Stats.write_profile_new('cv_θ_liq_q_tot_entr_gain'   , grid, EnvVar.cv_θ_liq_q_tot.entr_gain)
-        Stats.write_profile_new('cv_θ_liq_detr_loss'         , grid, EnvVar.cv_θ_liq.detr_loss)
-        Stats.write_profile_new('cv_q_tot_detr_loss'         , grid, EnvVar.cv_q_tot.detr_loss)
-        Stats.write_profile_new('cv_θ_liq_q_tot_detr_loss'   , grid, EnvVar.cv_θ_liq_q_tot.detr_loss)
-        Stats.write_profile_new('cv_θ_liq_shear'             , grid, EnvVar.cv_θ_liq.shear)
-        Stats.write_profile_new('cv_q_tot_shear'             , grid, EnvVar.cv_q_tot.shear)
-        Stats.write_profile_new('cv_θ_liq_q_tot_shear'       , grid, EnvVar.cv_θ_liq_q_tot.shear)
-        Stats.write_profile_new('cv_θ_liq_rain_src'          , grid, EnvVar.cv_θ_liq.rain_src)
-        Stats.write_profile_new('cv_q_tot_rain_src'          , grid, EnvVar.cv_q_tot.rain_src)
-        Stats.write_profile_new('cv_θ_liq_q_tot_rain_src'    , grid, EnvVar.cv_θ_liq_q_tot.rain_src)
-        Stats.write_profile_new('cv_θ_liq_interdomain'       , grid, EnvVar.cv_θ_liq.interdomain)
-        Stats.write_profile_new('cv_q_tot_interdomain'       , grid, EnvVar.cv_q_tot.interdomain)
-        Stats.write_profile_new('cv_θ_liq_q_tot_interdomain' , grid, EnvVar.cv_θ_liq_q_tot.interdomain)
+    def export_data(self, grid, q, tmp, tmp_O2, Stats, EnvVar, UpdVar, UpdMicro):
+        self.pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, EnvVar, UpdVar, UpdMicro)
+        UpdVar.export_data(grid, q, tmp, Stats)
+        EnvVar.export_data(grid, q, tmp, Stats)
         return
 
     def set_updraft_surface_bc(self, grid, q, GMV, Case, tmp):

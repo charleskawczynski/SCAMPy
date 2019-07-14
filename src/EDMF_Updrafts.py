@@ -156,14 +156,6 @@ class UpdraftVariables:
         return
 
     def initialize_io(self, Stats):
-        Stats.add_profile('updraft_area')
-        Stats.add_profile('updraft_w')
-        Stats.add_profile('updraft_q_tot')
-        Stats.add_profile('updraft_q_liq')
-        Stats.add_profile('updraft_q_rai')
-        Stats.add_profile('updraft_θ_liq')
-        Stats.add_profile('updraft_temperature')
-        Stats.add_profile('updraft_buoyancy')
         Stats.add_ts('updraft_cloud_cover')
         Stats.add_ts('updraft_cloud_base')
         Stats.add_ts('updraft_cloud_top')

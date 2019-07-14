@@ -234,7 +234,22 @@ class Simulation1d:
         plot_solutions(sol, self.Stats)
         return sol
 
+
     def initialize_io(self):
+        for v in self.q.var_names:
+          for i in self.q.over_sub_domains(v):
+            self.Stats.add_profile(v+'_'+self.q.idx_name(i))
+
+        for v in self.tmp.var_names:
+          for i in self.tmp.over_sub_domains(v):
+            self.Stats.add_profile(v+'_'+self.tmp.idx_name(i))
+
+        for k in self.tmp_O2:
+          q_local = self.tmp_O2[k]
+          for v in q_local.var_names:
+            for i in q_local.over_sub_domains(v):
+              self.Stats.add_profile(k+'_'+v+'_'+q_local.idx_name(i))
+
         self.GMV.initialize_io(self.Stats)
         self.Case.initialize_io(self.Stats)
         self.Turb.initialize_io(self.Stats, self.EnvVar, self.UpdVar)
@@ -246,6 +261,21 @@ class Simulation1d:
         self.GMV.export_data(self.grid, self.Stats, self.tmp)
         self.Case.export_data(self.Stats)
         self.Turb.export_data(self.grid, self.q, self.tmp, self.tmp_O2, self.Stats, self.EnvVar, self.UpdVar, self.UpdMicro)
+
+        for v in self.q.var_names:
+          for i in self.q.over_sub_domains(v):
+            self.Stats.write_profile_new(v+'_'+self.q.idx_name(i), self.grid, self.q[v, i])
+
+        for v in self.tmp.var_names:
+          for i in self.tmp.over_sub_domains(v):
+            self.Stats.write_profile_new(v+'_'+self.tmp.idx_name(i), self.grid, self.tmp[v, i])
+
+        for k in self.tmp_O2:
+          q_local = self.tmp_O2[k]
+          for v in q_local.var_names:
+            for i in q_local.over_sub_domains(v):
+              self.Stats.write_profile_new(k+'_'+v+'_'+q_local.idx_name(i), self.grid, q_local[v])
+
         self.Stats.close_files()
         return
 

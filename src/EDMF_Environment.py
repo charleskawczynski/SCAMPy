@@ -83,29 +83,9 @@ class EnvironmentVariables:
         return
 
     def initialize_io(self, Stats):
-        Stats.add_profile('env_W')
-        Stats.add_profile('env_q_tot')
-        Stats.add_profile('env_q_liq')
-        Stats.add_profile('env_q_rai')
-        Stats.add_profile('env_θ_liq')
-        Stats.add_profile('env_T')
-        Stats.add_profile('env_tke')
-        Stats.add_profile('env_cv_θ_liq')
-        Stats.add_profile('env_cv_q_tot')
-        Stats.add_profile('env_cv_θ_liq_q_tot')
         return
 
     def export_data(self, grid, q, tmp, Stats):
-        Stats.write_profile_new('env_W'              , grid, self.W.values)
-        Stats.write_profile_new('env_q_tot'          , grid, self.q_tot.values)
-        Stats.write_profile_new('env_q_liq'          , grid, self.q_liq.values)
-        Stats.write_profile_new('env_q_rai'          , grid, self.q_rai.values)
-        Stats.write_profile_new('env_θ_liq'          , grid, self.θ_liq.values)
-        Stats.write_profile_new('env_T'              , grid, self.T.values)
-        Stats.write_profile_new('env_tke'            , grid, self.tke.values)
-        Stats.write_profile_new('env_cv_θ_liq'       , grid, self.cv_θ_liq.values)
-        Stats.write_profile_new('env_cv_q_tot'       , grid, self.cv_q_tot.values)
-        Stats.write_profile_new('env_cv_θ_liq_q_tot' , grid, self.cv_θ_liq_q_tot.values)
         return
 
 class EnvironmentThermodynamics:
