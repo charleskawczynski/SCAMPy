@@ -934,7 +934,7 @@ class EDMF_PrognosticTKE:
                                 UpdVar.q_tot.new[i][k],
                                 UpdVar.θ_liq.new[i][k])
                     UpdVar.T.new[i][k], UpdVar.q_liq.new[i][k] = T, q_liq
-                    compute_update_combined_local_thetal(tmp['p_0_half'], UpdVar.T.new,
+                    compute_update_combined_local_thetal(tmp, UpdVar.T.new,
                                                          UpdVar.q_tot.new, UpdVar.q_liq.new,
                                                          UpdVar.q_rai.new, UpdVar.θ_liq.new,
                                                          i, k, UpdMicro)

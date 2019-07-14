@@ -36,8 +36,8 @@ def update_updraftvars(grid, q, tmp, UpdVar, UpdMicro):
             UpdVar.θ_liq.values[i][k] += UpdMicro.prec_src_θ_liq[i][k]
     return
 
-def compute_update_combined_local_thetal(p_0, T, q_tot, q_liq, q_rai, θ_liq, i, k, UpdMicro):
-    p_0_k = p_0[k]
+def compute_update_combined_local_thetal(tmp, T, q_tot, q_liq, q_rai, θ_liq, i, k, UpdMicro):
+    p_0_k = tmp['p_0_half'][k]
     q_tot_k = q_tot[i][k]
     q_liq_k = q_liq[i][k]
     T_k = T[i][k]
