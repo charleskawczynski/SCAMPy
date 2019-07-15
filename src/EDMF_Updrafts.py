@@ -4,12 +4,11 @@ from funcs_thermo import  *
 from funcs_micro import  *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
-from Variables import GridMeanVariables
+from funcs_EDMF import *
 from NetCDFIO import NetCDFIO_Stats
-from EDMF_Environment import EnvironmentVariables
 import pylab as plt
 
-def compute_sources(grid, q, tmp, UpdVar, UpdMicro):
+def compute_sources(grid, q, tmp, UpdVar, UpdMicro, max_supersaturation):
     i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
     for i in i_uds:
         for k in grid.over_elems(Center()):
@@ -17,7 +16,7 @@ def compute_sources(grid, q, tmp, UpdVar, UpdMicro):
             q_tot = UpdVar.q_liq.values[i][k]
             T = UpdVar.T.values[i][k]
             p_0 = tmp['p_0_half'][k]
-            tmp_qr = acnv_instant(q_tot, q_tot, UpdMicro.max_supersaturation, T, p_0)
+            tmp_qr = acnv_instant(q_tot, q_tot, max_supersaturation, T, p_0)
             UpdMicro.prec_src_q_tot[i][k] = -tmp_qr
             UpdMicro.prec_src_θ_liq[i][k] = rain_source_to_thetal(p_0, T, q_tot, q_tot, 0.0, tmp_qr)
     for k in grid.over_elems(Center()):
@@ -36,12 +35,12 @@ def update_updraftvars(grid, q, tmp, UpdVar, UpdMicro):
             UpdVar.θ_liq.values[i][k] += UpdMicro.prec_src_θ_liq[i][k]
     return
 
-def compute_update_combined_local_thetal(tmp, T, q_tot, q_liq, q_rai, θ_liq, i, k, UpdMicro):
+def compute_update_combined_local_thetal(tmp, T, q_tot, q_liq, q_rai, θ_liq, i, k, UpdMicro, max_supersaturation):
     p_0_k = tmp['p_0_half'][k]
     q_tot_k = q_tot[i][k]
     q_liq_k = q_liq[i][k]
     T_k = T[i][k]
-    tmp_qr = acnv_instant(q_liq_k, q_tot_k, UpdMicro.max_supersaturation, T_k, p_0_k)
+    tmp_qr = acnv_instant(q_liq_k, q_tot_k, max_supersaturation, T_k, p_0_k)
     s = -tmp_qr
     UpdMicro.prec_src_q_tot[i][k] = s
     UpdMicro.prec_src_θ_liq[i][k] = rain_source_to_thetal(p_0_k, T_k, q_tot_k, q_liq_k, 0.0, tmp_qr)
@@ -51,7 +50,7 @@ def compute_update_combined_local_thetal(tmp, T, q_tot, q_liq, q_rai, θ_liq, i,
     θ_liq[i][k] += UpdMicro.prec_src_θ_liq[i][k]
     return
 
-def buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV):
+def buoyancy(grid, q, tmp, UpdVar):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for i in i_uds:
         for k in grid.over_elems_real(Center()):
@@ -73,7 +72,7 @@ def buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV):
         tmp['B', i_env][k] -= tmp['B', i_gm][k]
     return
 
-def get_cloud_base_top_cover(grid, q, tmp, UpdVar):
+def compute_cloud_base_top_cover(grid, q, tmp, UpdVar):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for i in i_uds:
         UpdVar.cloud_base[i] = grid.z_half[grid.nzg-grid.gw-1]
@@ -100,7 +99,7 @@ def assign_values_to_new(grid, q, tmp, UpdVar):
             UpdVar.B.values[i][k] = UpdVar.B.new[i][k]
     return
 
-def initialize(grid, GMV, tmp, q, UpdVar):
+def initialize(grid, tmp, q, UpdVar):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
     for i in i_uds:
@@ -162,7 +161,7 @@ class UpdraftVariables:
         return
 
     def export_data(self, grid, q, tmp, Stats):
-        get_cloud_base_top_cover(grid, q, tmp, self)
+        compute_cloud_base_top_cover(grid, q, tmp, self)
         Stats.write_ts('updraft_cloud_cover', np.sum(self.cloud_cover))
         Stats.write_ts('updraft_cloud_base' , np.amin(self.cloud_base))
         Stats.write_ts('updraft_cloud_top'  , np.amax(self.cloud_top))
@@ -176,7 +175,6 @@ class UpdraftThermodynamics:
 class UpdraftMicrophysics:
     def __init__(self, paramlist, n_updrafts, grid):
         self.n_updrafts = n_updrafts
-        self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
         self.prec_src_θ_liq = [Half(grid) for i in range(n_updrafts)]
         self.prec_src_q_tot = [Half(grid) for i in range(n_updrafts)]
         self.prec_src_θ_liq_tot = Half(grid)
