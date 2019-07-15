@@ -99,9 +99,10 @@ def assign_values_to_new(grid, q, tmp, UpdVar):
             UpdVar.B.values[i][k] = UpdVar.B.new[i][k]
     return
 
-def initialize(grid, tmp, q, UpdVar):
+def initialize(grid, tmp, q, UpdVar, updraft_fraction):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
+    n_updrafts = len(i_uds)
     for i in i_uds:
         for k in grid.over_elems(Center()):
             UpdVar.W.values[i][k] = 0.0
@@ -112,7 +113,7 @@ def initialize(grid, tmp, q, UpdVar):
             UpdVar.θ_liq.values[i][k] = q['θ_liq', i_gm][k]
             UpdVar.T.values[i][k] = tmp['T', i_gm][k]
             UpdVar.B.values[i][k] = 0.0
-        UpdVar.Area.values[i][k_1] = UpdVar.updraft_fraction/UpdVar.n_updrafts
+        UpdVar.Area.values[i][k_1] = updraft_fraction/n_updrafts
     UpdVar.q_tot.set_bcs(grid)
     UpdVar.q_rai.set_bcs(grid)
     UpdVar.θ_liq.set_bcs(grid)
@@ -147,8 +148,6 @@ class UpdraftVariables:
         self.B     = UpdraftVariable(grid, nu, Center(), Neumann())
         self.θ_liq = UpdraftVariable(grid, nu, Center(), Neumann())
 
-        self.updraft_fraction = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
-
         self.cloud_base  = np.zeros((nu,), dtype=np.double, order='c')
         self.cloud_top   = np.zeros((nu,), dtype=np.double, order='c')
         self.cloud_cover = np.zeros((nu,), dtype=np.double, order='c')
@@ -167,7 +166,3 @@ class UpdraftVariables:
         Stats.write_ts('updraft_cloud_top'  , np.amax(self.cloud_top))
         return
 
-class UpdraftThermodynamics:
-    def __init__(self, n_updrafts, grid, UpdVar):
-        self.n_updrafts = n_updrafts
-        return

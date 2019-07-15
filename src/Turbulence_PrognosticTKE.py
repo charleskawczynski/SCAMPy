@@ -331,6 +331,7 @@ class EDMF_PrognosticTKE:
         self.tke_ed_coeff           = paramlist['turbulence']['EDMF_PrognosticTKE']['tke_ed_coeff']
         self.tke_diss_coeff         = paramlist['turbulence']['EDMF_PrognosticTKE']['tke_diss_coeff']
         self.max_supersaturation    = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
+        self.updraft_fraction       = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
 
         entr_src = namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']
         if str(entr_src) == 'inverse_z':        self.entr_detr_fp = entr_detr_inverse_z
