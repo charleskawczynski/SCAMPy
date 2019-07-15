@@ -83,6 +83,14 @@ class StateVec:
     def domain_idx(self):
         return self.i_gm, self.i_env, self.i_uds, self.i_sd
 
+    def idx_name(self, i):
+      i_gm, i_env, i_uds, i_sd = self.domain_idx()
+      if i==i_gm: return 'i_gm'
+      elif i==i_env: return 'i_env'
+      elif i in i_uds: return 'i_ud_'+str(i)
+      else:
+        raise ValueError('Bad index in idx_name in StateVec.py')
+
     def slice_updrafts(self):
         return slice(self.i_uds[0], self.i_uds[:-1])
 

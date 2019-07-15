@@ -5,7 +5,7 @@ from Field import Field, Full, Half, Dirichlet, Neumann
 from StateVec import StateVec
 from funcs_tridiagsolver import solve_tridiag, solve_tridiag_stored, init_β_γ, solve_tridiag_old
 
-def construct_tridiag_diffusion_O2(grid, q, tmp, TS, UpdVar, EnvVar, tri_diag, tke_diss_coeff):
+def construct_tridiag_diffusion_O2(grid, q, tmp, TS, UpdVar, tri_diag, tke_diss_coeff):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     dzi = grid.dzi
     dzi2 = grid.dzi**2.0
@@ -28,7 +28,7 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, UpdVar, EnvVar, tri_diag, t
                      tmp['entr_sc', i][k] for i in i_uds])
 
         l_mix = np.fmax(tmp['l_mix'][k], 1.0)
-        tke_env = np.fmax(EnvVar.tke.values[k], 0.0)
+        tke_env = np.fmax(q['tke', i_env][k], 0.0)
 
         tri_diag.a[k] = (- ρa_K_cut[0] * dzi2 )
         tri_diag.b[k] = (ρ_0_cut[1] * ae_cut[1] * dti

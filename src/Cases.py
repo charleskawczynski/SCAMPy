@@ -3,7 +3,7 @@ from parameters import *
 
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
-from Variables import GridMeanVariables
+from funcs_EDMF import *
 from ReferenceState import ReferenceState
 from TimeStepping import  TimeStepping
 import Surface
@@ -44,11 +44,11 @@ class CasesBase:
         return
     def initialize_reference(self, grid, Ref, Stats, tmp):
         return
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         return
     def initialize_surface(self, grid, Ref, tmp):
         return
-    def initialize_forcing(self, grid,  Ref, GMV, tmp):
+    def initialize_forcing(self, grid,  Ref, tmp):
         return
     def initialize_io(self, Stats):
         Stats.add_ts('Tsurface')
@@ -56,15 +56,15 @@ class CasesBase:
         Stats.add_ts('lhf')
         Stats.add_ts('ustar')
         return
-    def io(self, Stats):
+    def export_data(self, Stats):
         Stats.write_ts('Tsurface', self.Sur.Tsurface)
         Stats.write_ts('shf', self.Sur.shf)
         Stats.write_ts('lhf', self.Sur.lhf)
         Stats.write_ts('ustar', self.Sur.ustar)
         return
-    def update_surface(self, grid, q, GMV, TS, tmp):
+    def update_surface(self, grid, q, TS, tmp):
         return
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
         return
 
 
@@ -83,7 +83,7 @@ class Soares(CasesBase):
         Ref.Tg = 300.0
         Ref.initialize(grid, Stats, tmp)
         return
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         theta = Half(grid)
         q_liq = 0.0
@@ -92,24 +92,24 @@ class Soares(CasesBase):
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
             if z[k] <= 1350.0:
-                GMV.q_tot.values[k] = 5.0e-3 - 3.7e-4* z[k]/1000.0
+                q['q_tot', i_gm][k] = 5.0e-3 - 3.7e-4* z[k]/1000.0
                 theta[k] = 300.0
 
             else:
-                GMV.q_tot.values[k] = 5.0e-3 - 3.7e-4 * 1.35 - 9.4e-4 * (z[k]-1350.0)/1000.0
+                q['q_tot', i_gm][k] = 5.0e-3 - 3.7e-4 * 1.35 - 9.4e-4 * (z[k]-1350.0)/1000.0
                 theta[k] = 300.0 + 2.0 * (z[k]-1350.0)/1000.0
-            GMV.U.values[k] = 0.01
+            q['U', i_gm][k] = 0.01
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.values[k] = theta[k]
-            GMV.T.values[k] =  theta[k] * exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = theta[k]
+            tmp['T', i_gm][k] =  theta[k] * exner_c(tmp['p_0_half'][k])
 
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        satadjust(grid, q, tmp)
 
         return
 
@@ -126,24 +126,24 @@ class Soares(CasesBase):
         self.Sur.initialize()
 
         return
-    def initialize_forcing(self, grid, Ref, GMV, tmp):
+    def initialize_forcing(self, grid, Ref, tmp):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
-        self.Fo.initialize(grid, GMV)
+        self.Fo.initialize(grid)
         return
 
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self, Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self, Stats)
         return
 
-    def update_surface(self, grid, q, GMV, TS, tmp):
-        self.Sur.update(grid, q, GMV, tmp)
+    def update_surface(self, grid, q, TS, tmp):
+        self.Sur.update(grid, q, tmp)
         return
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
-        self.Fo.update(grid, q, q_tendencies, GMV, tmp)
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
+        self.Fo.update(grid, q, q_tendencies, tmp)
         return
 
 class Bomex(CasesBase):
@@ -162,7 +162,7 @@ class Bomex(CasesBase):
         Ref.qtg = 0.02245   #Total water mixing ratio at surface
         Ref.initialize(grid, Stats, tmp)
         return
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq = 0.0
@@ -182,30 +182,30 @@ class Bomex(CasesBase):
 
             #Set q_tot profile
             if z[k] <= 520:
-                GMV.q_tot.values[k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
+                q['q_tot', i_gm][k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
             if z[k] > 520.0 and z[k] <= 1480.0:
-                GMV.q_tot.values[k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
+                q['q_tot', i_gm][k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
             if z[k] > 1480.0 and z[k] <= 2000.0:
-                GMV.q_tot.values[k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
+                q['q_tot', i_gm][k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
             if z[k] > 2000.0:
-                GMV.q_tot.values[k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
+                q['q_tot', i_gm][k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
 
 
             #Set u profile
             if z[k] <= 700.0:
-                GMV.U.values[k] = -8.75
+                q['U', i_gm][k] = -8.75
             if z[k] > 700.0:
-                GMV.U.values[k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+                q['U', i_gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
         for k in grid.over_elems_real(Center()):
-            GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0_half'][k])
-            GMV.θ_liq.values[k] = thetal[k]
+            tmp['T', i_gm][k] = thetal[k] * exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = thetal[k]
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        satadjust(grid, q, tmp)
 
         return
     def initialize_surface(self, grid, Ref, tmp):
@@ -220,10 +220,10 @@ class Bomex(CasesBase):
         self.Sur.Ref = Ref
         self.Sur.initialize()
         return
-    def initialize_forcing(self, grid, Ref, GMV, tmp):
+    def initialize_forcing(self, grid, Ref, tmp):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
-        self.Fo.initialize(grid, GMV)
+        self.Fo.initialize(grid)
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
             # Geostrophic velocity profiles. vg = 0
@@ -250,14 +250,14 @@ class Bomex(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
-    def update_surface(self, grid, q, GMV, TS, tmp):
-        self.Sur.update(grid, q, GMV, tmp)
+    def update_surface(self, grid, q, TS, tmp):
+        self.Sur.update(grid, q, tmp)
         return
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
-        self.Fo.update(grid, q, q_tendencies, GMV, tmp)
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
+        self.Fo.update(grid, q, q_tendencies, tmp)
         return
 
 class life_cycle_Tan2018(CasesBase):
@@ -280,7 +280,7 @@ class life_cycle_Tan2018(CasesBase):
         Ref.qtg = 0.02245   #Total water mixing ratio at surface
         Ref.initialize(grid, Stats, tmp)
         return
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq = 0.0
@@ -299,31 +299,31 @@ class life_cycle_Tan2018(CasesBase):
 
             #Set q_tot profile
             if z[k] <= 520:
-                GMV.q_tot.values[k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
+                q['q_tot', i_gm][k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
             if z[k] > 520.0 and z[k] <= 1480.0:
-                GMV.q_tot.values[k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
+                q['q_tot', i_gm][k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
             if z[k] > 1480.0 and z[k] <= 2000.0:
-                GMV.q_tot.values[k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
+                q['q_tot', i_gm][k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
             if z[k] > 2000.0:
-                GMV.q_tot.values[k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
+                q['q_tot', i_gm][k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
 
 
             #Set u profile
             if z[k] <= 700.0:
-                GMV.U.values[k] = -8.75
+                q['U', i_gm][k] = -8.75
             if z[k] > 700.0:
-                GMV.U.values[k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+                q['U', i_gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.values[k] = thetal[k]
-            GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = thetal[k]
+            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        satadjust(grid, q, tmp)
 
         return
     def initialize_surface(self, grid, Ref, tmp):
@@ -341,10 +341,10 @@ class life_cycle_Tan2018(CasesBase):
         self.Sur.bflux = (g * ((8.0e-3 + (eps_vi-1.0)*(299.1 * 5.2e-5  + 22.45e-3 * 8.0e-3)) /(299.1 * (1.0 + (eps_vi-1) * 22.45e-3))))
         self.Sur.initialize()
         return
-    def initialize_forcing(self, grid, Ref, GMV, tmp):
+    def initialize_forcing(self, grid, Ref, tmp):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
-        self.Fo.initialize(grid, GMV)
+        self.Fo.initialize(grid)
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
             # Geostrophic velocity profiles. vg = 0
@@ -371,19 +371,19 @@ class life_cycle_Tan2018(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
-    def update_surface(self, grid, q, GMV, TS, tmp):
+    def update_surface(self, grid, q, TS, tmp):
         weight_factor = 0.01 + 0.99 *(np.cos(2.0*pi * TS.t /3600.0) + 1.0)/2.0
         weight = weight_factor
         self.Sur.lhf = self.lhf0*weight
         self.Sur.shf = self.shf0*weight
         self.Sur.bflux = (g * ((8.0e-3*weight + (eps_vi-1.0)*(299.1 * 5.2e-5*weight  + 22.45e-3 * 8.0e-3*weight)) /(299.1 * (1.0 + (eps_vi-1) * 22.45e-3))))
-        self.Sur.update(grid, q, GMV, tmp)
+        self.Sur.update(grid, q, tmp)
         return
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
-        self.Fo.update(grid, q, q_tendencies, GMV, tmp)
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
+        self.Fo.update(grid, q, q_tendencies, tmp)
         return
 
 class Rico(CasesBase):
@@ -405,7 +405,7 @@ class Rico(CasesBase):
         Ref.qtg = eps_v * pvg/(Ref.Pg - pvg)   #Total water mixing ratio at surface
         Ref.initialize(grid, Stats, tmp)
         return
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq = 0.0
@@ -413,8 +413,8 @@ class Rico(CasesBase):
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
-            GMV.U.values[k] =  -9.9 + 2.0e-3 * z[k]
-            GMV.V.values[k] = -3.8
+            q['U', i_gm][k] =  -9.9 + 2.0e-3 * z[k]
+            q['V', i_gm][k] = -3.8
             #Set Thetal profile
             if z[k] <= 740.0:
                 thetal[k] = 297.9
@@ -423,21 +423,21 @@ class Rico(CasesBase):
 
             #Set q_tot profile
             if z[k] <= 740.0:
-                GMV.q_tot.values[k] =  (16.0 + (13.8 - 16.0)/740.0 * z[k])/1000.0
+                q['q_tot', i_gm][k] =  (16.0 + (13.8 - 16.0)/740.0 * z[k])/1000.0
             elif z[k] > 740.0 and z[k] <= 3260.0:
-                GMV.q_tot.values[k] = (13.8 + (2.4 - 13.8)/(3260.0-740.0) * (z[k] - 740.0))/1000.0
+                q['q_tot', i_gm][k] = (13.8 + (2.4 - 13.8)/(3260.0-740.0) * (z[k] - 740.0))/1000.0
             else:
-                GMV.q_tot.values[k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(z[k] - 3260.0))/1000.0
+                q['q_tot', i_gm][k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(z[k] - 3260.0))/1000.0
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.values[k] = thetal[k]
-            GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = thetal[k]
+            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        satadjust(grid, q, tmp)
 
 
         return
@@ -458,10 +458,10 @@ class Rico(CasesBase):
         self.Sur.initialize()
         return
 
-    def initialize_forcing(self, grid, Ref, GMV, tmp):
+    def initialize_forcing(self, grid, Ref, tmp):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
-        self.Fo.initialize(grid, GMV)
+        self.Fo.initialize(grid)
         z = grid.z_half
         for k in grid.over_elems(Center()):
             # Geostrophic velocity profiles
@@ -487,15 +487,15 @@ class Rico(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
-    def update_surface(self, grid, q, GMV, TS, tmp):
-        self.Sur.update(grid, q, GMV, tmp)
+    def update_surface(self, grid, q, TS, tmp):
+        self.Sur.update(grid, q, tmp)
         return
 
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
-        self.Fo.update(grid, q, q_tendencies, GMV, tmp)
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
+        self.Fo.update(grid, q, q_tendencies, tmp)
         return
 
 class TRMM_LBA(CasesBase):
@@ -516,7 +516,7 @@ class TRMM_LBA(CasesBase):
         Ref.qtg = eps_v * pvg/(Ref.Pg - pvg)#Total water mixing ratio at surface
         Ref.initialize(grid, Stats, tmp)
         return
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         p_1 = Half(grid)
 
@@ -571,8 +571,8 @@ class TRMM_LBA(CasesBase):
         # interpolate to the model grid-points
 
         p_1 = np.interp(grid.z_half,z_in,p_in)
-        GMV.U.values[:] = np.interp(grid.z_half,z_in,u_in)
-        GMV.V.values[:] = np.interp(grid.z_half,z_in,v_in)
+        q['U', i_gm][:] = np.interp(grid.z_half,z_in,u_in)
+        q['V', i_gm][:] = np.interp(grid.z_half,z_in,v_in)
 
         # get the entropy from RH, p, T
         k_1 = grid.first_interior(Zmin())
@@ -584,31 +584,31 @@ class TRMM_LBA(CasesBase):
         T = Half(grid)
         theta_rho = Half(grid)
         T[k_1:k_2] = np.interp(grid.z_half[k_1:k_2],z_in,T_in)
-        GMV.T.values[:] = T
+        tmp['T', i_gm][:] = T
         epsi = 287.1/461.5
 
-        GMV.U.set_bcs(grid)
-        GMV.T.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
 
 
         for k in grid.over_elems_real(Center()):
-            p_vap_star = pv_star(GMV.T.values[k])
+            p_vap_star = pv_star(tmp['T', i_gm][k])
             # eq. 37 in pressel et al and the def of RH
             q_vap_star = p_vap_star*epsi/(p_1[k]- p_vap_star + epsi*p_vap_star*RH[k]/100.0)
-            q_vap = GMV.q_tot.values[k] - GMV.q_liq.values[k]
-            GMV.q_tot.values[k] = q_vap_star*RH[k]/100.0
-            GMV.θ_liq.values[k] = thetali_c(tmp['p_0_half'][k],
-                                            GMV.T.values[k],
-                                            GMV.q_tot.values[k],
+            q_vap = q['q_tot', i_gm][k] - tmp['q_liq', i_gm][k]
+            q['q_tot', i_gm][k] = q_vap_star*RH[k]/100.0
+            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0_half'][k],
+                                            tmp['T', i_gm][k],
+                                            q['q_tot', i_gm][k],
                                             0.0,
                                             0.0,
-                                            latent_heat(GMV.T.values[k]))
+                                            latent_heat(tmp['T', i_gm][k]))
 
-            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], q_vap)
+            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
 
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        satadjust(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -624,10 +624,10 @@ class TRMM_LBA(CasesBase):
         self.Sur.initialize()
 
         return
-    def initialize_forcing(self, grid, Ref, GMV, tmp):
+    def initialize_forcing(self, grid, Ref, tmp):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
-        self.Fo.initialize(grid, GMV)
+        self.Fo.initialize(grid)
         self.Fo.dTdt = Half(grid)
         self.rad_time = np.linspace(10,360,36)*60
         z_in         = np.array([42.5, 200.92, 456.28, 743, 1061.08, 1410.52, 1791.32, 2203.48, 2647,3121.88, 3628.12,
@@ -764,19 +764,19 @@ class TRMM_LBA(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
 
-    def update_surface(self, grid, q, GMV, TS, tmp):
+    def update_surface(self, grid, q, TS, tmp):
         self.Sur.lhf = 554.0 * mt.pow(np.maximum(0, np.cos(np.pi/2*((5.25*3600.0 - TS.t)/5.25/3600.0))),1.3)
         self.Sur.shf = 270.0 * mt.pow(np.maximum(0, np.cos(np.pi/2*((5.25*3600.0 - TS.t)/5.25/3600.0))),1.5)
-        self.Sur.update(grid, q, GMV, tmp)
+        self.Sur.update(grid, q, tmp)
         # fix momentum fluxes to zero as they are not used in the paper
         self.Sur.rho_uflux = 0.0
         self.Sur.rho_vflux = 0.0
         return
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
 
         ind2 = int(mt.ceil(TS.t/600.0))
         ind1 = int(mt.trunc(TS.t/600.0))
@@ -800,7 +800,7 @@ class TRMM_LBA(CasesBase):
                                                  *(TS.t/60.0-self.rad_time[ind1])+self.rad[ind1,k]
                     else:
                         self.Fo.dTdt[k] = 0.0
-        self.Fo.update(grid, q, q_tendencies, GMV, tmp)
+        self.Fo.update(grid, q, q_tendencies, tmp)
 
         return
 
@@ -823,7 +823,7 @@ class ARM_SGP(CasesBase):
         Ref.qtg = 15.2/1000#Total water mixing ratio at surface
         Ref.initialize(grid, Stats, tmp)
         return
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         p_1 = Half(grid)
 
@@ -840,17 +840,17 @@ class ARM_SGP(CasesBase):
 
 
         for k in grid.over_elems_real(Center()):
-            GMV.U.values[k] = 10.0
-            GMV.q_tot.values[k] = q_tot[k]
-            GMV.T.values[k] = Theta[k]*exner_c(tmp['p_0_half'][k])
-            GMV.θ_liq.values[k] = thetali_c(tmp['p_0_half'][k],GMV.T.values[k],
-                                            GMV.q_tot.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
+            q['U', i_gm][k] = 10.0
+            q['q_tot', i_gm][k] = q_tot[k]
+            tmp['T', i_gm][k] = Theta[k]*exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0_half'][k],tmp['T', i_gm][k],
+                                            q['q_tot', i_gm][k], 0.0, 0.0, latent_heat(tmp['T', i_gm][k]))
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        satadjust(grid, q, tmp)
 
         return
 
@@ -866,10 +866,10 @@ class ARM_SGP(CasesBase):
         self.Sur.initialize()
 
         return
-    def initialize_forcing(self, grid, Ref, GMV, tmp):
+    def initialize_forcing(self, grid, Ref, tmp):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
-        self.Fo.initialize(grid, GMV)
+        self.Fo.initialize(grid)
         for k in grid.over_elems(Center()):
             self.Fo.ug[k] = 10.0
             self.Fo.vg[k] = 0.0
@@ -880,11 +880,11 @@ class ARM_SGP(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
 
-    def update_surface(self, grid, q, GMV, TS, tmp):
+    def update_surface(self, grid, q, TS, tmp):
         t_Sur_in = np.array([0.0, 4.0, 6.5, 7.5, 10.0, 12.5, 14.5]) * 3600 #LES time is in sec
         SH = np.array([-30.0, 90.0, 140.0, 140.0, 100.0, -10, -10]) # W/m^2
         LH = np.array([5.0, 250.0, 450.0, 500.0, 420.0, 180.0, 0.0]) # W/m^2
@@ -897,13 +897,13 @@ class ARM_SGP(CasesBase):
         # if self.Sur.lhf < 1.0:
         #     self.Sur.lhf = 1.0
         #+++++++++
-        self.Sur.update(grid, q, GMV, tmp)
+        self.Sur.update(grid, q, tmp)
         # fix momentum fluxes to zero as they are not used in the paper
         self.Sur.rho_uflux = 0.0
         self.Sur.rho_vflux = 0.0
         return
 
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
         t_in = np.array([0.0, 3.0, 6.0, 9.0, 12.0, 14.5]) * 3600.0 #LES time is in sec
         AT_in = np.array([0.0, 0.0, 0.0, -0.08, -0.016, -0.016])/3600.0 # Advective forcing for theta [K/h] converted to [K/sec]
         RT_in = np.array([-0.125, 0.0, 0.0, 0.0, 0.0, -0.1])/3600.0  # Radiative forcing for theta [K/h] converted to [K/sec]
@@ -919,7 +919,7 @@ class ARM_SGP(CasesBase):
                     self.Fo.dTdt[k] = dTdt*(1-(z[k]-1000.0)/1000.0)
                     self.Fo.dqtdt[k]  = dqtdt * exner_c(tmp['p_0_half'][k])\
                                         *(1-(z[k]-1000.0)/1000.0)
-        self.Fo.update(grid, q, q_tendencies, GMV, tmp)
+        self.Fo.update(grid, q, q_tendencies, tmp)
 
         return
 
@@ -942,7 +942,7 @@ class GATE_III(CasesBase):
         Ref.qtg = 16.5/1000#Total water mixing ratio at surface
         Ref.initialize(grid, Stats, tmp)
         return
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         q_tot = Half(grid)
         T = Half(grid)
@@ -972,18 +972,18 @@ class GATE_III(CasesBase):
 
 
         for k in grid.over_elems_real(Center()):
-            GMV.q_tot.values[k] = q_tot[k]
-            GMV.T.values[k] = T[k]
-            GMV.U.values[k] = U[k]
+            q['q_tot', i_gm][k] = q_tot[k]
+            tmp['T', i_gm][k] = T[k]
+            q['U', i_gm][k] = U[k]
 
-            GMV.θ_liq.values[k] = thetali_c(tmp['p_0_half'][k],GMV.T.values[k],
-                                           GMV.q_tot.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
+            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0_half'][k],tmp['T', i_gm][k],
+                                           q['q_tot', i_gm][k], 0.0, 0.0, latent_heat(tmp['T', i_gm][k]))
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        satadjust(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -999,10 +999,10 @@ class GATE_III(CasesBase):
         self.Sur.initialize()
 
         return
-    def initialize_forcing(self, grid, Ref, GMV, tmp):
+    def initialize_forcing(self, grid, Ref, tmp):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
-        self.Fo.initialize(grid, GMV)
+        self.Fo.initialize(grid)
         #LES z is in meters
         z_in     = np.array([ 0.0,   0.5,  1.0,  1.5,   2.0,   2.5,    3.0,   3.5,   4.0,   4.5,   5.0,   5.5,   6.0,
                               6.5,  7.0,  7.5,   8.0,  8.5,   9.0,  9.5,  10.0,  10.5,  11.0,    11.5,   12.0, 12.5,
@@ -1033,16 +1033,16 @@ class GATE_III(CasesBase):
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         return
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
 
-    def update_surface(self, grid, q, GMV, TS, tmp):
-        self.Sur.update(grid, q, GMV, tmp) # here lhf and shf are needed for calcualtion of bflux in surface and thus u_star
+    def update_surface(self, grid, q, TS, tmp):
+        self.Sur.update(grid, q, tmp) # here lhf and shf are needed for calcualtion of bflux in surface and thus u_star
         return
 
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
-        self.Fo.update(grid, q, q_tendencies, GMV, tmp)
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
+        self.Fo.update(grid, q, q_tendencies, tmp)
         return
 
 
@@ -1121,7 +1121,7 @@ class DYCOMS_RF01(CasesBase):
 
             return t_2, ql_2
 
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq     = Half(grid)
@@ -1137,37 +1137,37 @@ class DYCOMS_RF01(CasesBase):
 
             # q_tot profile as defined in DYCOMS
             if z[k] <= 840.0:
-               GMV.q_tot.values[k] = 9. / 1000.0
+               q['q_tot', i_gm][k] = 9. / 1000.0
             if z[k] > 840.0:
-               GMV.q_tot.values[k] = 1.5 / 1000.0
+               q['q_tot', i_gm][k] = 1.5 / 1000.0
 
             # q_liq and T profile
             # (calculated by saturation adjustment using thetal and q_tot values provided in DYCOMS
             # and using Rd, cp and L constants as defined in DYCOMS)
-            GMV.T.values[k], GMV.q_liq.values[k] = self.dycoms_sat_adjst(tmp['p_0_half'][k], thetal[k], GMV.q_tot.values[k])
+            tmp['T', i_gm][k], tmp['q_liq', i_gm][k] = self.dycoms_sat_adjst(tmp['p_0_half'][k], thetal[k], q['q_tot', i_gm][k])
 
             # thermodynamic variable profile (either entropy or thetal)
             # (calculated based on T and q_liq profiles.
             # Here we use Rd, cp and L constants as defined in scampy)
-            GMV.θ_liq.values[k] = t_to_thetali_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], GMV.q_liq.values[k], q_ice)
+            q['θ_liq', i_gm][k] = t_to_thetali_c(tmp['p_0_half'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], tmp['q_liq', i_gm][k], q_ice)
 
             # buoyancy profile
-            q_vap = GMV.q_tot.values[k] - q_ice - GMV.q_liq.values[k]
-            alpha = alpha_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], q_vap)
-            GMV.B.values[k] = buoyancy_c(tmp['α_0_half'][k], alpha)
+            q_vap = q['q_tot', i_gm][k] - q_ice - tmp['q_liq', i_gm][k]
+            alpha = alpha_c(tmp['p_0_half'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
+            tmp['B', i_gm][k] = buoyancy_c(tmp['α_0_half'][k], alpha)
 
             # velocity profile (geostrophic)
-            GMV.U.values[k] = 7.0
-            GMV.V.values[k] = -5.5
+            q['U', i_gm][k] = 7.0
+            q['V', i_gm][k] = -5.5
 
         # fill out boundary conditions
-        GMV.U.set_bcs(grid)
-        GMV.V.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.q_liq.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.B.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['V', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        tmp['q_liq', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        tmp['B', i_gm].apply_bc(grid, 0.0)
 
         return
 
@@ -1197,10 +1197,10 @@ class DYCOMS_RF01(CasesBase):
 
         return
 
-    def initialize_forcing(self, grid, Ref, GMV, tmp):
+    def initialize_forcing(self, grid, Ref, tmp):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
-        self.Fo.initialize(grid, GMV)
+        self.Fo.initialize(grid)
 
         # geostrophic velocity profiles
         self.Fo.ug[:] = 7.0
@@ -1218,24 +1218,24 @@ class DYCOMS_RF01(CasesBase):
 
         # radiation is treated as a forcing term (see eq. 3 in Stevens et. al. 2005)
         # cloud-top cooling + cloud-base warming + cooling in free troposphere
-        self.Fo.calculate_radiation(GMV, tmp)
+        self.Fo.calculate_radiation(tmp)
 
     def initialize_io(self, Stats):
         CasesBase.initialize_io(self, Stats)
         self.Fo.initialize_io(Stats)
         return
 
-    def io(self, Stats):
-        CasesBase.io(self, Stats)
-        self.Fo.io(Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self, Stats)
+        self.Fo.export_data(Stats)
         return
 
-    def update_surface(self, grid, q, GMV, TS, tmp):
-        self.Sur.update(grid, q, GMV, tmp)
+    def update_surface(self, grid, q, TS, tmp):
+        self.Sur.update(grid, q, tmp)
         return
 
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
-        self.Fo.update(grid, q, q_tendencies, GMV, tmp)
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
+        self.Fo.update(grid, q, q_tendencies, tmp)
         return
 
 class GABLS(CasesBase):
@@ -1257,7 +1257,7 @@ class GABLS(CasesBase):
         Ref.qtg = 1.0e-4 #Total water mixing ratio at surface. if set to 0, alpha0, rho0, p0 are NaN (TBD)
         Ref.initialize(grid, Stats, tmp)
         return
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq = 0.0
@@ -1265,8 +1265,8 @@ class GABLS(CasesBase):
 
         for k in grid.over_elems_real(Center()):
             #Set wind velocity profile
-            GMV.U.values[k] =  8.0
-            GMV.V.values[k] =  0.0
+            q['U', i_gm][k] =  8.0
+            q['V', i_gm][k] =  0.0
 
             #Set Thetal profile
             if grid.z_half[k] <= 100.0:
@@ -1275,18 +1275,18 @@ class GABLS(CasesBase):
                 thetal[k] = 265.0 + (grid.z_half[k] - 100.0) * 0.01
 
             #Set q_tot profile
-            GMV.q_tot.values[k] = 0.0
+            q['q_tot', i_gm][k] = 0.0
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.values[k] = thetal[k]
-            GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0_half'][k]) # No water content
+            q['θ_liq', i_gm][k] = thetal[k]
+            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0_half'][k]) # No water content
 
-        GMV.U.set_bcs(grid)
-        GMV.V.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['V', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        satadjust(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1297,10 +1297,10 @@ class GABLS(CasesBase):
         self.Sur.initialize()
         return
 
-    def initialize_forcing(self, grid, Ref, GMV, tmp):
+    def initialize_forcing(self, grid, Ref, tmp):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
-        self.Fo.initialize(grid, GMV)
+        self.Fo.initialize(grid)
         for k in grid.over_elems_real(Center()):
             # Geostrophic velocity profiles.
             self.Fo.ug[k] = 8.0
@@ -1311,17 +1311,17 @@ class GABLS(CasesBase):
         CasesBase.initialize_io(self, Stats)
         return
 
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
 
-    def update_surface(self, grid, q, GMV, TS, tmp):
+    def update_surface(self, grid, q, TS, tmp):
         self.Sur.Tsurface = 265.0 - (0.25/3600.0)*TS.t
-        self.Sur.update(grid, q, GMV, tmp)
+        self.Sur.update(grid, q, tmp)
         return
 
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
-        self.Fo.update(grid, q, q_tendencies, GMV, tmp)
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
+        self.Fo.update(grid, q, q_tendencies, tmp)
         return
 
 # Not fully implemented yet - Ignacio
@@ -1344,7 +1344,7 @@ class SP(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
 
-    def initialize_profiles(self, grid, GMV, Ref, tmp, q):
+    def initialize_profiles(self, grid, Ref, tmp, q):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         thetal = Half(grid)
         q_liq = 0.0
@@ -1352,8 +1352,8 @@ class SP(CasesBase):
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
-            GMV.U.values[k] =  1.0
-            GMV.V.values[k] =  0.0
+            q['U', i_gm][k] =  1.0
+            q['V', i_gm][k] =  0.0
             #Set Thetal profile
             if z[k] <= 974.0:
                 thetal[k] = 300.0
@@ -1363,18 +1363,18 @@ class SP(CasesBase):
                 thetal[k] = 308.0 + (z[k] - 1074.0) * 0.003
 
             #Set q_tot profile
-            GMV.q_tot.values[k] = 0.0
+            q['q_tot', i_gm][k] = 0.0
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.values[k] = thetal[k]
-            GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = thetal[k]
+            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
 
-        GMV.U.set_bcs(grid)
-        GMV.V.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.satadjust(grid, tmp)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['V', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        satadjust(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1390,10 +1390,10 @@ class SP(CasesBase):
         self.Sur.initialize()
         return
 
-    def initialize_forcing(self, grid, Ref, GMV, tmp):
+    def initialize_forcing(self, grid, Ref, tmp):
         self.Fo.grid = grid
         self.Fo.Ref = Ref
-        self.Fo.initialize(grid, GMV)
+        self.Fo.initialize(grid)
         for k in grid.over_elems_real(Center()):
             # Geostrophic velocity profiles. vg = 0
             self.Fo.ug[k] = 1.0
@@ -1405,14 +1405,14 @@ class SP(CasesBase):
         CasesBase.initialize_io(self, Stats)
         return
 
-    def io(self, Stats):
-        CasesBase.io(self,Stats)
+    def export_data(self, Stats):
+        CasesBase.export_data(self,Stats)
         return
 
-    def update_surface(self, grid, q, GMV, TS, tmp):
-        self.Sur.update(grid, q, GMV, tmp)
+    def update_surface(self, grid, q, TS, tmp):
+        self.Sur.update(grid, q, tmp)
         return
 
-    def update_forcing(self, grid, q, q_tendencies, GMV, TS, tmp):
-        self.Fo.update(grid, q, q_tendencies, GMV, tmp)
+    def update_forcing(self, grid, q, q_tendencies, TS, tmp):
+        self.Fo.update(grid, q, q_tendencies, tmp)
         return

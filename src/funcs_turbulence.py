@@ -121,11 +121,11 @@ def entr_detr_none(entr_in):
     return  _ret
 
 # convective velocity scale
-def get_wstar(bflux, zi):
+def compute_convective_velocity(bflux, zi):
     return np.cbrt(np.fmax(bflux * zi, 0.0))
 
 # BL height
-def get_inversion(theta_rho, u, v, grid, Ri_bulk_crit):
+def compute_inversion_height(theta_rho, u, v, grid, Ri_bulk_crit):
     theta_rho_b = theta_rho.first_interior(grid)
     h = 0.0
     Ri_bulk=0.0
@@ -150,19 +150,19 @@ def get_inversion(theta_rho, u, v, grid, Ri_bulk_crit):
     return h
 
 # Teixiera convective tau
-def get_mixing_tau(zi, wstar):
+def compute_mixing_tau(zi, wstar):
     # return 0.5 * zi / wstar
     #return zi / (np.fmax(wstar, 1e-5))
     return zi / (wstar + 0.001)
 
 # MO scaling of near surface tke and scalar variance
-def get_surface_tke(ustar, wstar, zLL, oblength):
+def surface_tke(ustar, wstar, zLL, oblength):
     if oblength < 0.0:
         return ((3.75 + np.cbrt(zLL/oblength * zLL/oblength)) * ustar * ustar + 0.2 * wstar * wstar)
     else:
         return (3.75 * ustar * ustar)
 
-def get_surface_variance(flux1, flux2, ustar, zLL, oblength):
+def surface_variance(flux1, flux2, ustar, zLL, oblength):
     c_star1 = -flux1/ustar
     c_star2 = -flux2/ustar
     if oblength < 0.0:

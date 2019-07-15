@@ -56,9 +56,17 @@ def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, sg, Pg, Tg, qtg):
     ρ_0_name = nice_name('ρ_0')+str(loc.__class__.__name__)
     α_0_name = nice_name('α_0')+str(loc.__class__.__name__)
 
-    plt.plot(p_0.values, grid.z); plt.savefig(Stats.figpath+p_0_name+'.png'); plt.close()
-    plt.plot(ρ_0.values, grid.z); plt.savefig(Stats.figpath+ρ_0_name+'.png'); plt.close()
-    plt.plot(α_0.values, grid.z); plt.savefig(Stats.figpath+α_0_name+'.png'); plt.close()
+    plt.plot(p_0.values, grid.z); plt.title(p_0_name+' vs z')
+    plt.xlabel(p_0_name); plt.ylabel('z')
+    plt.savefig(Stats.figpath+p_0_name+'.png'); plt.close()
+
+    plt.plot(ρ_0.values, grid.z); plt.title(ρ_0_name+' vs z')
+    plt.xlabel(ρ_0_name); plt.ylabel('z')
+    plt.savefig(Stats.figpath+ρ_0_name+'.png'); plt.close()
+
+    plt.plot(α_0.values, grid.z); plt.title(α_0_name+' vs z')
+    plt.xlabel(α_0_name); plt.ylabel('z')
+    plt.savefig(Stats.figpath+α_0_name+'.png'); plt.close()
 
     p_0.export_data(grid, Stats.outpath+p_0_name+'.dat')
     ρ_0.export_data(grid, Stats.outpath+ρ_0_name+'.dat')
