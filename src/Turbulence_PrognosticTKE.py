@@ -192,7 +192,7 @@ def diagnose_environment(grid, q, UpdVar):
         q['w', i_env][k] = (0.0 - sum([q['a', i][k]*UpdVar.W.values[i][k] for i in i_uds]))/a_env
     return
 
-def compute_tendencies_gm(grid, q_tendencies, q, UpdMicro, Case, TS, tmp, tri_diag):
+def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
     dzi = grid.dzi
@@ -200,10 +200,10 @@ def compute_tendencies_gm(grid, q_tendencies, q, UpdMicro, Case, TS, tmp, tri_di
     ae_1 = q['a', i_env][k_1]
     slice_all_c = grid.slice_all(Center())
 
-    q_tendencies['q_tot', i_gm][slice_all_c] += [tmp['mf_tend_q_tot'][k] + UpdMicro.prec_src_q_tot_tot[k]*TS.dti for k in grid.over_elems(Center())]
+    q_tendencies['q_tot', i_gm][slice_all_c] += [tmp['mf_tend_q_tot'][k] + tmp['prec_src_q_tot', i_gm][k]*TS.dti for k in grid.over_elems(Center())]
     q_tendencies['q_tot', i_gm][k_1] += Case.Sur.rho_q_tot_flux * dzi * α_1/ae_1
 
-    q_tendencies['θ_liq', i_gm][slice_all_c] += [tmp['mf_tend_θ_liq'][k] + UpdMicro.prec_src_θ_liq_tot[k]*TS.dti for k in grid.over_elems(Center())]
+    q_tendencies['θ_liq', i_gm][slice_all_c] += [tmp['mf_tend_θ_liq'][k] + tmp['prec_src_θ_liq', i_gm][k]*TS.dti for k in grid.over_elems(Center())]
     q_tendencies['θ_liq', i_gm][k_1] += Case.Sur.rho_θ_liq_flux * dzi * α_1/ae_1
 
     q_tendencies['U', i_gm][k_1] += Case.Sur.rho_uflux * dzi * α_1/ae_1
@@ -393,7 +393,7 @@ class EDMF_PrognosticTKE:
         UpdVar.initialize(tmp, q)
         return
 
-    def initialize_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, UpdMicro, UpdThermo, Case, TS, tri_diag):
+    def initialize_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         zs = self.zi
@@ -416,10 +416,10 @@ class EDMF_PrognosticTKE:
                 q['cv_θ_liq_q_tot', i_gm][k] = cv_θ_liq_q_tot_1 * temp
             reset_surface_covariance(grid, q, tmp, Case, ws)
             compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, self.zi, self.wstar)
-        self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, UpdMicro, UpdThermo, Case, TS, tri_diag)
+        self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
         return
 
-    def pre_export_data_compute(self, grid, q, tmp, tmp_O2, Stats, UpdVar, UpdMicro):
+    def pre_export_data_compute(self, grid, q, tmp, tmp_O2, Stats, UpdVar):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         for k in grid.over_elems_real(Center()):
             tmp['mf_θ_liq_half'][k] = tmp['mf_θ_liq'].Mid(k)
@@ -444,8 +444,8 @@ class EDMF_PrognosticTKE:
         UpdVar.initialize_io(Stats)
         return
 
-    def export_data(self, grid, q, tmp, tmp_O2, Stats, UpdVar, UpdMicro):
-        self.pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, UpdVar, UpdMicro)
+    def export_data(self, grid, q, tmp, tmp_O2, Stats, UpdVar):
+        self.pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, UpdVar)
         UpdVar.export_data(grid, q, tmp, Stats)
         return
 
@@ -466,7 +466,7 @@ class EDMF_PrognosticTKE:
             self.q_tot_surface_bc[i] = (q_tot_1 + self.surface_scalar_coeff[i] * np.sqrt(cv_q_tot))
         return
 
-    def pre_compute_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, UpdMicro, UpdThermo, Case, TS, tri_diag):
+    def pre_compute_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
@@ -510,7 +510,7 @@ class EDMF_PrognosticTKE:
         compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, 'cv_q_tot')
         compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, 'cv_θ_liq_q_tot')
 
-        compute_tendencies_gm(grid, q_tendencies, q, UpdMicro, Case, TS, tmp, tri_diag)
+        compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag)
 
         for k in grid.over_elems_real(Center()):
             q['tke', i_env][k] = np.fmax(q['tke', i_env][k], 0.0)
@@ -520,14 +520,14 @@ class EDMF_PrognosticTKE:
         cleanup_covariance(grid, q, UpdVar)
         self.set_updraft_surface_bc(grid, q, Case, tmp)
 
-    def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, UpdMicro, UpdThermo, Case, TS, tri_diag):
+    def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
 
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, UpdMicro, UpdThermo, Case, TS, tri_diag)
+        self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
 
         assign_new_to_values(grid, q, tmp, UpdVar)
 
-        self.compute_prognostic_updrafts(grid, q, q_tendencies, tmp, UpdVar, UpdMicro, UpdThermo, Case, TS)
+        self.compute_prognostic_updrafts(grid, q, q_tendencies, tmp, UpdVar, Case, TS)
 
         update_cv_env(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
         update_cv_env(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, TS, 'cv_θ_liq'      , tri_diag, self.tke_diss_coeff)
@@ -547,7 +547,7 @@ class EDMF_PrognosticTKE:
 
         return
 
-    def compute_prognostic_updrafts(self, grid, q, q_tendencies, tmp, UpdVar, UpdMicro, UpdThermo, Case, TS):
+    def compute_prognostic_updrafts(self, grid, q, q_tendencies, tmp, UpdVar, Case, TS):
         time_elapsed = 0.0
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         self.dt_upd = np.minimum(TS.dt, 0.5 * grid.dz/np.fmax(np.max(UpdVar.W.values),1e-10))
@@ -555,11 +555,11 @@ class EDMF_PrognosticTKE:
             compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
             eos_update_SA_mean(grid, q, False, tmp, self.max_supersaturation)
             buoyancy(grid, q, tmp, UpdVar)
-            compute_sources(grid, q, tmp, UpdVar, UpdMicro, self.max_supersaturation)
-            update_updraftvars(grid, q, tmp, UpdVar, UpdMicro)
+            compute_sources(grid, q, tmp, UpdVar, self.max_supersaturation)
+            update_updraftvars(grid, q, tmp, UpdVar)
 
             self.solve_updraft_velocity_area(grid, q, q_tendencies, tmp, UpdVar, TS)
-            self.solve_updraft_scalars(grid, q, q_tendencies, tmp, UpdVar, UpdMicro, TS)
+            self.solve_updraft_scalars(grid, q, q_tendencies, tmp, UpdVar, TS)
             UpdVar.θ_liq.set_bcs(grid)
             UpdVar.q_tot.set_bcs(grid)
             UpdVar.q_rai.set_bcs(grid)
@@ -680,7 +680,7 @@ class EDMF_PrognosticTKE:
 
         return
 
-    def solve_updraft_scalars(self, grid, q, q_tendencies, tmp, UpdVar, UpdMicro, TS):
+    def solve_updraft_scalars(self, grid, q, q_tendencies, tmp, UpdVar, TS):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         dzi = grid.dzi
         dti_ = 1.0/self.dt_upd
@@ -732,7 +732,7 @@ class EDMF_PrognosticTKE:
                     compute_update_combined_local_thetal(tmp, UpdVar.T.new,
                                                          UpdVar.q_tot.new, UpdVar.q_liq.new,
                                                          UpdVar.q_rai.new, UpdVar.θ_liq.new,
-                                                         i, k, UpdMicro, self.max_supersaturation)
+                                                         i, k, self.max_supersaturation)
                 UpdVar.q_rai.new[i][k_1] = 0.0
 
         return
