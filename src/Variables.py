@@ -12,15 +12,15 @@ from funcs_thermo import eos, t_to_entropy_c, t_to_thetali_c, \
 def satadjust(grid, q, tmp, GMV):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for k in grid.over_elems(Center()):
-        θ_liq = GMV.θ_liq.values[k]
-        q_tot = GMV.q_tot.values[k]
+        θ_liq = q['θ_liq', i_gm][k]
+        q_tot = q['q_tot', i_gm][k]
         p_0 = tmp['p_0_half'][k]
         T, q_liq = eos(p_0, q_tot, θ_liq)
-        GMV.q_liq.values[k] = q_liq
-        GMV.T.values[k] = T
+        tmp['q_liq', i_gm][k] = q_liq
+        tmp['T', i_gm][k] = T
         q_vap = q_tot - q_liq
         alpha = alpha_c(p_0, T, q_tot, q_vap)
-        GMV.B.values[k] = buoyancy_c(tmp['α_0_half'][k], alpha)
+        tmp['B', i_gm][k] = buoyancy_c(tmp['α_0_half'][k], alpha)
     return
 
 class VariablePrognostic:

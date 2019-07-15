@@ -22,8 +22,8 @@ class ForcingBase:
     def coriolis_force(self, grid, q, q_tendencies, GMV):
         i_gm, i_env, i_uds, i_sd = q_tendencies.domain_idx()
         for k in grid.over_elems_real(Center()):
-            q_tendencies['U', i_gm][k] -= self.coriolis_param * (self.vg[k] - GMV.V.values[k])
-            q_tendencies['V', i_gm][k] += self.coriolis_param * (self.ug[k] - GMV.U.values[k])
+            q_tendencies['U', i_gm][k] -= self.coriolis_param * (self.vg[k] - q['V', i_gm][k])
+            q_tendencies['V', i_gm][k] += self.coriolis_param * (self.ug[k] - q['U', i_gm][k])
         return
     def initialize_io(self, Stats):
         return
@@ -59,20 +59,20 @@ class ForcingStandard(ForcingBase):
 
         for k in grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
-            q_tot = GMV.q_tot.values[k]
-            q_vap = q_tot - GMV.q_liq.values[k]
+            q_tot = q['q_tot', i_gm][k]
+            q_vap = q_tot - tmp['q_liq', i_gm][k]
             q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0_half'][k],
                                                                     q_tot,
                                                                     q_vap,
-                                                                    GMV.T.values[k],
+                                                                    tmp['T', i_gm][k],
                                                                     self.dqtdt[k],
                                                                     self.dTdt[k])
             q_tendencies['q_tot', i_gm][k] += self.dqtdt[k]
         if self.apply_subsidence:
             for k in grid.over_elems_real(Center()):
                 # Apply large-scale subsidence tendencies
-                q_tendencies['θ_liq', i_gm][k] -= grad(GMV.θ_liq.values.Dual(k), grid) * self.subsidence[k]
-                q_tendencies['q_tot', i_gm][k] -= grad(GMV.q_tot.values.Dual(k), grid) * self.subsidence[k]
+                q_tendencies['θ_liq', i_gm][k] -= grad(q['θ_liq', i_gm].Dual(k), grid) * self.subsidence[k]
+                q_tendencies['q_tot', i_gm][k] -= grad(q['q_tot', i_gm].Dual(k), grid) * self.subsidence[k]
 
         if self.apply_coriolis:
             self.coriolis_force(grid, q, q_tendencies, GMV)
@@ -95,9 +95,9 @@ class ForcingStandard(ForcingBase):
 #         i_gm, i_env, i_uds, i_sd = q_tendencies.domain_idx()
 #         for k in grid.over_elems_real(Center()):
 #             # Apply large-scale horizontal advection tendencies
-#             q_vap = GMV.q_tot.values[k] - GMV.q_liq.values[k]
-#             q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0_half'][k],GMV.q_tot.values[k], q_vap,
-#                                                                 GMV.T.values[k], self.dqtdt[k], self.dTdt[k])
+#             q_vap = q['q_tot', i_gm][k] - tmp['q_liq', i_gm][k]
+#             q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0_half'][k],q['q_tot', i_gm][k], q_vap,
+#                                                                 tmp['T', i_gm][k], self.dqtdt[k], self.dTdt[k])
 #             q_tendencies['q_tot', i_gm][k] += self.dqtdt[k]
 #
 #
@@ -140,7 +140,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         k_1 = grid.first_interior(Zmin())
         z_i = grid.z[k_1]
         for k in grid.over_elems_real(Center()):
-            if (GMV.q_tot.values[k] < 8.0 / 1000):
+            if (q['q_tot', i_gm][k] < 8.0 / 1000):
                 idx_zi = k
                 # will be used at cell edges
                 z_i  = grid.z[idx_zi]
@@ -157,14 +157,14 @@ class ForcingDYCOMS_RF01(ForcingBase):
 
         self.f_rad[k_2] = self.F0 * np.exp(-q_0)
         for k in range(k_2 - 1, -1, -1):
-            q_0           += self.kappa * tmp['ρ_0_half'][k] * GMV.q_liq.values[k] * grid.dz
+            q_0           += self.kappa * tmp['ρ_0_half'][k] * tmp['q_liq', i_gm][k] * grid.dz
             self.f_rad[k]  = self.F0 * np.exp(-q_0)
 
         # cloud-base warming
         q_1 = 0.0
         self.f_rad[k_1] += self.F1 * np.exp(-q_1)
         for k in range(1, k_2 + 1):
-            q_1           += self.kappa * tmp['ρ_0_half'][k - 1] * GMV.q_liq.values[k - 1] * grid.dz
+            q_1           += self.kappa * tmp['ρ_0_half'][k - 1] * tmp['q_liq', i_gm][k - 1] * grid.dz
             self.f_rad[k] += self.F1 * np.exp(-q_1)
 
         # cooling in free troposphere
@@ -191,18 +191,18 @@ class ForcingDYCOMS_RF01(ForcingBase):
 
         for k in grid.over_elems_real(Center()):
             # Apply large-scale horizontal advection tendencies
-            q_tot = GMV.q_tot.values[k]
-            q_vap = q_tot - GMV.q_liq.values[k]
+            q_tot = q['q_tot', i_gm][k]
+            q_vap = q_tot - tmp['q_liq', i_gm][k]
             q_tendencies['θ_liq', i_gm][k]  += convert_forcing_thetal(tmp['p_0_half'][k],
                                                                  q_tot,
                                                                  q_vap,
-                                                                 GMV.T.values[k],
+                                                                 tmp['T', i_gm][k],
                                                                  self.dqtdt[k],
                                                                  self.dTdt[k])
             q_tendencies['q_tot', i_gm][k] += self.dqtdt[k]
             # Apply large-scale subsidence tendencies
-            q_tendencies['θ_liq', i_gm][k] -= grad_pos(GMV.θ_liq.values.Cut(k), grid) * self.subsidence[k]
-            q_tendencies['q_tot', i_gm][k] -= grad_pos(GMV.q_tot.values.Cut(k), grid) * self.subsidence[k]
+            q_tendencies['θ_liq', i_gm][k] -= grad_pos(q['θ_liq', i_gm].Cut(k), grid) * self.subsidence[k]
+            q_tendencies['q_tot', i_gm][k] -= grad_pos(q['q_tot', i_gm].Cut(k), grid) * self.subsidence[k]
 
         if self.apply_coriolis:
             self.coriolis_force(grid, q, q_tendencies, GMV)

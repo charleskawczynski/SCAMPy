@@ -23,9 +23,9 @@ class SurfaceBase:
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         theta_rho = Half(grid)
         for k in grid.over_elems(Center()):
-            q_vap = GMV.q_tot.values[k] - GMV.q_liq.values[k]
-            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], q_vap)
-        zi = get_inversion(theta_rho, GMV.U.values, GMV.V.values, grid, self.Ri_bulk_crit)
+            q_vap = q['q_tot', i_gm][k] - tmp['q_liq', i_gm][k]
+            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
+        zi = get_inversion(theta_rho, q['U', i_gm], q['V', i_gm], grid, self.Ri_bulk_crit)
         wstar = get_wstar(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
         return
@@ -33,7 +33,7 @@ class SurfaceBase:
 def compute_windspeed(grid, q, GMV, windspeed_min):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
-    return np.maximum(np.sqrt(GMV.U.values[k_1]**2.0 + GMV.V.values[k_1]**2.0), windspeed_min)
+    return np.maximum(np.sqrt(q['U', i_gm][k_1]**2.0 + q['V', i_gm][k_1]**2.0), windspeed_min)
 
 def compute_MO_len(ustar, bflux):
     if np.fabs(bflux) < 1e-10:
@@ -54,11 +54,11 @@ class SurfaceFixedFlux(SurfaceBase):
         z_1 = grid.z_half[k_1]
         ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
         α_0_surf = tmp.surface(grid, 'α_0_half')
-        T_1 = GMV.T.values[k_1]
-        θ_liq_1 = GMV.θ_liq.values[k_1]
-        q_tot_1 = GMV.q_tot.values[k_1]
-        V_1 = GMV.V.values[k_1]
-        U_1 = GMV.U.values[k_1]
+        T_1 = tmp['T', i_gm][k_1]
+        θ_liq_1 = q['θ_liq', i_gm][k_1]
+        q_tot_1 = q['q_tot', i_gm][k_1]
+        V_1 = q['V', i_gm][k_1]
+        U_1 = q['U', i_gm][k_1]
 
         rho_tflux =  self.shf /(cpm_c(self.qsurface))
         self.windspeed = compute_windspeed(grid, q, GMV, 0.0)
@@ -106,11 +106,11 @@ class SurfaceFixedCoeffs(SurfaceBase):
         k_1 = grid.first_interior(Zmin())
         ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
         α_0_surf = tmp.surface(grid, 'α_0_half')
-        T_1 = GMV.T.values[k_1]
-        θ_liq_1 = GMV.θ_liq.values[k_1]
-        q_tot_1 = GMV.q_tot.values[k_1]
-        V_1 = GMV.V.values[k_1]
-        U_1 = GMV.U.values[k_1]
+        T_1 = tmp['T', i_gm][k_1]
+        θ_liq_1 = q['θ_liq', i_gm][k_1]
+        q_tot_1 = q['q_tot', i_gm][k_1]
+        V_1 = q['V', i_gm][k_1]
+        U_1 = q['U', i_gm][k_1]
 
         cp_ = cpm_c(q_tot_1)
         lv = latent_heat(T_1)
@@ -142,11 +142,11 @@ class SurfaceMoninObukhov(SurfaceBase):
         ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
         α_0_surf = tmp.surface(grid, 'α_0_half')
         p_1 = tmp['p_0_half'][k_1]
-        T_1 = GMV.T.values[k_1]
-        θ_liq_1 = GMV.θ_liq.values[k_1]
-        q_tot_1 = GMV.q_tot.values[k_1]
-        V_1 = GMV.V.values[k_1]
-        U_1 = GMV.U.values[k_1]
+        T_1 = tmp['T', i_gm][k_1]
+        θ_liq_1 = q['θ_liq', i_gm][k_1]
+        q_tot_1 = q['q_tot', i_gm][k_1]
+        V_1 = q['V', i_gm][k_1]
+        U_1 = q['U', i_gm][k_1]
 
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
         theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
@@ -190,11 +190,11 @@ class SurfaceSullivanPatton(SurfaceBase):
         p_0_1 = tmp['p_0_half'][k_1]
         α_0_1 = tmp['α_0_half'][k_1]
         ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
-        T_1 = GMV.T.values[k_1]
-        θ_liq_1 = GMV.θ_liq.values[k_1]
-        q_tot_1 = GMV.q_tot.values[k_1]
-        V_1 = GMV.V.values[k_1]
-        U_1 = GMV.U.values[k_1]
+        T_1 = tmp['T', i_gm][k_1]
+        θ_liq_1 = q['θ_liq', i_gm][k_1]
+        q_tot_1 = q['q_tot', i_gm][k_1]
+        V_1 = q['V', i_gm][k_1]
+        U_1 = q['U', i_gm][k_1]
 
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
 

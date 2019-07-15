@@ -10,34 +10,34 @@ from funcs_micro import *
 
 def update_EnvVar(q, tmp, k, EnvVar, T, θ_liq, q_tot, q_liq, q_rai, alpha):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    EnvVar.T.values[k]      = T
-    EnvVar.θ_liq.values[k]  = θ_liq
-    EnvVar.q_tot.values[k]  = q_tot
-    EnvVar.q_liq.values[k]  = q_liq
-    EnvVar.q_rai.values[k] += q_rai
-    EnvVar.B.values[k]   = buoyancy_c(tmp['α_0_half'][k], alpha)
+    tmp['T', i_env][k]      = T
+    q['θ_liq', i_env][k]  = θ_liq
+    q['q_tot', i_env][k]  = q_tot
+    tmp['q_liq', i_env][k]  = q_liq
+    q['q_rai', i_env][k] += q_rai
+    tmp['B', i_env][k]   = buoyancy_c(tmp['α_0_half'][k], alpha)
     return
 
 def update_cloud_dry(k, EnvVar, EnvThermo, T, θ, q_tot, q_liq, q_vap, tmp):
     i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
     if q_liq > 0.0:
-        EnvVar.CF.values[k] = 1.
-        EnvThermo.θ_cloudy[k]     = θ
-        EnvThermo.t_cloudy[k]     = T
-        EnvThermo.q_tot_cloudy[k] = q_tot
-        EnvThermo.q_vap_cloudy[k] = q_vap
+        tmp['CF'][k] = 1.
+        tmp['θ_cloudy'][k]     = θ
+        tmp['t_cloudy'][k]     = T
+        tmp['q_tot_cloudy'][k] = q_tot
+        tmp['q_vap_cloudy'][k] = q_vap
     else:
-        EnvVar.CF.values[k] = 0.
-        EnvThermo.θ_dry[k]     = θ
-        EnvThermo.q_tot_dry[k] = q_tot
+        tmp['CF'][k] = 0.
+        tmp['θ_dry'][k]     = θ
+        tmp['q_tot_dry'][k] = q_tot
     return
 
 def eos_update_SA_mean(grid, q, EnvVar, EnvThermo, in_Env, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for k in grid.over_elems_real(Center()):
         p_0_k = tmp['p_0_half'][k]
-        T, q_liq  = eos(p_0_k, EnvVar.q_tot.values[k], EnvVar.θ_liq.values[k])
-        mph = microphysics(T, q_liq, p_0_k, EnvVar.q_tot.values[k], EnvThermo.max_supersaturation, in_Env)
+        T, q_liq  = eos(p_0_k, q['q_tot', i_env][k], q['θ_liq', i_env][k])
+        mph = microphysics(T, q_liq, p_0_k, q['q_tot', i_env][k], EnvThermo.max_supersaturation, in_Env)
         update_EnvVar(q, tmp, k, EnvVar, mph.T, mph.θ_liq, mph.q_tot, mph.q_liq, mph.q_rai, mph.alpha)
         update_cloud_dry(k, EnvVar, EnvThermo, mph.T, mph.θ,  mph.q_tot, mph.q_liq, mph.q_vap, tmp)
     return

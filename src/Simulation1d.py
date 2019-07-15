@@ -173,10 +173,10 @@ class Simulation1d:
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2, self.GMV,
         self.EnvVar, self.UpdVar, self.UpdMicro, self.EnvThermo, self.UpdThermo, self.Case, self.TS, self.tri_diag)
         for k in self.grid.over_elems(Center()):
-            self.EnvVar.tke.values[k]            = self.GMV.tke.values[k]
-            self.EnvVar.cv_θ_liq.values[k]       = self.GMV.cv_θ_liq.values[k]
-            self.EnvVar.cv_q_tot.values[k]       = self.GMV.cv_q_tot.values[k]
-            self.EnvVar.cv_θ_liq_q_tot.values[k] = self.GMV.cv_θ_liq_q_tot.values[k]
+            self.q['tke', i_env][k]            = self.q['tke', i_gm][k]
+            self.q['cv_θ_liq', i_env][k]       = self.q['cv_θ_liq', i_gm][k]
+            self.q['cv_q_tot', i_env][k]       = self.q['cv_q_tot', i_gm][k]
+            self.q['cv_θ_liq_q_tot', i_env][k] = self.q['cv_θ_liq_q_tot', i_gm][k]
 
         while self.TS.t <= self.TS.t_max:
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
@@ -203,17 +203,17 @@ class Simulation1d:
         i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
 
         sol.e_W              = self.q['w', i_env].values
-        sol.e_q_tot          = self.EnvVar.q_tot.values
-        sol.e_q_liq          = self.EnvVar.q_liq.values
-        sol.e_q_rai          = self.EnvVar.q_rai.values
-        sol.e_θ_liq          = self.EnvVar.θ_liq.values
-        sol.e_T              = self.EnvVar.T.values
-        sol.e_B              = self.EnvVar.B.values
-        sol.e_CF             = self.EnvVar.CF.values
-        sol.e_tke            = self.EnvVar.tke.values
-        sol.e_cv_θ_liq       = self.EnvVar.cv_θ_liq.values
-        sol.e_cv_q_tot       = self.EnvVar.cv_q_tot.values
-        sol.e_cv_θ_liq_q_tot = self.EnvVar.cv_θ_liq_q_tot.values
+        sol.e_q_tot          = self.q['q_tot', i_env]
+        sol.e_q_liq          = self.tmp['q_liq', i_env]
+        sol.e_q_rai          = self.q['q_rai', i_env]
+        sol.e_θ_liq          = self.q['θ_liq', i_env]
+        sol.e_T              = self.tmp['T', i_env]
+        sol.e_B              = self.tmp['B', i_env]
+        sol.e_CF             = self.tmp['CF']
+        sol.e_tke            = self.q['tke', i_env]
+        sol.e_cv_θ_liq       = self.q['cv_θ_liq', i_env]
+        sol.e_cv_q_tot       = self.q['cv_q_tot', i_env]
+        sol.e_cv_θ_liq_q_tot = self.q['cv_θ_liq_q_tot', i_env]
 
         sol.ud_W     = self.UpdVar.W.values[0]
         sol.ud_Area  = self.UpdVar.Area.values[0]
@@ -223,13 +223,13 @@ class Simulation1d:
         sol.ud_T     = self.UpdVar.T.values[0]
         sol.ud_B     = self.UpdVar.B.values[0]
 
-        sol.gm_q_tot = self.GMV.q_tot.values
-        sol.gm_U     = self.GMV.U.values
-        sol.gm_θ_liq = self.GMV.θ_liq.values
-        sol.gm_T     = self.GMV.T.values
-        sol.gm_V     = self.GMV.V.values
-        sol.gm_q_liq = self.GMV.q_liq.values
-        sol.gm_B     = self.GMV.B.values
+        sol.gm_q_tot = self.q['q_tot', i_gm]
+        sol.gm_U     = self.q['U', i_gm]
+        sol.gm_θ_liq = self.q['θ_liq', i_gm]
+        sol.gm_T     = self.tmp['T', i_gm]
+        sol.gm_V     = self.q['V', i_gm]
+        sol.gm_q_liq = self.tmp['q_liq', i_gm]
+        sol.gm_B     = self.tmp['B', i_gm]
 
         plot_solutions(sol, self.Stats)
         return sol

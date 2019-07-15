@@ -62,15 +62,15 @@ def buoyancy(grid, q, tmp, UpdVar, EnvVar, GMV):
                 α_i = alpha_c(tmp['p_0_half'][k], T, q_tot, q_vap)
                 UpdVar.B.values[i][k] = buoyancy_c(tmp['α_0_half'][k], α_i)
             else:
-                UpdVar.B.values[i][k] = EnvVar.B.values[k]
+                UpdVar.B.values[i][k] = tmp['B', i_env][k]
     # Subtract grid mean buoyancy
     for k in grid.over_elems_real(Center()):
-        GMV.B.values[k] = q['a', i_env][k] * EnvVar.B.values[k]
+        tmp['B', i_gm][k] = q['a', i_env][k] * tmp['B', i_env][k]
         for i in i_uds:
-            GMV.B.values[k] += UpdVar.Area.values[i][k] * UpdVar.B.values[i][k]
+            tmp['B', i_gm][k] += UpdVar.Area.values[i][k] * UpdVar.B.values[i][k]
         for i in i_uds:
-            UpdVar.B.values[i][k] -= GMV.B.values[k]
-        EnvVar.B.values[k] -= GMV.B.values[k]
+            UpdVar.B.values[i][k] -= tmp['B', i_gm][k]
+        tmp['B', i_env][k] -= tmp['B', i_gm][k]
     return
 
 def get_cloud_base_top_cover(grid, q, tmp, UpdVar):
@@ -107,11 +107,11 @@ def initialize(grid, GMV, tmp, q, UpdVar):
         for k in grid.over_elems(Center()):
             UpdVar.W.values[i][k] = 0.0
             UpdVar.Area.values[i][k] = 0.0
-            UpdVar.q_tot.values[i][k] = GMV.q_tot.values[k]
-            UpdVar.q_liq.values[i][k] = GMV.q_liq.values[k]
-            UpdVar.q_rai.values[i][k] = GMV.q_rai.values[k]
-            UpdVar.θ_liq.values[i][k] = GMV.θ_liq.values[k]
-            UpdVar.T.values[i][k] = GMV.T.values[k]
+            UpdVar.q_tot.values[i][k] = q['q_tot', i_gm][k]
+            UpdVar.q_liq.values[i][k] = tmp['q_liq', i_gm][k]
+            UpdVar.q_rai.values[i][k] = q['q_rai', i_gm][k]
+            UpdVar.θ_liq.values[i][k] = q['θ_liq', i_gm][k]
+            UpdVar.T.values[i][k] = tmp['T', i_gm][k]
             UpdVar.B.values[i][k] = 0.0
         UpdVar.Area.values[i][k_1] = UpdVar.updraft_fraction/UpdVar.n_updrafts
     UpdVar.q_tot.set_bcs(grid)

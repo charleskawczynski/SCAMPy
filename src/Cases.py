@@ -92,23 +92,23 @@ class Soares(CasesBase):
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
             if z[k] <= 1350.0:
-                GMV.q_tot.values[k] = 5.0e-3 - 3.7e-4* z[k]/1000.0
+                q['q_tot', i_gm][k] = 5.0e-3 - 3.7e-4* z[k]/1000.0
                 theta[k] = 300.0
 
             else:
-                GMV.q_tot.values[k] = 5.0e-3 - 3.7e-4 * 1.35 - 9.4e-4 * (z[k]-1350.0)/1000.0
+                q['q_tot', i_gm][k] = 5.0e-3 - 3.7e-4 * 1.35 - 9.4e-4 * (z[k]-1350.0)/1000.0
                 theta[k] = 300.0 + 2.0 * (z[k]-1350.0)/1000.0
-            GMV.U.values[k] = 0.01
+            q['U', i_gm][k] = 0.01
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.values[k] = theta[k]
-            GMV.T.values[k] =  theta[k] * exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = theta[k]
+            tmp['T', i_gm][k] =  theta[k] * exner_c(tmp['p_0_half'][k])
 
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp, GMV)
 
         return
@@ -182,29 +182,29 @@ class Bomex(CasesBase):
 
             #Set q_tot profile
             if z[k] <= 520:
-                GMV.q_tot.values[k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
+                q['q_tot', i_gm][k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
             if z[k] > 520.0 and z[k] <= 1480.0:
-                GMV.q_tot.values[k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
+                q['q_tot', i_gm][k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
             if z[k] > 1480.0 and z[k] <= 2000.0:
-                GMV.q_tot.values[k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
+                q['q_tot', i_gm][k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
             if z[k] > 2000.0:
-                GMV.q_tot.values[k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
+                q['q_tot', i_gm][k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
 
 
             #Set u profile
             if z[k] <= 700.0:
-                GMV.U.values[k] = -8.75
+                q['U', i_gm][k] = -8.75
             if z[k] > 700.0:
-                GMV.U.values[k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+                q['U', i_gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
         for k in grid.over_elems_real(Center()):
-            GMV.T.values[k] = thetal[k] * exner_c(tmp['p_0_half'][k])
-            GMV.θ_liq.values[k] = thetal[k]
+            tmp['T', i_gm][k] = thetal[k] * exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = thetal[k]
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp, GMV)
 
         return
@@ -299,30 +299,30 @@ class life_cycle_Tan2018(CasesBase):
 
             #Set q_tot profile
             if z[k] <= 520:
-                GMV.q_tot.values[k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
+                q['q_tot', i_gm][k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
             if z[k] > 520.0 and z[k] <= 1480.0:
-                GMV.q_tot.values[k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
+                q['q_tot', i_gm][k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
             if z[k] > 1480.0 and z[k] <= 2000.0:
-                GMV.q_tot.values[k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
+                q['q_tot', i_gm][k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
             if z[k] > 2000.0:
-                GMV.q_tot.values[k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
+                q['q_tot', i_gm][k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
 
 
             #Set u profile
             if z[k] <= 700.0:
-                GMV.U.values[k] = -8.75
+                q['U', i_gm][k] = -8.75
             if z[k] > 700.0:
-                GMV.U.values[k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+                q['U', i_gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.values[k] = thetal[k]
-            GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = thetal[k]
+            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp, GMV)
 
         return
@@ -413,8 +413,8 @@ class Rico(CasesBase):
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
-            GMV.U.values[k] =  -9.9 + 2.0e-3 * z[k]
-            GMV.V.values[k] = -3.8
+            q['U', i_gm][k] =  -9.9 + 2.0e-3 * z[k]
+            q['V', i_gm][k] = -3.8
             #Set Thetal profile
             if z[k] <= 740.0:
                 thetal[k] = 297.9
@@ -423,20 +423,20 @@ class Rico(CasesBase):
 
             #Set q_tot profile
             if z[k] <= 740.0:
-                GMV.q_tot.values[k] =  (16.0 + (13.8 - 16.0)/740.0 * z[k])/1000.0
+                q['q_tot', i_gm][k] =  (16.0 + (13.8 - 16.0)/740.0 * z[k])/1000.0
             elif z[k] > 740.0 and z[k] <= 3260.0:
-                GMV.q_tot.values[k] = (13.8 + (2.4 - 13.8)/(3260.0-740.0) * (z[k] - 740.0))/1000.0
+                q['q_tot', i_gm][k] = (13.8 + (2.4 - 13.8)/(3260.0-740.0) * (z[k] - 740.0))/1000.0
             else:
-                GMV.q_tot.values[k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(z[k] - 3260.0))/1000.0
+                q['q_tot', i_gm][k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(z[k] - 3260.0))/1000.0
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.values[k] = thetal[k]
-            GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = thetal[k]
+            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp, GMV)
 
 
@@ -571,8 +571,8 @@ class TRMM_LBA(CasesBase):
         # interpolate to the model grid-points
 
         p_1 = np.interp(grid.z_half,z_in,p_in)
-        GMV.U.values[:] = np.interp(grid.z_half,z_in,u_in)
-        GMV.V.values[:] = np.interp(grid.z_half,z_in,v_in)
+        q['U', i_gm][:] = np.interp(grid.z_half,z_in,u_in)
+        q['V', i_gm][:] = np.interp(grid.z_half,z_in,v_in)
 
         # get the entropy from RH, p, T
         k_1 = grid.first_interior(Zmin())
@@ -584,30 +584,30 @@ class TRMM_LBA(CasesBase):
         T = Half(grid)
         theta_rho = Half(grid)
         T[k_1:k_2] = np.interp(grid.z_half[k_1:k_2],z_in,T_in)
-        GMV.T.values[:] = T
+        tmp['T', i_gm][:] = T
         epsi = 287.1/461.5
 
-        GMV.U.set_bcs(grid)
-        GMV.T.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
 
 
         for k in grid.over_elems_real(Center()):
-            p_vap_star = pv_star(GMV.T.values[k])
+            p_vap_star = pv_star(tmp['T', i_gm][k])
             # eq. 37 in pressel et al and the def of RH
             q_vap_star = p_vap_star*epsi/(p_1[k]- p_vap_star + epsi*p_vap_star*RH[k]/100.0)
-            q_vap = GMV.q_tot.values[k] - GMV.q_liq.values[k]
-            GMV.q_tot.values[k] = q_vap_star*RH[k]/100.0
-            GMV.θ_liq.values[k] = thetali_c(tmp['p_0_half'][k],
-                                            GMV.T.values[k],
-                                            GMV.q_tot.values[k],
+            q_vap = q['q_tot', i_gm][k] - tmp['q_liq', i_gm][k]
+            q['q_tot', i_gm][k] = q_vap_star*RH[k]/100.0
+            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0_half'][k],
+                                            tmp['T', i_gm][k],
+                                            q['q_tot', i_gm][k],
                                             0.0,
                                             0.0,
-                                            latent_heat(GMV.T.values[k]))
+                                            latent_heat(tmp['T', i_gm][k]))
 
-            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], q_vap)
+            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
 
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp, GMV)
         return
 
@@ -840,16 +840,16 @@ class ARM_SGP(CasesBase):
 
 
         for k in grid.over_elems_real(Center()):
-            GMV.U.values[k] = 10.0
-            GMV.q_tot.values[k] = q_tot[k]
-            GMV.T.values[k] = Theta[k]*exner_c(tmp['p_0_half'][k])
-            GMV.θ_liq.values[k] = thetali_c(tmp['p_0_half'][k],GMV.T.values[k],
-                                            GMV.q_tot.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
+            q['U', i_gm][k] = 10.0
+            q['q_tot', i_gm][k] = q_tot[k]
+            tmp['T', i_gm][k] = Theta[k]*exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0_half'][k],tmp['T', i_gm][k],
+                                            q['q_tot', i_gm][k], 0.0, 0.0, latent_heat(tmp['T', i_gm][k]))
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp, GMV)
 
         return
@@ -972,17 +972,17 @@ class GATE_III(CasesBase):
 
 
         for k in grid.over_elems_real(Center()):
-            GMV.q_tot.values[k] = q_tot[k]
-            GMV.T.values[k] = T[k]
-            GMV.U.values[k] = U[k]
+            q['q_tot', i_gm][k] = q_tot[k]
+            tmp['T', i_gm][k] = T[k]
+            q['U', i_gm][k] = U[k]
 
-            GMV.θ_liq.values[k] = thetali_c(tmp['p_0_half'][k],GMV.T.values[k],
-                                           GMV.q_tot.values[k], 0.0, 0.0, latent_heat(GMV.T.values[k]))
+            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0_half'][k],tmp['T', i_gm][k],
+                                           q['q_tot', i_gm][k], 0.0, 0.0, latent_heat(tmp['T', i_gm][k]))
 
-        GMV.U.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp, GMV)
         return
 
@@ -1137,37 +1137,37 @@ class DYCOMS_RF01(CasesBase):
 
             # q_tot profile as defined in DYCOMS
             if z[k] <= 840.0:
-               GMV.q_tot.values[k] = 9. / 1000.0
+               q['q_tot', i_gm][k] = 9. / 1000.0
             if z[k] > 840.0:
-               GMV.q_tot.values[k] = 1.5 / 1000.0
+               q['q_tot', i_gm][k] = 1.5 / 1000.0
 
             # q_liq and T profile
             # (calculated by saturation adjustment using thetal and q_tot values provided in DYCOMS
             # and using Rd, cp and L constants as defined in DYCOMS)
-            GMV.T.values[k], GMV.q_liq.values[k] = self.dycoms_sat_adjst(tmp['p_0_half'][k], thetal[k], GMV.q_tot.values[k])
+            tmp['T', i_gm][k], tmp['q_liq', i_gm][k] = self.dycoms_sat_adjst(tmp['p_0_half'][k], thetal[k], q['q_tot', i_gm][k])
 
             # thermodynamic variable profile (either entropy or thetal)
             # (calculated based on T and q_liq profiles.
             # Here we use Rd, cp and L constants as defined in scampy)
-            GMV.θ_liq.values[k] = t_to_thetali_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], GMV.q_liq.values[k], q_ice)
+            q['θ_liq', i_gm][k] = t_to_thetali_c(tmp['p_0_half'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], tmp['q_liq', i_gm][k], q_ice)
 
             # buoyancy profile
-            q_vap = GMV.q_tot.values[k] - q_ice - GMV.q_liq.values[k]
-            alpha = alpha_c(tmp['p_0_half'][k], GMV.T.values[k], GMV.q_tot.values[k], q_vap)
-            GMV.B.values[k] = buoyancy_c(tmp['α_0_half'][k], alpha)
+            q_vap = q['q_tot', i_gm][k] - q_ice - tmp['q_liq', i_gm][k]
+            alpha = alpha_c(tmp['p_0_half'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
+            tmp['B', i_gm][k] = buoyancy_c(tmp['α_0_half'][k], alpha)
 
             # velocity profile (geostrophic)
-            GMV.U.values[k] = 7.0
-            GMV.V.values[k] = -5.5
+            q['U', i_gm][k] = 7.0
+            q['V', i_gm][k] = -5.5
 
         # fill out boundary conditions
-        GMV.U.set_bcs(grid)
-        GMV.V.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.q_liq.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
-        GMV.B.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['V', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        tmp['q_liq', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
+        tmp['B', i_gm].apply_bc(grid, 0.0)
 
         return
 
@@ -1265,8 +1265,8 @@ class GABLS(CasesBase):
 
         for k in grid.over_elems_real(Center()):
             #Set wind velocity profile
-            GMV.U.values[k] =  8.0
-            GMV.V.values[k] =  0.0
+            q['U', i_gm][k] =  8.0
+            q['V', i_gm][k] =  0.0
 
             #Set Thetal profile
             if grid.z_half[k] <= 100.0:
@@ -1275,17 +1275,17 @@ class GABLS(CasesBase):
                 thetal[k] = 265.0 + (grid.z_half[k] - 100.0) * 0.01
 
             #Set q_tot profile
-            GMV.q_tot.values[k] = 0.0
+            q['q_tot', i_gm][k] = 0.0
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.values[k] = thetal[k]
-            GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0_half'][k]) # No water content
+            q['θ_liq', i_gm][k] = thetal[k]
+            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0_half'][k]) # No water content
 
-        GMV.U.set_bcs(grid)
-        GMV.V.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['V', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp, GMV)
         return
 
@@ -1352,8 +1352,8 @@ class SP(CasesBase):
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
-            GMV.U.values[k] =  1.0
-            GMV.V.values[k] =  0.0
+            q['U', i_gm][k] =  1.0
+            q['V', i_gm][k] =  0.0
             #Set Thetal profile
             if z[k] <= 974.0:
                 thetal[k] = 300.0
@@ -1363,17 +1363,17 @@ class SP(CasesBase):
                 thetal[k] = 308.0 + (z[k] - 1074.0) * 0.003
 
             #Set q_tot profile
-            GMV.q_tot.values[k] = 0.0
+            q['q_tot', i_gm][k] = 0.0
 
         for k in grid.over_elems_real(Center()):
-            GMV.θ_liq.values[k] = thetal[k]
-            GMV.T.values[k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
+            q['θ_liq', i_gm][k] = thetal[k]
+            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0_half'][k])
 
-        GMV.U.set_bcs(grid)
-        GMV.V.set_bcs(grid)
-        GMV.q_tot.set_bcs(grid)
-        GMV.θ_liq.set_bcs(grid)
-        GMV.T.set_bcs(grid)
+        q['U', i_gm].apply_bc(grid, 0.0)
+        q['V', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        tmp['T', i_gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp, GMV)
         return
 
