@@ -316,48 +316,11 @@ def assign_new_to_values(grid, q, tmp, UpdVar):
 class EDMF_PrognosticTKE:
     def __init__(self, namelist, paramlist, grid):
 
-        self.prandtl_number = paramlist['turbulence']['prandtl_number']
-        self.Ri_bulk_crit = paramlist['turbulence']['Ri_bulk_crit']
-
-        self.n_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
-
-        try:
-            self.use_local_micro = namelist['turbulence']['EDMF_PrognosticTKE']['use_local_micro']
-        except:
-            self.use_local_micro = True
-            print('Turbulence--EDMF_PrognosticTKE: defaulting to local (level-by-level) microphysics')
-
-        try:
-            if str(namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']) == 'inverse_z':
-                self.entr_detr_fp = entr_detr_inverse_z
-            elif str(namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']) == 'dry':
-                self.entr_detr_fp = entr_detr_dry
-            elif str(namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']) == 'inverse_w':
-                self.entr_detr_fp = entr_detr_inverse_w
-            elif str(namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']) == 'b_w2':
-                self.entr_detr_fp = entr_detr_b_w2
-            elif str(namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']) == 'entr_detr_tke':
-                self.entr_detr_fp = entr_detr_tke
-            elif str(namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']) == 'entr_detr_tke2':
-                self.entr_detr_fp = entr_detr_tke2
-            elif str(namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']) == 'suselj':
-                self.entr_detr_fp = entr_detr_suselj
-            elif str(namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']) == 'none':
-                self.entr_detr_fp = entr_detr_none
-            else:
-                print('Turbulence--EDMF_PrognosticTKE: Entrainment rate namelist option is not recognized')
-        except:
-            self.entr_detr_fp = entr_detr_b_w2
-            print('Turbulence--EDMF_PrognosticTKE: defaulting to cloudy entrainment formulation')
-
-        try:
-            self.similarity_diffusivity = namelist['turbulence']['EDMF_PrognosticTKE']['use_similarity_diffusivity']
-        except:
-            self.similarity_diffusivity = False
-            print('Turbulence--EDMF_PrognosticTKE: defaulting to tke-based eddy diffusivity')
-
-        # Get values from paramlist
-        # set defaults at some point?
+        self.n_updrafts             = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
+        self.use_local_micro        = namelist['turbulence']['EDMF_PrognosticTKE']['use_local_micro']
+        self.similarity_diffusivity = namelist['turbulence']['EDMF_PrognosticTKE']['use_similarity_diffusivity']
+        self.prandtl_number         = paramlist['turbulence']['prandtl_number']
+        self.Ri_bulk_crit           = paramlist['turbulence']['Ri_bulk_crit']
         self.surface_area           = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
         self.max_area_factor        = paramlist['turbulence']['EDMF_PrognosticTKE']['max_area_factor']
         self.entrainment_factor     = paramlist['turbulence']['EDMF_PrognosticTKE']['entrainment_factor']
@@ -365,13 +328,23 @@ class EDMF_PrognosticTKE:
         self.pressure_buoy_coeff    = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_buoy_coeff']
         self.pressure_drag_coeff    = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_drag_coeff']
         self.pressure_plume_spacing = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_plume_spacing']
+        self.tke_ed_coeff           = paramlist['turbulence']['EDMF_PrognosticTKE']['tke_ed_coeff']
+        self.tke_diss_coeff         = paramlist['turbulence']['EDMF_PrognosticTKE']['tke_diss_coeff']
+        self.max_supersaturation    = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
+
+        entr_src = namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']
+        if str(entr_src) == 'inverse_z':        self.entr_detr_fp = entr_detr_inverse_z
+        elif str(entr_src) == 'dry':            self.entr_detr_fp = entr_detr_dry
+        elif str(entr_src) == 'inverse_w':      self.entr_detr_fp = entr_detr_inverse_w
+        elif str(entr_src) == 'b_w2':           self.entr_detr_fp = entr_detr_b_w2
+        elif str(entr_src) == 'entr_detr_tke':  self.entr_detr_fp = entr_detr_tke
+        elif str(entr_src) == 'entr_detr_tke2': self.entr_detr_fp = entr_detr_tke2
+        elif str(entr_src) == 'suselj':         self.entr_detr_fp = entr_detr_suselj
+        elif str(entr_src) == 'none':           self.entr_detr_fp = entr_detr_none
+        else: raise ValueError('Bad entr_detr_fp in Turbulence_PrognosticTKE.py')
+
         self.vel_pressure_coeff = self.pressure_drag_coeff/self.pressure_plume_spacing
         self.vel_buoy_coeff = 1.0-self.pressure_buoy_coeff
-        self.tke_ed_coeff = paramlist['turbulence']['EDMF_PrognosticTKE']['tke_ed_coeff']
-        self.tke_diss_coeff = paramlist['turbulence']['EDMF_PrognosticTKE']['tke_diss_coeff']
-        self.max_supersaturation = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
-
-        # Need to code up as paramlist option?
         self.minimum_area = 1e-3
 
         a_ = self.surface_area/self.n_updrafts
