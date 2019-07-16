@@ -52,10 +52,6 @@ class Simulation1d:
          ('q_rai'         , Center() , Neumann() , N_sd),
          ('θ_liq'         , Center() , Neumann() , N_sd),
          ('a_tmp'         , Center() , Neumann() , N_sd),
-         ('w_tmp'         , Node()   , Dirichlet() , N_sd),
-         ('q_tot_tmp'     , Center() , Neumann() , N_sd),
-         ('q_rai_tmp'     , Center() , Neumann() , N_sd),
-         ('θ_liq_tmp'     , Center() , Neumann() , N_sd),
          ('tke'           , Center() , Neumann() , N_sd),
          ('cv_q_tot'      , Center() , Neumann() , N_sd),
          ('cv_θ_liq'      , Center() , Neumann() , N_sd),
@@ -102,8 +98,6 @@ class Simulation1d:
                      ('mf_tend_θ_liq' , Node() , Neumann(), N_sd),
                      ('mf_tend_q_tot' , Node() , Neumann(), N_sd),
                      ('mf_tmp'        , Node() , Neumann(), N_sd),
-                     ('ρaK_m'         , Node()   , Neumann(), N_sd),
-                     ('ρaK_h'         , Node()   , Neumann(), N_sd),
                      )
 
         q_2MO = (
@@ -211,10 +205,10 @@ class Simulation1d:
         sol.e_cv_q_tot       = self.q['cv_q_tot', i_env]
         sol.e_cv_θ_liq_q_tot = self.q['cv_θ_liq_q_tot', i_env]
 
-        sol.ud_W     = self.q['w_tmp', i_uds[0]]
+        sol.ud_W     = self.q['w', i_uds[0]]
         sol.ud_Area  = self.q['a_tmp', i_uds[0]]
-        sol.ud_q_tot = self.q['q_tot_tmp', i_uds[0]]
-        sol.ud_q_rai = self.q['q_rai_tmp', i_uds[0]]
+        sol.ud_q_tot = self.q['q_tot', i_uds[0]]
+        sol.ud_q_rai = self.q['q_rai', i_uds[0]]
         sol.ud_q_liq = self.tmp['q_liq', i_uds[0]]
         sol.ud_T     = self.tmp['T', i_uds[0]]
         sol.ud_B     = self.tmp['B', i_uds[0]]

@@ -24,7 +24,7 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
 
         D_env = sum([ρ_0_cut[1] *
                      q['a_tmp', i][k] *
-                     q['w_tmp', i].Mid(k) *
+                     q['w', i].Mid(k) *
                      tmp['entr_sc', i][k] for i in i_uds])
 
         l_mix = np.fmax(tmp['l_mix'][k], 1.0)
