@@ -51,6 +51,11 @@ class Simulation1d:
          ('q_tot'         , Center() , Neumann() , N_sd),
          ('q_rai'         , Center() , Neumann() , N_sd),
          ('θ_liq'         , Center() , Neumann() , N_sd),
+         ('a_tmp'         , Center() , Neumann() , N_sd),
+         ('w_tmp'         , Node()   , Dirichlet() , N_sd),
+         ('q_tot_tmp'     , Center() , Neumann() , N_sd),
+         ('q_rai_tmp'     , Center() , Neumann() , N_sd),
+         ('θ_liq_tmp'     , Center() , Neumann() , N_sd),
          ('tke'           , Center() , Neumann() , N_sd),
          ('cv_q_tot'      , Center() , Neumann() , N_sd),
          ('cv_θ_liq'      , Center() , Neumann() , N_sd),
@@ -180,7 +185,7 @@ class Simulation1d:
                              self.Case, self.TS, self.tri_diag)
 
             self.TS.update()
-            compute_grid_means(self.grid, self.q, self.tmp, self.UpdVar)
+            compute_grid_means(self.grid, self.q, self.tmp)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.export_data()
         sol = self.package_sol()
@@ -193,7 +198,7 @@ class Simulation1d:
 
         i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
 
-        sol.e_W              = self.q['w', i_env].values
+        sol.e_W              = self.q['w', i_env]
         sol.e_q_tot          = self.q['q_tot', i_env]
         sol.e_q_liq          = self.tmp['q_liq', i_env]
         sol.e_q_rai          = self.q['q_rai', i_env]
@@ -206,10 +211,10 @@ class Simulation1d:
         sol.e_cv_q_tot       = self.q['cv_q_tot', i_env]
         sol.e_cv_θ_liq_q_tot = self.q['cv_θ_liq_q_tot', i_env]
 
-        sol.ud_W     = self.UpdVar.W.values[0]
-        sol.ud_Area  = self.UpdVar.Area.values[0]
-        sol.ud_q_tot = self.UpdVar.q_tot.values[0]
-        sol.ud_q_rai = self.UpdVar.q_rai.values[0]
+        sol.ud_W     = self.q['w_tmp', i_uds[0]]
+        sol.ud_Area  = self.q['a_tmp', i_uds[0]]
+        sol.ud_q_tot = self.q['q_tot_tmp', i_uds[0]]
+        sol.ud_q_rai = self.q['q_rai_tmp', i_uds[0]]
         sol.ud_q_liq = self.tmp['q_liq', i_uds[0]]
         sol.ud_T     = self.tmp['T', i_uds[0]]
         sol.ud_B     = self.tmp['B', i_uds[0]]
