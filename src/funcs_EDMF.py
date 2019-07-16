@@ -87,7 +87,6 @@ def compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, cv):
     for k in grid.over_elems_real(Center()):
         l_mix = np.fmax(tmp['l_mix'][k], 1.0)
         tke_env = np.fmax(q['tke', i_env][k], 0.0)
-
         tmp_O2[cv]['dissipation'][k] = (tmp['ρ_0_half'][k] * ae[k] * q[cv, i_env][k] * pow(tke_env, 0.5)/l_mix * tke_diss_coeff)
     return
 
@@ -207,7 +206,6 @@ def compute_eddy_diffusivities_similarity_Siebesma2007(grid, Case, tmp, zi, wsta
 def compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, cv):
     i_gm, i_env, i_uds, i_sd = q_tendencies.domain_idx()
     k_1 = grid.first_interior(Zmin())
-
     for k in grid.over_elems_real(Center()):
         q_tendencies[cv, i_env][k] = tmp_O2[cv]['press'][k] + tmp_O2[cv]['buoy'][k] + tmp_O2[cv]['shear'][k] + tmp_O2[cv]['entr_gain'][k] + tmp_O2[cv]['rain_src'][k]
     q_tendencies[cv, i_env][k_1] = 0.0
@@ -293,50 +291,27 @@ def compute_grid_means(grid, q, tmp):
         tmp['B', i_gm][k]     = np.sum([ q['a', i][k] * tmp['B', i][k] for i in i_sd])
     return
 
-def compute_cv_gm(grid, q, ϕ, ψ, cv):
+def compute_cv_gm(grid, q, ϕ, ψ, cv, tke_factor, interp_func):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    is_tke = cv=='tke'
-    tke_factor = 0.5 if is_tke else 1.0
     ae = q['a', i_env]
     for k in grid.over_elems(Center()):
-        if is_tke:
-            Δϕ = q[ϕ, i_env].Mid(k) - q[ϕ, i_gm].Mid(k)
-            Δψ = q[ψ, i_env].Mid(k) - q[ψ, i_gm].Mid(k)
-        else:
-            Δϕ = q[ϕ, i_env][k]-q[ϕ, i_gm][k]
-            Δψ = q[ψ, i_env][k]-q[ψ, i_gm][k]
-
+        Δϕ = interp_func(q[ϕ, i_env], k) - interp_func(q[ϕ, i_gm], k)
+        Δψ = interp_func(q[ψ, i_env], k) - interp_func(q[ψ, i_gm], k)
         q[cv, i_gm][k] = tke_factor * ae[k] * Δϕ * Δψ + ae[k] * q[cv, i_env][k]
         for i in i_uds:
-            if is_tke:
-                Δϕ = q[ϕ, i].Mid(k) - q[ϕ, i_gm].Mid(k)
-                Δψ = q[ψ, i].Mid(k) - q[ψ, i_gm].Mid(k)
-            else:
-                Δϕ = q[ϕ, i][k]-q[ϕ, i_gm][k]
-                Δψ = q[ψ, i][k]-q[ψ, i_gm][k]
+            Δϕ = interp_func(q[ϕ, i], k) - interp_func(q[ϕ, i_gm], k)
+            Δψ = interp_func(q[ψ, i], k) - interp_func(q[ψ, i_gm], k)
             q[cv, i_gm][k] += tke_factor * q['a', i][k] * Δϕ * Δψ
     return
 
-def compute_covariance_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
+def compute_covariance_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    is_tke = cv=='tke'
-    tke_factor = 0.5 if is_tke else 1.0
     for k in grid.over_elems_real(Center()):
         tmp_O2[cv]['entr_gain'][k] = 0.0
         for i in i_uds:
-            if is_tke:
-                ϕ_u = q[ϕ, i].Mid(k)
-                ψ_u = q[ψ, i].Mid(k)
-                ϕ_e = q[ϕ, i_env].Mid(k)
-                ψ_e = q[ψ, i_env].Mid(k)
-            else:
-                ϕ_u = q[ϕ, i][k]
-                ψ_u = q[ψ, i][k]
-                ϕ_e = q[ϕ, i_env][k]
-                ψ_e = q[ψ, i_env][k]
-            w_u = q['w', i].Mid(k)
-            tmp_O2[cv]['entr_gain'][k] += tke_factor*q['a', i][k] * np.fabs(w_u) * tmp['detr_sc', i][k] * \
-                                         (ϕ_u - ϕ_e) * (ψ_u - ψ_e)
+            Δϕ = interp_func(q[ϕ, i], k) - interp_func(q[ϕ, i_env], k)
+            Δψ = interp_func(q[ψ, i], k) - interp_func(q[ψ, i_env], k)
+            tmp_O2[cv]['entr_gain'][k] += tke_factor*q['a', i][k] * np.fabs(q['w', i].Mid(k)) * tmp['detr_sc', i][k] * Δϕ * Δψ
         tmp_O2[cv]['entr_gain'][k] *= tmp['ρ_0_half'][k]
     return
 
