@@ -360,31 +360,20 @@ def compute_covariance_shear(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
         tmp_O2[cv]['shear'][k] = tke_factor*2.0*ρaK * (grad_ϕ*grad_ψ + grad_u**2.0 + grad_v**2.0)
     return
 
-def compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
+def compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    is_tke = cv=='tke'
-    tke_factor = 0.5 if is_tke else 1.0
     for k in grid.over_elems(Center()):
         tmp_O2[cv]['interdomain'][k] = 0.0
         for i in i_uds:
-            if is_tke:
-                Δϕ = q[ϕ, i].Mid(k) - q[ϕ, i_env].Mid(k)
-                Δψ = q[ψ, i].Mid(k) - q[ψ, i_env].Mid(k)
-            else:
-                Δϕ = q[ϕ, i][k]-q[ϕ, i_env][k]
-                Δψ = q[ψ, i][k]-q[ψ, i_env][k]
+            Δϕ = interp_func(q[ϕ, i], k) - interp_func(q[ϕ, i_env], k)
+            Δψ = interp_func(q[ψ, i], k) - interp_func(q[ψ, i_env], k)
             tmp_O2[cv]['interdomain'][k] += tke_factor*q['a', i][k] * (1.0-q['a', i][k]) * Δϕ * Δψ
     return
 
 def compute_covariance_detr(grid, q, tmp, tmp_O2, cv):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    ae = q['a', i_env]
-
     for k in grid.over_elems_real(Center()):
-        tmp_O2[cv]['detr_loss'][k] = 0.0
-        for i in i_uds:
-            w_u = q['w', i].Mid(k)
-            tmp_O2[cv]['detr_loss'][k] += q['a', i][k] * np.fabs(w_u) * tmp['entr_sc', i][k]
+        tmp_O2[cv]['detr_loss'][k] = sum([q['a', i][k] * np.fabs(q['w', i].Mid(k)) * tmp['entr_sc', i][k] for i in i_uds])
         tmp_O2[cv]['detr_loss'][k] *= tmp['ρ_0_half'][k] * q[cv, i_env][k]
     return
 
@@ -403,30 +392,15 @@ def compute_tke_pressure(grid, q, tmp, tmp_O2, pressure_buoy_coeff, pressure_dra
             tmp_O2[cv]['press'][k] += (we_half - wu_half) * (press_buoy + press_drag)
     return
 
-def compute_cv_env(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
+def compute_cv_env(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    is_tke = cv=='tke'
-    tke_factor = 0.5 if is_tke else 1.0
     ae = q['a', i_env]
-
     for k in grid.over_elems(Center()):
         if ae[k] > 0.0:
-            if is_tke:
-                Δϕ = q[ϕ, i_env].Mid(k) - q[ϕ, i_gm].Mid(k)
-                Δψ = q[ψ, i_env].Mid(k) - q[ψ, i_gm].Mid(k)
-            else:
-                Δϕ = q[ϕ, i_env][k] - q[ϕ, i_gm][k]
-                Δψ = q[ψ, i_env][k] - q[ψ, i_gm][k]
-
-            q[cv, i_env][k] = q[cv, i_gm][k] - tke_factor * ae[k] * Δϕ * Δψ
-            for i in i_uds:
-                if is_tke:
-                    Δϕ = q[ϕ, i].Mid(k) - q[ϕ, i_gm].Mid(k)
-                    Δψ = q[ψ, i].Mid(k) - q[ψ, i_gm].Mid(k)
-                else:
-                    Δϕ = q[ϕ, i][k] - q[ϕ, i_gm][k]
-                    Δψ = q[ψ, i][k] - q[ψ, i_gm][k]
-
+            q[cv, i_env][k] = q[cv, i_gm][k]
+            for i in i_sd:
+                Δϕ = interp_func(q[ϕ, i], k) - interp_func(q[ϕ, i_gm], k)
+                Δψ = interp_func(q[ψ, i], k) - interp_func(q[ψ, i_gm], k)
                 q[cv, i_env][k] -= tke_factor * q['a', i][k] * Δϕ * Δψ
             q[cv, i_env][k] = q[cv, i_env][k]/ae[k]
         else:
