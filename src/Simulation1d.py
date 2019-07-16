@@ -136,8 +136,8 @@ class Simulation1d:
 
         self.Ref        = ReferenceState(self.grid)
         self.Case       = CasesFactory(namelist, paramlist)
-        self.UpdVar     = UpdraftVariables(self.n_updrafts, namelist, paramlist, self.grid)
         self.Turb       = EDMF_PrognosticTKE(namelist, paramlist, self.grid)
+        self.UpdVar     = [UpdraftVariables(i, self.Turb.surface_area, self.n_updrafts) for i in range(self.n_updrafts)]
         self.TS         = TimeStepping(namelist)
         self.Stats      = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
         self.tri_diag   = type('', (), {})()
@@ -156,7 +156,7 @@ class Simulation1d:
         self.Case.initialize_profiles(self.grid, self.Ref, self.tmp, self.q)
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.tmp)
-        initialize(self.grid, self.tmp, self.q, self.UpdVar, self.Turb.updraft_fraction)
+        initialize_updrafts(self.grid, self.tmp, self.q, self.Turb.updraft_fraction)
         self.initialize_io()
         self.export_data()
         return
@@ -248,7 +248,7 @@ class Simulation1d:
 
         self.Stats.add_ts('lwp')
         self.Case.initialize_io(self.Stats)
-        self.Turb.initialize_io(self.Stats, self.UpdVar)
+        initialize_io_updrafts(self.UpdVar, self.Stats)
         return
 
     def export_data(self):
@@ -256,7 +256,8 @@ class Simulation1d:
         self.Stats.open_files()
         self.Stats.write_simulation_time(self.TS.t)
         self.Case.export_data(self.Stats)
-        self.Turb.export_data(self.grid, self.q, self.tmp, self.tmp_O2, self.Stats, self.UpdVar)
+        pre_export_data_compute(self.grid, self.q, self.tmp, self.tmp_O2, self.Stats, self.Turb.tke_diss_coeff)
+        export_data_updrafts(self.grid, self.UpdVar, self.q, self.tmp, self.Stats)
 
         lwp = 0.0
         for k in self.grid.over_elems_real(Center()):

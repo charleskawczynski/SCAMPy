@@ -11,7 +11,3 @@ def percentile_bounds_mean_norm(low_percentile, high_percentile, nsamples):
     x = np.ma.masked_less(x,xp_low)
     x = np.ma.masked_greater(x,xp_high)
     return np.ma.mean(x)
-
-def interp2pt(val1, val2):
-    return 0.5*(val1 + val2)
-
