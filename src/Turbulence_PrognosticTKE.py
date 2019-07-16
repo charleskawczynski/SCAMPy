@@ -35,7 +35,7 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.ml               = tmp['l_mix'][k]
             input_st.b                = tmp['B', i][k]
             input_st.w                = q['w', i].Mid(k)
-            input_st.af               = q['a_tmp', i][k]
+            input_st.af               = q['a', i][k]
             input_st.tke              = q['tke', i_env][k]
             input_st.qt_env           = q['q_tot', i_env][k]
             input_st.q_liq_env        = tmp['q_liq', i_env][k]
@@ -57,8 +57,8 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
 
             w_cut = q['w', i].DualCut(k)
             w_env_cut = q['w', i_env].DualCut(k)
-            a_cut = q['a_tmp', i].Cut(k)
-            a_env_cut = (1.0-q['a_tmp', i].Cut(k))
+            a_cut = q['a', i].Cut(k)
+            a_env_cut = (1.0-q['a', i].Cut(k))
             aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
 
             input_st.dwdz = grad(aw_cut, grid)

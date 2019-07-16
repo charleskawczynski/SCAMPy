@@ -206,7 +206,7 @@ class Simulation1d:
         sol.e_cv_θ_liq_q_tot = self.q['cv_θ_liq_q_tot', i_env]
 
         sol.ud_W     = self.q['w', i_uds[0]]
-        sol.ud_Area  = self.q['a_tmp', i_uds[0]]
+        sol.ud_Area  = self.q['a', i_uds[0]]
         sol.ud_q_tot = self.q['q_tot', i_uds[0]]
         sol.ud_q_rai = self.q['q_rai', i_uds[0]]
         sol.ud_q_liq = self.tmp['q_liq', i_uds[0]]

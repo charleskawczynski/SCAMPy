@@ -23,7 +23,7 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
         ρa_K_cut = a_env.DualCut(k) * tmp['K_h'].DualCut(k) * ρ_0_half.DualCut(k)
 
         D_env = sum([ρ_0_cut[1] *
-                     q['a_tmp', i][k] *
+                     q['a', i][k] *
                      q['w', i].Mid(k) *
                      tmp['entr_sc', i][k] for i in i_uds])
 
