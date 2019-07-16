@@ -20,10 +20,10 @@ def compute_grid_means(grid, q, tmp, UpdVar):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     ae = q['a', i_env]
     for k in grid.over_elems_real(Center()):
-        tmp['q_liq', i_gm][k] = ae[k] * tmp['q_liq', i_env][k] + sum([ UpdVar.Area.values[i][k] * UpdVar.q_liq.values[i][k] for i in i_uds])
+        tmp['q_liq', i_gm][k] = ae[k] * tmp['q_liq', i_env][k] + sum([ UpdVar.Area.values[i][k] * tmp['q_liq', i][k] for i in i_uds])
         q['q_rai', i_gm][k]   = ae[k] * q['q_rai', i_env][k]   + sum([ UpdVar.Area.values[i][k] * UpdVar.q_rai.values[i][k] for i in i_uds])
-        tmp['T', i_gm][k]     = ae[k] * tmp['T', i_env][k]     + sum([ UpdVar.Area.values[i][k] * UpdVar.T.values[i][k] for i in i_uds])
-        tmp['B', i_gm][k]     = ae[k] * tmp['B', i_env][k]     + sum([ UpdVar.Area.values[i][k] * UpdVar.B.values[i][k] for i in i_uds])
+        tmp['T', i_gm][k]     = ae[k] * tmp['T', i_env][k]     + sum([ UpdVar.Area.values[i][k] * tmp['T', i][k] for i in i_uds])
+        tmp['B', i_gm][k]     = ae[k] * tmp['B', i_env][k]     + sum([ UpdVar.Area.values[i][k] * tmp['B', i][k] for i in i_uds])
     return
 
 def compute_cv_gm(grid, q, UpdVar, ϕ_u, ψ_u, ϕ_e, ψ_e, covar_e, ϕ_gm, ψ_gm, gmv_covar, cv):
@@ -132,7 +132,7 @@ def compute_tke_pressure(grid, q, tmp, tmp_O2, UpdVar, pressure_buoy_coeff, pres
             we_half = q['w', i_env].Mid(k)
             a_i = UpdVar.Area.values[i][k]
             ρ_0_k = tmp['ρ_0_half'][k]
-            press_buoy = (-1.0 * ρ_0_k * a_i * UpdVar.B.values[i][k] * pressure_buoy_coeff)
+            press_buoy = (-1.0 * ρ_0_k * a_i * tmp['B', i][k] * pressure_buoy_coeff)
             press_drag_coeff = -1.0 * ρ_0_k * np.sqrt(a_i) * pressure_drag_coeff/pressure_plume_spacing
             press_drag = press_drag_coeff * (wu_half - we_half)*np.fabs(wu_half - we_half)
             tmp_O2[cv]['press'][k] += (we_half - wu_half) * (press_buoy + press_drag)
@@ -258,7 +258,7 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.quadrature_order = quadrature_order
             input_st.z = grid.z_half[k]
             input_st.ml = tmp['l_mix'][k]
-            input_st.b = UpdVar.B.values[i][k]
+            input_st.b = tmp['B', i][k]
             input_st.w = UpdVar.W.values[i].Mid(k)
             input_st.af = UpdVar.Area.values[i][k]
             input_st.tke = q['tke', i_env][k]
@@ -269,7 +269,7 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.w_env = q['w', i_env].values[k]
             input_st.θ_liq_up = UpdVar.θ_liq.values[i][k]
             input_st.qt_up = UpdVar.q_tot.values[i][k]
-            input_st.q_liq_up = UpdVar.q_liq.values[i][k]
+            input_st.q_liq_up = tmp['q_liq', i][k]
             input_st.env_Hvar = q['cv_θ_liq', i_env][k]
             input_st.env_QTvar = q['cv_q_tot', i_env][k]
             input_st.env_HQTcov = q['cv_θ_liq_q_tot', i_env][k]
@@ -306,11 +306,11 @@ def assign_new_to_values(grid, q, tmp, UpdVar):
             UpdVar.W.new[i][k] = UpdVar.W.values[i][k]
             UpdVar.Area.new[i][k] = UpdVar.Area.values[i][k]
             UpdVar.q_tot.new[i][k] = UpdVar.q_tot.values[i][k]
-            UpdVar.q_liq.new[i][k] = UpdVar.q_liq.values[i][k]
+            UpdVar.q_liq.new[i][k] = tmp['q_liq', i][k]
             UpdVar.q_rai.new[i][k] = UpdVar.q_rai.values[i][k]
             UpdVar.θ_liq.new[i][k] = UpdVar.θ_liq.values[i][k]
-            UpdVar.T.new[i][k] = UpdVar.T.values[i][k]
-            UpdVar.B.new[i][k] = UpdVar.B.values[i][k]
+            UpdVar.T.new[i][k] = tmp['T', i][k]
+            UpdVar.B.new[i][k] = tmp['B', i][k]
     return
 
 class EDMF_PrognosticTKE:
@@ -619,7 +619,7 @@ class EDMF_PrognosticTKE:
                     a_k = UpdVar.Area.values[i].Mid(k)
                     entr_w = tmp['entr_sc', i].Mid(k)
                     detr_w = tmp['detr_sc', i].Mid(k)
-                    B_k = UpdVar.B.values[i].Mid(k)
+                    B_k = tmp['B', i].Mid(k)
 
                     a_cut = UpdVar.Area.values[i].DualCut(k)
                     ρ_cut = tmp['ρ_0'].Cut(k)

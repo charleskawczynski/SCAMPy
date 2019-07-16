@@ -209,10 +209,10 @@ class Simulation1d:
         sol.ud_W     = self.UpdVar.W.values[0]
         sol.ud_Area  = self.UpdVar.Area.values[0]
         sol.ud_q_tot = self.UpdVar.q_tot.values[0]
-        sol.ud_q_liq = self.UpdVar.q_liq.values[0]
         sol.ud_q_rai = self.UpdVar.q_rai.values[0]
-        sol.ud_T     = self.UpdVar.T.values[0]
-        sol.ud_B     = self.UpdVar.B.values[0]
+        sol.ud_q_liq = self.tmp['q_liq', i_uds[0]]
+        sol.ud_T     = self.tmp['T', i_uds[0]]
+        sol.ud_B     = self.tmp['B', i_uds[0]]
 
         sol.gm_q_tot = self.q['q_tot', i_gm]
         sol.gm_U     = self.q['U', i_gm]
