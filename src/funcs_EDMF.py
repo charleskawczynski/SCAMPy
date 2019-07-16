@@ -498,10 +498,21 @@ def assign_new_to_values(grid, q_new, q, tmp):
     slice_all_n = grid.slice_all(Node())
     for i in i_uds:
         q_new['w', i][slice_all_n] = [q['w', i][k] for k in grid.over_elems(Node())]
-        q_new['a', i][slice_all_c] = [q['a_tmp', i][k] for k in grid.over_elems(Center())]
         q_new['q_tot', i][slice_all_c] = [q['q_tot', i][k] for k in grid.over_elems(Center())]
         q_new['q_rai', i][slice_all_c] = [q['q_rai', i][k] for k in grid.over_elems(Center())]
         q_new['θ_liq', i][slice_all_c] = [q['θ_liq', i][k] for k in grid.over_elems(Center())]
+    return
+
+def assign_values_to_new(grid, q, q_new, tmp):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    for k in grid.over_elems(Center()):
+        for i in i_uds:
+            q['w', i][k] = q_new['w', i][k]
+            q['q_tot', i][k] = q_new['q_tot', i][k]
+            q['q_rai', i][k] = q_new['q_rai', i][k]
+            q['θ_liq', i][k] = q_new['θ_liq', i][k]
+            q['a', i][k] = q_new['a', i][k]
+        q['a', i_env][k] = 1.0 - sum([q_new['a', i][k] for i in i_uds])
     return
 
 def initialize_updrafts(grid, tmp, q, updraft_fraction):
@@ -523,8 +534,6 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
     for i in i_uds: q['q_rai', i].apply_bc(grid, 0.0)
     for i in i_uds: q['θ_liq', i].apply_bc(grid, 0.0)
     for k in grid.over_elems(Center()):
-        for i in i_uds:
-            q['a_tmp', i][k] = q['a', i][k]
         q['a', i_env][k] = 1.0 - sum([q['a', i][k] for i in i_uds])
     return
 
@@ -575,17 +584,6 @@ def buoyancy(grid, q, tmp):
         for i in i_uds:
             tmp['B', i][k] -= tmp['B', i_gm][k]
         tmp['B', i_env][k] -= tmp['B', i_gm][k]
-    return
-
-def assign_values_to_new(grid, q, q_new, tmp):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    for i in i_uds:
-        for k in grid.over_elems(Center()):
-            q['w', i][k] = q_new['w', i][k]
-            q['a_tmp', i][k] = q_new['a', i][k]
-            q['q_tot', i][k] = q_new['q_tot', i][k]
-            q['q_rai', i][k] = q_new['q_rai', i][k]
-            q['θ_liq', i][k] = q_new['θ_liq', i][k]
     return
 
 def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):

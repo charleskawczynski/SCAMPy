@@ -51,7 +51,6 @@ class Simulation1d:
          ('q_tot'         , Center() , Neumann() , N_sd),
          ('q_rai'         , Center() , Neumann() , N_sd),
          ('θ_liq'         , Center() , Neumann() , N_sd),
-         ('a_tmp'         , Center() , Neumann() , N_sd),
          ('tke'           , Center() , Neumann() , N_sd),
          ('cv_q_tot'      , Center() , Neumann() , N_sd),
          ('cv_θ_liq'      , Center() , Neumann() , N_sd),
