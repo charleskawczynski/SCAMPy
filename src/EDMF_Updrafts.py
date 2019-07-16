@@ -35,19 +35,19 @@ def update_updraftvars(grid, q, tmp, UpdVar):
             UpdVar.θ_liq.values[i][k] += tmp['prec_src_θ_liq', i][k]
     return
 
-def compute_update_combined_local_thetal(tmp, T, q_tot, q_liq, q_rai, θ_liq, i, k, max_supersaturation):
+def compute_update_combined_local_thetal(tmp, q_tot, q_rai, θ_liq, i, k, max_supersaturation):
     p_0_k = tmp['p_0_half'][k]
     q_tot_k = q_tot[i][k]
-    q_liq_k = q_liq[i][k]
-    T_k = T[i][k]
+    q_liq_k = tmp['q_liq', i][k]
+    T_k = tmp['T', i][k]
     tmp_qr = acnv_instant(q_liq_k, q_tot_k, max_supersaturation, T_k, p_0_k)
     s = -tmp_qr
     tmp['prec_src_q_tot', i][k] = s
     tmp['prec_src_θ_liq', i][k] = rain_source_to_thetal(p_0_k, T_k, q_tot_k, q_liq_k, 0.0, tmp_qr)
     q_tot[i][k] += s
-    q_liq[i][k] += s
     q_rai[i][k] -= s
     θ_liq[i][k] += tmp['prec_src_θ_liq', i][k]
+    tmp['q_liq', i][k] += s
     return
 
 def buoyancy(grid, q, tmp, UpdVar):
@@ -87,16 +87,14 @@ def compute_cloud_base_top_cover(grid, q, tmp, UpdVar):
 
 def assign_values_to_new(grid, q, tmp, UpdVar):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    # slice_all_c = grid.slice_all(Center())
     for i in i_uds:
         for k in grid.over_elems(Center()):
             UpdVar.W.values[i][k] = UpdVar.W.new[i][k]
             UpdVar.Area.values[i][k] = UpdVar.Area.new[i][k]
             UpdVar.q_tot.values[i][k] = UpdVar.q_tot.new[i][k]
-            tmp['q_liq', i][k] = UpdVar.q_liq.new[i][k]
             UpdVar.q_rai.values[i][k] = UpdVar.q_rai.new[i][k]
             UpdVar.θ_liq.values[i][k] = UpdVar.θ_liq.new[i][k]
-            tmp['T', i][k] = UpdVar.T.new[i][k]
-            tmp['B', i][k] = UpdVar.B.new[i][k]
     return
 
 def initialize(grid, tmp, q, UpdVar, updraft_fraction):
@@ -142,11 +140,7 @@ class UpdraftVariables:
         self.W     = UpdraftVariable(grid, nu, Node()  , Dirichlet())
         self.Area  = UpdraftVariable(grid, nu, Center(), Neumann())
         self.q_tot = UpdraftVariable(grid, nu, Center(), Neumann())
-        self.q_liq = UpdraftVariable(grid, nu, Center(), Neumann())
         self.q_rai = UpdraftVariable(grid, nu, Center(), Neumann())
-
-        self.T     = UpdraftVariable(grid, nu, Center(), Neumann())
-        self.B     = UpdraftVariable(grid, nu, Center(), Neumann())
         self.θ_liq = UpdraftVariable(grid, nu, Center(), Neumann())
 
         self.cloud_base  = np.zeros((nu,), dtype=np.double, order='c')

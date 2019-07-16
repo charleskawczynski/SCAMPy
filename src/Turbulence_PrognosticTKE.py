@@ -306,11 +306,8 @@ def assign_new_to_values(grid, q, tmp, UpdVar):
             UpdVar.W.new[i][k] = UpdVar.W.values[i][k]
             UpdVar.Area.new[i][k] = UpdVar.Area.values[i][k]
             UpdVar.q_tot.new[i][k] = UpdVar.q_tot.values[i][k]
-            UpdVar.q_liq.new[i][k] = tmp['q_liq', i][k]
             UpdVar.q_rai.new[i][k] = UpdVar.q_rai.values[i][k]
             UpdVar.θ_liq.new[i][k] = UpdVar.θ_liq.values[i][k]
-            UpdVar.T.new[i][k] = tmp['T', i][k]
-            UpdVar.B.new[i][k] = tmp['B', i][k]
     return
 
 class EDMF_PrognosticTKE:
@@ -702,10 +699,12 @@ class EDMF_PrognosticTKE:
                     T, q_liq = eos(tmp['p_0_half'][k],
                                 UpdVar.q_tot.new[i][k],
                                 UpdVar.θ_liq.new[i][k])
-                    UpdVar.T.new[i][k], UpdVar.q_liq.new[i][k] = T, q_liq
-                    compute_update_combined_local_thetal(tmp, UpdVar.T.new,
-                                                         UpdVar.q_tot.new, UpdVar.q_liq.new,
-                                                         UpdVar.q_rai.new, UpdVar.θ_liq.new,
+                    tmp['T', i][k] = T
+                    tmp['q_liq', i][k] = q_liq
+                    compute_update_combined_local_thetal(tmp,
+                                                         UpdVar.q_tot.new,
+                                                         UpdVar.q_rai.new,
+                                                         UpdVar.θ_liq.new,
                                                          i, k, self.max_supersaturation)
                 UpdVar.q_rai.new[i][k_1] = 0.0
 
