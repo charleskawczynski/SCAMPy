@@ -61,9 +61,14 @@ def satadjust(grid, q, tmp):
     return
 
 def predict(grid, tmp, q, q_tendencies, name, name_predict, Δt):
-    for k in grid.over_elems_real(Center()):
+    for k in grid.over_elems_real(q.data_location(name)):
         for i in q.over_sub_domains(name):
             tmp[name_predict, i][k] = q[name, i][k] + Δt*q_tendencies[name, i][k]
+
+def residual(grid, tmp, q_new, q, q_tendencies, name, name_res, Δt):
+    for k in grid.over_elems_real(q.data_location(name)):
+        for i in q.over_sub_domains(name):
+            tmp[name_res, i][k] = (q_new[name, i][k] - q[name, i][k])/Δt - q_tendencies[name, i][k]
 
 def compute_covariance_rain(grid, q, tmp, tmp_O2, TS, cv):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
@@ -75,7 +80,6 @@ def compute_covariance_rain(grid, q, tmp, tmp_O2, TS, cv):
         if cv=='cv_q_tot':       tmp_O2[cv]['rain_src'][k] = ρa_0 * 2. * tmp['cv_q_tot_rain_dt'][k]       * TS.dti
         if cv=='cv_θ_liq_q_tot': tmp_O2[cv]['rain_src'][k] = ρa_0 *      tmp['cv_θ_liq_q_tot_rain_dt'][k] * TS.dti
     return
-
 
 def compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, cv):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
@@ -175,7 +179,6 @@ def compute_mixing_length(grid, q, tmp, obukhov_length, zi, wstar):
             l2 = vkb * z_
         tmp['l_mix'][k] = np.fmax( 1.0/(1.0/np.fmax(l1,1e-10) + 1.0/l2), 1e-3)
     return
-
 
 def compute_eddy_diffusivities_tke(grid, q, tmp, Case, zi, wstar, prandtl_number, tke_ed_coeff, similarity_diffusivity):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
