@@ -287,10 +287,10 @@ def compute_grid_means(grid, q, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     ae = q['a', i_env]
     for k in grid.over_elems_real(Center()):
-        tmp['q_liq', i_gm][k] = ae[k] * tmp['q_liq', i_env][k] + sum([ q['a', i][k] * tmp['q_liq', i][k] for i in i_uds])
-        q['q_rai', i_gm][k]   = ae[k] * q['q_rai', i_env][k]   + sum([ q['a', i][k] * q['q_rai', i][k] for i in i_uds])
-        tmp['T', i_gm][k]     = ae[k] * tmp['T', i_env][k]     + sum([ q['a', i][k] * tmp['T', i][k] for i in i_uds])
-        tmp['B', i_gm][k]     = ae[k] * tmp['B', i_env][k]     + sum([ q['a', i][k] * tmp['B', i][k] for i in i_uds])
+        tmp['q_liq', i_gm][k] = ae[k] * tmp['q_liq', i_env][k] + np.sum([ q['a', i][k] * tmp['q_liq', i][k] for i in i_uds])
+        q['q_rai', i_gm][k]   = ae[k] * q['q_rai', i_env][k]   + np.sum([ q['a', i][k] * q['q_rai', i][k] for i in i_uds])
+        tmp['T', i_gm][k]     = ae[k] * tmp['T', i_env][k]     + np.sum([ q['a', i][k] * tmp['T', i][k] for i in i_uds])
+        tmp['B', i_gm][k]     = ae[k] * tmp['B', i_env][k]     + np.sum([ q['a', i][k] * tmp['B', i][k] for i in i_uds])
     return
 
 def compute_cv_gm(grid, q, ϕ, ψ, cv):
@@ -437,11 +437,11 @@ def diagnose_environment(grid, q):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for k in grid.over_elems(Center()):
         a_env = q['a', i_env][k]
-        q['q_tot', i_env][k] = (q['q_tot', i_gm][k] - sum([q['a', i][k]*q['q_tot', i][k] for i in i_uds]))/a_env
-        q['θ_liq', i_env][k] = (q['θ_liq', i_gm][k] - sum([q['a', i][k]*q['θ_liq', i][k] for i in i_uds]))/a_env
+        q['q_tot', i_env][k] = (q['q_tot', i_gm][k] - np.sum([q['a', i][k]*q['q_tot', i][k] for i in i_uds]))/a_env
+        q['θ_liq', i_env][k] = (q['θ_liq', i_gm][k] - np.sum([q['a', i][k]*q['θ_liq', i][k] for i in i_uds]))/a_env
         # Assuming q['w', i_gm] = 0!
         a_env = q['a', i_env].Mid(k)
-        q['w', i_env][k] = (0.0 - sum([q['a', i][k]*q['w', i][k] for i in i_uds]))/a_env
+        q['w', i_env][k] = (0.0 - np.sum([q['a', i][k]*q['w', i][k] for i in i_uds]))/a_env
     return
 
 def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
@@ -512,7 +512,7 @@ def assign_values_to_new(grid, q, q_new, tmp):
             q['q_rai', i][k] = q_new['q_rai', i][k]
             q['θ_liq', i][k] = q_new['θ_liq', i][k]
             q['a', i][k] = q_new['a', i][k]
-        q['a', i_env][k] = 1.0 - sum([q_new['a', i][k] for i in i_uds])
+        q['a', i_env][k] = 1.0 - np.sum([q_new['a', i][k] for i in i_uds])
     return
 
 def initialize_updrafts(grid, tmp, q, updraft_fraction):
@@ -534,7 +534,7 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
     for i in i_uds: q['q_rai', i].apply_bc(grid, 0.0)
     for i in i_uds: q['θ_liq', i].apply_bc(grid, 0.0)
     for k in grid.over_elems(Center()):
-        q['a', i_env][k] = 1.0 - sum([q['a', i][k] for i in i_uds])
+        q['a', i_env][k] = 1.0 - np.sum([q['a', i][k] for i in i_uds])
     return
 
 def compute_sources(grid, q, tmp, max_supersaturation):
@@ -578,12 +578,9 @@ def buoyancy(grid, q, tmp):
                 tmp['B', i][k] = tmp['B', i_env][k]
     # Subtract grid mean buoyancy
     for k in grid.over_elems_real(Center()):
-        tmp['B', i_gm][k] = q['a', i_env][k] * tmp['B', i_env][k]
-        for i in i_uds:
-            tmp['B', i_gm][k] += q['a', i][k] * tmp['B', i][k]
-        for i in i_uds:
+        tmp['B', i_gm][k] = np.sum([q['a', i][k] * tmp['B', i][k] for i in i_sd])
+        for i in i_sd:
             tmp['B', i][k] -= tmp['B', i_gm][k]
-        tmp['B', i_env][k] -= tmp['B', i_gm][k]
     return
 
 def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):
@@ -592,7 +589,7 @@ def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):
         tmp['mf_θ_liq_half'][k] = tmp['mf_θ_liq'].Mid(k)
         tmp['mf_q_tot_half'][k] = tmp['mf_q_tot'].Mid(k)
         tmp['massflux_half'][k] = tmp['mf_tmp', 0].Mid(k)
-        a_bulk = sum([q['a', i][k] for i in i_uds])
+        a_bulk = np.sum([q['a', i][k] for i in i_uds])
         if a_bulk > 0.0:
             for i in i_uds:
                 tmp['mean_entr_sc'][k] += q['a', i][k] * tmp['entr_sc', i][k]/a_bulk
