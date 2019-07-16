@@ -287,10 +287,10 @@ def compute_grid_means(grid, q, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     ae = q['a', i_env]
     for k in grid.over_elems_real(Center()):
-        tmp['q_liq', i_gm][k] = ae[k] * tmp['q_liq', i_env][k] + np.sum([ q['a', i][k] * tmp['q_liq', i][k] for i in i_uds])
-        q['q_rai', i_gm][k]   = ae[k] * q['q_rai', i_env][k]   + np.sum([ q['a', i][k] * q['q_rai', i][k] for i in i_uds])
-        tmp['T', i_gm][k]     = ae[k] * tmp['T', i_env][k]     + np.sum([ q['a', i][k] * tmp['T', i][k] for i in i_uds])
-        tmp['B', i_gm][k]     = ae[k] * tmp['B', i_env][k]     + np.sum([ q['a', i][k] * tmp['B', i][k] for i in i_uds])
+        tmp['q_liq', i_gm][k] = np.sum([ q['a', i][k] * tmp['q_liq', i][k] for i in i_sd])
+        q['q_rai', i_gm][k]   = np.sum([ q['a', i][k] * q['q_rai', i][k] for i in i_sd])
+        tmp['T', i_gm][k]     = np.sum([ q['a', i][k] * tmp['T', i][k] for i in i_sd])
+        tmp['B', i_gm][k]     = np.sum([ q['a', i][k] * tmp['B', i][k] for i in i_sd])
     return
 
 def compute_cv_gm(grid, q, ϕ, ψ, cv):
@@ -549,8 +549,8 @@ def compute_sources(grid, q, tmp, max_supersaturation):
             tmp['prec_src_θ_liq', i][k] = rain_source_to_thetal(p_0, T, q_tot, q_tot, 0.0, tmp_qr)
             tmp['prec_src_q_tot', i][k] = -tmp_qr
     for k in grid.over_elems(Center()):
-        tmp['prec_src_θ_liq', i_gm][k] = np.sum([tmp['prec_src_θ_liq', i][k] * q['a', i][k] for i in i_uds])
-        tmp['prec_src_q_tot', i_gm][k] = np.sum([tmp['prec_src_q_tot', i][k] * q['a', i][k] for i in i_uds])
+        tmp['prec_src_θ_liq', i_gm][k] = np.sum([tmp['prec_src_θ_liq', i][k] * q['a', i][k] for i in i_sd])
+        tmp['prec_src_q_tot', i_gm][k] = np.sum([tmp['prec_src_q_tot', i][k] * q['a', i][k] for i in i_sd])
     return
 
 def update_updraftvars(grid, q, tmp):
