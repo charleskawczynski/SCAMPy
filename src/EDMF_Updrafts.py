@@ -17,10 +17,12 @@ def compute_cloud_base_top_cover(grid, q, tmp, UpdVar):
         UpdVar[i].cloud_top = 0.0
         UpdVar[i].cloud_cover = 0.0
         for k in grid.over_elems_real(Center()):
-            if tmp['q_liq', i][k] > 1e-8 and q['a_tmp', i][k] > 1e-3:
-                UpdVar[i].cloud_base = np.fmin(UpdVar[i].cloud_base, grid.z_half[k])
-                UpdVar[i].cloud_top = np.fmax(UpdVar[i].cloud_top, grid.z_half[k])
-                UpdVar[i].cloud_cover = np.fmax(UpdVar[i].cloud_cover, q['a_tmp', i][k])
+            a_ik = q['a_tmp', i][k]
+            z_k = grid.z_half[k]
+            if tmp['q_liq', i][k] > 1e-8 and a_ik > 1e-3:
+                UpdVar[i].cloud_base  = np.fmin(UpdVar[i].cloud_base, z_k)
+                UpdVar[i].cloud_top   = np.fmax(UpdVar[i].cloud_top, z_k)
+                UpdVar[i].cloud_cover = np.fmax(UpdVar[i].cloud_cover, a_ik)
     return
 
 def export_data_updrafts(grid, UpdVar, q, tmp, Stats):

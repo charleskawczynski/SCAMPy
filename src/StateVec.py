@@ -83,6 +83,9 @@ class StateVec:
     def domain_idx(self):
         return self.i_gm, self.i_env, self.i_uds, self.i_sd
 
+    def data_location(self, name):
+        return self.fields[self.var_mapper[name][0]].loc
+
     def idx_name(self, i):
       i_gm, i_env, i_uds, i_sd = self.domain_idx()
       if i==i_gm: return 'i_gm'
