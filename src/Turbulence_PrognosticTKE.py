@@ -34,7 +34,7 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.z                = grid.z_half[k]
             input_st.ml               = tmp['l_mix'][k]
             input_st.b                = tmp['B', i][k]
-            input_st.w                = q['w_tmp', i].Mid(k)
+            input_st.w                = q['w', i].Mid(k)
             input_st.af               = q['a_tmp', i][k]
             input_st.tke              = q['tke', i_env][k]
             input_st.qt_env           = q['q_tot', i_env][k]
@@ -42,8 +42,8 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.θ_liq_env        = q['θ_liq', i_env][k]
             input_st.b_env            = tmp['B', i_env][k]
             input_st.w_env            = q['w', i_env].values[k]
-            input_st.θ_liq_up         = q['θ_liq_tmp', i][k]
-            input_st.qt_up            = q['q_tot_tmp', i][k]
+            input_st.θ_liq_up         = q['θ_liq', i][k]
+            input_st.qt_up            = q['q_tot', i][k]
             input_st.q_liq_up         = tmp['q_liq', i][k]
             input_st.env_Hvar         = q['cv_θ_liq', i_env][k]
             input_st.env_QTvar        = q['cv_q_tot', i_env][k]
@@ -55,7 +55,7 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.L                = 20000.0 # need to define the scale of the GCM grid resolution
             input_st.n_up             = n_updrafts
 
-            w_cut = q['w_tmp', i].DualCut(k)
+            w_cut = q['w', i].DualCut(k)
             w_env_cut = q['w', i_env].DualCut(k)
             a_cut = q['a_tmp', i].Cut(k)
             a_env_cut = (1.0-q['a_tmp', i].Cut(k))
@@ -157,28 +157,28 @@ class EDMF_PrognosticTKE:
         self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
         diagnose_environment(grid, q)
-        compute_cv_gm(grid, q, 'w_tmp'    , 'w_tmp'    , 'tke')
-        compute_cv_gm(grid, q, 'θ_liq_tmp', 'θ_liq_tmp', 'cv_θ_liq')
-        compute_cv_gm(grid, q, 'q_tot_tmp', 'q_tot_tmp', 'cv_q_tot')
-        compute_cv_gm(grid, q, 'θ_liq_tmp', 'q_tot_tmp', 'cv_θ_liq_q_tot')
+        compute_cv_gm(grid, q, 'w'    , 'w'    , 'tke')
+        compute_cv_gm(grid, q, 'θ_liq', 'θ_liq', 'cv_θ_liq')
+        compute_cv_gm(grid, q, 'q_tot', 'q_tot', 'cv_q_tot')
+        compute_cv_gm(grid, q, 'θ_liq', 'q_tot', 'cv_θ_liq_q_tot')
         update_GMV_MF(grid, q, TS, tmp)
         compute_eddy_diffusivities_tke(grid, q, tmp, Case, self.zi, self.wstar, self.prandtl_number, self.tke_ed_coeff, self.similarity_diffusivity)
 
         we = q['w', i_env]
         compute_tke_buoy(grid, q, tmp, tmp_O2, 'tke')
-        compute_covariance_entr(grid, q, tmp, tmp_O2, 'w_tmp'    , 'w_tmp'    , 'tke')
-        compute_covariance_shear(grid, q, tmp, tmp_O2, 'w_tmp'    , 'w_tmp'    , 'tke')
-        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w_tmp'    , 'w_tmp'    , 'tke')
+        compute_covariance_entr(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke')
+        compute_covariance_shear(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke')
+        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke')
         compute_tke_pressure(grid, q, tmp, tmp_O2, self.pressure_buoy_coeff, self.pressure_drag_coeff, self.pressure_plume_spacing, 'tke')
-        compute_covariance_entr(grid, q, tmp, tmp_O2, 'θ_liq_tmp', 'θ_liq_tmp', 'cv_θ_liq')
-        compute_covariance_entr(grid, q, tmp, tmp_O2, 'q_tot_tmp', 'q_tot_tmp', 'cv_q_tot')
-        compute_covariance_entr(grid, q, tmp, tmp_O2, 'θ_liq_tmp', 'q_tot_tmp', 'cv_θ_liq_q_tot')
-        compute_covariance_shear(grid, q, tmp, tmp_O2, 'θ_liq_tmp', 'θ_liq_tmp', 'cv_θ_liq')
-        compute_covariance_shear(grid, q, tmp, tmp_O2, 'q_tot_tmp', 'q_tot_tmp', 'cv_q_tot')
-        compute_covariance_shear(grid, q, tmp, tmp_O2, 'θ_liq_tmp', 'q_tot_tmp', 'cv_θ_liq_q_tot')
-        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'θ_liq_tmp', 'θ_liq_tmp', 'cv_θ_liq')
-        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'q_tot_tmp', 'q_tot_tmp', 'cv_q_tot')
-        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'θ_liq_tmp', 'q_tot_tmp', 'cv_θ_liq_q_tot')
+        compute_covariance_entr(grid, q, tmp, tmp_O2, 'θ_liq', 'θ_liq', 'cv_θ_liq')
+        compute_covariance_entr(grid, q, tmp, tmp_O2, 'q_tot', 'q_tot', 'cv_q_tot')
+        compute_covariance_entr(grid, q, tmp, tmp_O2, 'θ_liq', 'q_tot', 'cv_θ_liq_q_tot')
+        compute_covariance_shear(grid, q, tmp, tmp_O2, 'θ_liq', 'θ_liq', 'cv_θ_liq')
+        compute_covariance_shear(grid, q, tmp, tmp_O2, 'q_tot', 'q_tot', 'cv_q_tot')
+        compute_covariance_shear(grid, q, tmp, tmp_O2, 'θ_liq', 'q_tot', 'cv_θ_liq_q_tot')
+        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'θ_liq', 'θ_liq', 'cv_θ_liq')
+        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'q_tot', 'q_tot', 'cv_q_tot')
+        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'θ_liq', 'q_tot', 'cv_θ_liq_q_tot')
         compute_covariance_rain(grid, q, tmp, tmp_O2, TS, 'tke')
         compute_covariance_rain(grid, q, tmp, tmp_O2, TS, 'cv_θ_liq')
         compute_covariance_rain(grid, q, tmp, tmp_O2, TS, 'cv_q_tot')
@@ -186,10 +186,10 @@ class EDMF_PrognosticTKE:
 
         reset_surface_covariance(grid, q, tmp, Case, self.wstar)
 
-        compute_cv_env(grid, q, tmp, tmp_O2, 'w_tmp'    , 'w_tmp'    , 'tke')
-        compute_cv_env(grid, q, tmp, tmp_O2, 'θ_liq_tmp', 'θ_liq_tmp', 'cv_θ_liq')
-        compute_cv_env(grid, q, tmp, tmp_O2, 'q_tot_tmp', 'q_tot_tmp', 'cv_q_tot')
-        compute_cv_env(grid, q, tmp, tmp_O2, 'θ_liq_tmp', 'q_tot_tmp', 'cv_θ_liq_q_tot')
+        compute_cv_env(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke')
+        compute_cv_env(grid, q, tmp, tmp_O2, 'θ_liq', 'θ_liq', 'cv_θ_liq')
+        compute_cv_env(grid, q, tmp, tmp_O2, 'q_tot', 'q_tot', 'cv_q_tot')
+        compute_cv_env(grid, q, tmp, tmp_O2, 'θ_liq', 'q_tot', 'cv_θ_liq_q_tot')
 
         compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, 'tke')
         compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, 'cv_θ_liq')
@@ -231,7 +231,7 @@ class EDMF_PrognosticTKE:
     def compute_prognostic_updrafts(self, grid, q_new, q, q_tendencies, tmp, UpdVar, Case, TS):
         time_elapsed = 0.0
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        u_max = np.max([q['w_tmp', i][k] for i in i_uds for k in grid.over_elems(Node())])
+        u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Node())])
         self.dt_upd = np.minimum(TS.dt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
         while time_elapsed < TS.dt:
             compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
@@ -242,15 +242,15 @@ class EDMF_PrognosticTKE:
 
             self.solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS)
             self.solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS)
-            for i in i_uds: q['θ_liq_tmp', i].apply_bc(grid, 0.0)
-            for i in i_uds: q['q_tot_tmp', i].apply_bc(grid, 0.0)
+            for i in i_uds: q['θ_liq', i].apply_bc(grid, 0.0)
+            for i in i_uds: q['q_tot', i].apply_bc(grid, 0.0)
             for i in i_uds: q['q_rai', i].apply_bc(grid, 0.0)
             q['w', i_env].apply_bc(grid, 0.0)
             q['θ_liq', i_env].apply_bc(grid, 0.0)
             q['q_tot', i_env].apply_bc(grid, 0.0)
             assign_values_to_new(grid, q, q_new, tmp)
             time_elapsed += self.dt_upd
-            u_max = np.max([q['w_tmp', i][k] for i in i_uds for k in grid.over_elems(Node())])
+            u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Node())])
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * grid.dz/np.fmax(u_max,1e-10))
             diagnose_environment(grid, q)
         eos_update_SA_mean(grid, q, True, tmp, self.max_supersaturation)
@@ -272,9 +272,9 @@ class EDMF_PrognosticTKE:
 
                 a_k = q['a_tmp', i][k]
                 α_0_kp = tmp['α_0_half'][k]
-                w_k = q['w_tmp', i].Mid(k)
+                w_k = q['w', i].Mid(k)
 
-                w_cut = q['w_tmp', i].DualCut(k)
+                w_cut = q['w', i].DualCut(k)
                 a_cut = q['a_tmp', i].Cut(k)
                 ρ_cut = tmp['ρ_0_half'].Cut(k)
                 tendencies = 0.0
@@ -323,7 +323,7 @@ class EDMF_PrognosticTKE:
                 if a_new_k >= self.minimum_area:
 
                     ρ_k = tmp['ρ_0'][k]
-                    w_i = q['w_tmp', i][k]
+                    w_i = q['w', i][k]
                     w_env = q['w', i_env].values[k]
                     a_k = q['a_tmp', i].Mid(k)
                     entr_w = tmp['entr_sc', i].Mid(k)
@@ -332,7 +332,7 @@ class EDMF_PrognosticTKE:
 
                     a_cut = q['a_tmp', i].DualCut(k)
                     ρ_cut = tmp['ρ_0'].Cut(k)
-                    w_cut = q['w_tmp', i].Cut(k)
+                    w_cut = q['w', i].Cut(k)
 
                     ρa_k = ρ_k * a_k
                     ρa_new_k = ρ_k * a_new_k
@@ -382,11 +382,11 @@ class EDMF_PrognosticTKE:
                     a_k = q['a_tmp', i][k]
                     a_cut = q['a_tmp', i].Cut(k)
                     a_k_new = q_new['a', i][k]
-                    θ_liq_cut = q['θ_liq_tmp', i].Cut(k)
-                    q_tot_cut = q['q_tot_tmp', i].Cut(k)
+                    θ_liq_cut = q['θ_liq', i].Cut(k)
+                    q_tot_cut = q['q_tot', i].Cut(k)
                     ρ_k = tmp['ρ_0_half'][k]
                     ρ_cut = tmp['ρ_0_half'].Cut(k)
-                    w_cut = q['w_tmp', i].DualCut(k)
+                    w_cut = q['w', i].DualCut(k)
                     ε_sc = tmp['entr_sc', i][k]
                     δ_sc = tmp['detr_sc', i][k]
                     ρa_k = ρ_k*a_k
