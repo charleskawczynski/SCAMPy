@@ -156,7 +156,7 @@ class Simulation1d:
         self.Case.initialize_profiles(self.grid, self.Ref, self.tmp, self.q)
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.tmp)
-        initialize(self.grid, self.tmp, self.q, self.UpdVar, self.Turb.updraft_fraction)
+        initialize_updrafts(self.grid, self.tmp, self.q, self.Turb.updraft_fraction)
         self.initialize_io()
         self.export_data()
         return
@@ -167,7 +167,7 @@ class Simulation1d:
         self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
-        self.UpdVar, self.Case, self.TS, self.tri_diag)
+        self.Case, self.TS, self.tri_diag)
         for k in self.grid.over_elems(Center()):
             self.q['tke', i_env][k]            = self.q['tke', i_gm][k]
             self.q['cv_θ_liq', i_env][k]       = self.q['cv_θ_liq', i_gm][k]
