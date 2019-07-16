@@ -51,7 +51,6 @@ class Simulation1d:
          ('q_tot'         , Center() , Neumann() , N_sd),
          ('q_rai'         , Center() , Neumann() , N_sd),
          ('θ_liq'         , Center() , Neumann() , N_sd),
-         ('a_tmp'         , Center() , Neumann() , N_sd),
          ('tke'           , Center() , Neumann() , N_sd),
          ('cv_q_tot'      , Center() , Neumann() , N_sd),
          ('cv_θ_liq'      , Center() , Neumann() , N_sd),
@@ -206,7 +205,7 @@ class Simulation1d:
         sol.e_cv_θ_liq_q_tot = self.q['cv_θ_liq_q_tot', i_env]
 
         sol.ud_W     = self.q['w', i_uds[0]]
-        sol.ud_Area  = self.q['a_tmp', i_uds[0]]
+        sol.ud_Area  = self.q['a', i_uds[0]]
         sol.ud_q_tot = self.q['q_tot', i_uds[0]]
         sol.ud_q_rai = self.q['q_rai', i_uds[0]]
         sol.ud_q_liq = self.tmp['q_liq', i_uds[0]]

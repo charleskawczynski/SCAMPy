@@ -17,7 +17,7 @@ def compute_cloud_base_top_cover(grid, q, tmp, UpdVar):
         UpdVar[i].cloud_top = 0.0
         UpdVar[i].cloud_cover = 0.0
         for k in grid.over_elems_real(Center()):
-            a_ik = q['a_tmp', i][k]
+            a_ik = q['a', i][k]
             z_k = grid.z_half[k]
             if tmp['q_liq', i][k] > 1e-8 and a_ik > 1e-3:
                 UpdVar[i].cloud_base  = np.fmin(UpdVar[i].cloud_base, z_k)

@@ -287,10 +287,10 @@ def compute_grid_means(grid, q, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     ae = q['a', i_env]
     for k in grid.over_elems_real(Center()):
-        tmp['q_liq', i_gm][k] = ae[k] * tmp['q_liq', i_env][k] + sum([ q['a_tmp', i][k] * tmp['q_liq', i][k] for i in i_uds])
-        q['q_rai', i_gm][k]   = ae[k] * q['q_rai', i_env][k]   + sum([ q['a_tmp', i][k] * q['q_rai', i][k] for i in i_uds])
-        tmp['T', i_gm][k]     = ae[k] * tmp['T', i_env][k]     + sum([ q['a_tmp', i][k] * tmp['T', i][k] for i in i_uds])
-        tmp['B', i_gm][k]     = ae[k] * tmp['B', i_env][k]     + sum([ q['a_tmp', i][k] * tmp['B', i][k] for i in i_uds])
+        tmp['q_liq', i_gm][k] = ae[k] * tmp['q_liq', i_env][k] + sum([ q['a', i][k] * tmp['q_liq', i][k] for i in i_uds])
+        q['q_rai', i_gm][k]   = ae[k] * q['q_rai', i_env][k]   + sum([ q['a', i][k] * q['q_rai', i][k] for i in i_uds])
+        tmp['T', i_gm][k]     = ae[k] * tmp['T', i_env][k]     + sum([ q['a', i][k] * tmp['T', i][k] for i in i_uds])
+        tmp['B', i_gm][k]     = ae[k] * tmp['B', i_env][k]     + sum([ q['a', i][k] * tmp['B', i][k] for i in i_uds])
     return
 
 def compute_cv_gm(grid, q, ϕ, ψ, cv):
@@ -314,7 +314,7 @@ def compute_cv_gm(grid, q, ϕ, ψ, cv):
             else:
                 Δϕ = q[ϕ, i][k]-q[ϕ, i_gm][k]
                 Δψ = q[ψ, i][k]-q[ψ, i_gm][k]
-            q[cv, i_gm][k] += tke_factor * q['a_tmp', i][k] * Δϕ * Δψ
+            q[cv, i_gm][k] += tke_factor * q['a', i][k] * Δϕ * Δψ
     return
 
 def compute_covariance_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
@@ -335,7 +335,7 @@ def compute_covariance_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
                 ϕ_e = q[ϕ, i_env][k]
                 ψ_e = q[ψ, i_env][k]
             w_u = q['w', i].Mid(k)
-            tmp_O2[cv]['entr_gain'][k] += tke_factor*q['a_tmp', i][k] * np.fabs(w_u) * tmp['detr_sc', i][k] * \
+            tmp_O2[cv]['entr_gain'][k] += tke_factor*q['a', i][k] * np.fabs(w_u) * tmp['detr_sc', i][k] * \
                                          (ϕ_u - ϕ_e) * (ψ_u - ψ_e)
         tmp_O2[cv]['entr_gain'][k] *= tmp['ρ_0_half'][k]
     return
@@ -373,7 +373,7 @@ def compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
             else:
                 Δϕ = q[ϕ, i][k]-q[ϕ, i_env][k]
                 Δψ = q[ψ, i][k]-q[ψ, i_env][k]
-            tmp_O2[cv]['interdomain'][k] += tke_factor*q['a_tmp', i][k] * (1.0-q['a_tmp', i][k]) * Δϕ * Δψ
+            tmp_O2[cv]['interdomain'][k] += tke_factor*q['a', i][k] * (1.0-q['a', i][k]) * Δϕ * Δψ
     return
 
 def compute_covariance_detr(grid, q, tmp, tmp_O2, cv):
@@ -384,7 +384,7 @@ def compute_covariance_detr(grid, q, tmp, tmp_O2, cv):
         tmp_O2[cv]['detr_loss'][k] = 0.0
         for i in i_uds:
             w_u = q['w', i].Mid(k)
-            tmp_O2[cv]['detr_loss'][k] += q['a_tmp', i][k] * np.fabs(w_u) * tmp['entr_sc', i][k]
+            tmp_O2[cv]['detr_loss'][k] += q['a', i][k] * np.fabs(w_u) * tmp['entr_sc', i][k]
         tmp_O2[cv]['detr_loss'][k] *= tmp['ρ_0_half'][k] * q[cv, i_env][k]
     return
 
@@ -395,7 +395,7 @@ def compute_tke_pressure(grid, q, tmp, tmp_O2, pressure_buoy_coeff, pressure_dra
         for i in i_uds:
             wu_half = q['w', i].Mid(k)
             we_half = q['w', i_env].Mid(k)
-            a_i = q['a_tmp', i][k]
+            a_i = q['a', i][k]
             ρ_0_k = tmp['ρ_0_half'][k]
             press_buoy = (-1.0 * ρ_0_k * a_i * tmp['B', i][k] * pressure_buoy_coeff)
             press_drag_coeff = -1.0 * ρ_0_k * np.sqrt(a_i) * pressure_drag_coeff/pressure_plume_spacing
@@ -427,7 +427,7 @@ def compute_cv_env(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
                     Δϕ = q[ϕ, i][k] - q[ϕ, i_gm][k]
                     Δψ = q[ψ, i][k] - q[ψ, i_gm][k]
 
-                q[cv, i_env][k] -= tke_factor * q['a_tmp', i][k] * Δϕ * Δψ
+                q[cv, i_env][k] -= tke_factor * q['a', i][k] * Δϕ * Δψ
             q[cv, i_env][k] = q[cv, i_env][k]/ae[k]
         else:
             q[cv, i_env][k] = 0.0
@@ -482,7 +482,7 @@ def update_GMV_MF(grid, q, TS, tmp):
 
     for i in i_uds:
         tmp['mf_tmp', i][slice_all_c] = [((q['w', i][k] - q['w', i_env].values[k]) * tmp['ρ_0'][k]
-                       * q['a_tmp', i].Mid(k)) for k in grid.over_elems_real(Center())]
+                       * q['a', i].Mid(k)) for k in grid.over_elems_real(Center())]
 
     for k in grid.over_elems_real(Center()):
         tmp['mf_θ_liq'][k] = np.sum([tmp['mf_tmp', i][k] * (q['θ_liq', i].Mid(k) - q['θ_liq', i_env].Mid(k)) for i in i_uds])
@@ -498,10 +498,21 @@ def assign_new_to_values(grid, q_new, q, tmp):
     slice_all_n = grid.slice_all(Node())
     for i in i_uds:
         q_new['w', i][slice_all_n] = [q['w', i][k] for k in grid.over_elems(Node())]
-        q_new['a', i][slice_all_c] = [q['a_tmp', i][k] for k in grid.over_elems(Center())]
         q_new['q_tot', i][slice_all_c] = [q['q_tot', i][k] for k in grid.over_elems(Center())]
         q_new['q_rai', i][slice_all_c] = [q['q_rai', i][k] for k in grid.over_elems(Center())]
         q_new['θ_liq', i][slice_all_c] = [q['θ_liq', i][k] for k in grid.over_elems(Center())]
+    return
+
+def assign_values_to_new(grid, q, q_new, tmp):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    for k in grid.over_elems(Center()):
+        for i in i_uds:
+            q['w', i][k] = q_new['w', i][k]
+            q['q_tot', i][k] = q_new['q_tot', i][k]
+            q['q_rai', i][k] = q_new['q_rai', i][k]
+            q['θ_liq', i][k] = q_new['θ_liq', i][k]
+            q['a', i][k] = q_new['a', i][k]
+        q['a', i_env][k] = 1.0 - sum([q_new['a', i][k] for i in i_uds])
     return
 
 def initialize_updrafts(grid, tmp, q, updraft_fraction):
@@ -511,21 +522,19 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
     for i in i_uds:
         for k in grid.over_elems(Center()):
             q['w', i][k] = 0.0
-            q['a_tmp', i][k] = 0.0
+            q['a', i][k] = 0.0
             q['q_tot', i][k] = q['q_tot', i_gm][k]
             tmp['q_liq', i][k] = tmp['q_liq', i_gm][k]
             q['q_rai', i][k] = q['q_rai', i_gm][k]
             q['θ_liq', i][k] = q['θ_liq', i_gm][k]
             tmp['T', i][k] = tmp['T', i_gm][k]
             tmp['B', i][k] = 0.0
-        q['a_tmp', i][k_1] = updraft_fraction/n_updrafts
+        q['a', i][k_1] = updraft_fraction/n_updrafts
     for i in i_uds: q['q_tot', i].apply_bc(grid, 0.0)
     for i in i_uds: q['q_rai', i].apply_bc(grid, 0.0)
     for i in i_uds: q['θ_liq', i].apply_bc(grid, 0.0)
     for k in grid.over_elems(Center()):
-        for i in i_uds:
-            q['a', i][k] = q['a_tmp', i][k]
-        q['a', i_env][k] = 1.0 - sum([q['a_tmp', i][k] for i in i_uds])
+        q['a', i_env][k] = 1.0 - sum([q['a', i][k] for i in i_uds])
     return
 
 def compute_sources(grid, q, tmp, max_supersaturation):
@@ -540,8 +549,8 @@ def compute_sources(grid, q, tmp, max_supersaturation):
             tmp['prec_src_θ_liq', i][k] = rain_source_to_thetal(p_0, T, q_tot, q_tot, 0.0, tmp_qr)
             tmp['prec_src_q_tot', i][k] = -tmp_qr
     for k in grid.over_elems(Center()):
-        tmp['prec_src_θ_liq', i_gm][k] = np.sum([tmp['prec_src_θ_liq', i][k] * q['a_tmp', i][k] for i in i_uds])
-        tmp['prec_src_q_tot', i_gm][k] = np.sum([tmp['prec_src_q_tot', i][k] * q['a_tmp', i][k] for i in i_uds])
+        tmp['prec_src_θ_liq', i_gm][k] = np.sum([tmp['prec_src_θ_liq', i][k] * q['a', i][k] for i in i_uds])
+        tmp['prec_src_q_tot', i_gm][k] = np.sum([tmp['prec_src_q_tot', i][k] * q['a', i][k] for i in i_uds])
     return
 
 def update_updraftvars(grid, q, tmp):
@@ -559,7 +568,7 @@ def buoyancy(grid, q, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for i in i_uds:
         for k in grid.over_elems_real(Center()):
-            if q['a_tmp', i][k] > 1e-3:
+            if q['a', i][k] > 1e-3:
                 q_tot = q['q_tot', i][k]
                 q_vap = q_tot - tmp['q_liq', i][k]
                 T = tmp['T', i][k]
@@ -571,21 +580,10 @@ def buoyancy(grid, q, tmp):
     for k in grid.over_elems_real(Center()):
         tmp['B', i_gm][k] = q['a', i_env][k] * tmp['B', i_env][k]
         for i in i_uds:
-            tmp['B', i_gm][k] += q['a_tmp', i][k] * tmp['B', i][k]
+            tmp['B', i_gm][k] += q['a', i][k] * tmp['B', i][k]
         for i in i_uds:
             tmp['B', i][k] -= tmp['B', i_gm][k]
         tmp['B', i_env][k] -= tmp['B', i_gm][k]
-    return
-
-def assign_values_to_new(grid, q, q_new, tmp):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    for i in i_uds:
-        for k in grid.over_elems(Center()):
-            q['w', i][k] = q_new['w', i][k]
-            q['a_tmp', i][k] = q_new['a', i][k]
-            q['q_tot', i][k] = q_new['q_tot', i][k]
-            q['q_rai', i][k] = q_new['q_rai', i][k]
-            q['θ_liq', i][k] = q_new['θ_liq', i][k]
     return
 
 def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):

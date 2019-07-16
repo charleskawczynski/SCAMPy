@@ -35,7 +35,7 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.ml               = tmp['l_mix'][k]
             input_st.b                = tmp['B', i][k]
             input_st.w                = q['w', i].Mid(k)
-            input_st.af               = q['a_tmp', i][k]
+            input_st.af               = q['a', i][k]
             input_st.tke              = q['tke', i_env][k]
             input_st.qt_env           = q['q_tot', i_env][k]
             input_st.q_liq_env        = tmp['q_liq', i_env][k]
@@ -57,8 +57,8 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
 
             w_cut = q['w', i].DualCut(k)
             w_env_cut = q['w', i_env].DualCut(k)
-            a_cut = q['a_tmp', i].Cut(k)
-            a_env_cut = (1.0-q['a_tmp', i].Cut(k))
+            a_cut = q['a', i].Cut(k)
+            a_env_cut = (1.0-q['a', i].Cut(k))
             aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
 
             input_st.dwdz = grad(aw_cut, grid)
@@ -242,13 +242,13 @@ class EDMF_PrognosticTKE:
 
             self.solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS)
             self.solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS)
+            assign_values_to_new(grid, q, q_new, tmp)
             for i in i_uds: q['θ_liq', i].apply_bc(grid, 0.0)
             for i in i_uds: q['q_tot', i].apply_bc(grid, 0.0)
             for i in i_uds: q['q_rai', i].apply_bc(grid, 0.0)
             q['w', i_env].apply_bc(grid, 0.0)
             q['θ_liq', i_env].apply_bc(grid, 0.0)
             q['q_tot', i_env].apply_bc(grid, 0.0)
-            assign_values_to_new(grid, q, q_new, tmp)
             time_elapsed += self.dt_upd
             u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Node())])
             self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * grid.dz/np.fmax(u_max,1e-10))
@@ -270,12 +270,12 @@ class EDMF_PrognosticTKE:
             au_lim = UpdVar[i].area_surface_bc * self.max_area_factor
             for k in grid.over_elems_real(Center()):
 
-                a_k = q['a_tmp', i][k]
+                a_k = q['a', i][k]
                 α_0_kp = tmp['α_0_half'][k]
                 w_k = q['w', i].Mid(k)
 
                 w_cut = q['w', i].DualCut(k)
-                a_cut = q['a_tmp', i].Cut(k)
+                a_cut = q['a', i].Cut(k)
                 ρ_cut = tmp['ρ_0_half'].Cut(k)
                 tendencies = 0.0
 
@@ -309,12 +309,6 @@ class EDMF_PrognosticTKE:
             tmp['detr_sc', i][k_1] = 0.0
             q_new['a', i][k_1] = UpdVar[i].area_surface_bc
 
-
-        for k in grid.over_elems(Center()):
-            for i in i_uds:
-                q['a', i][k] = q_new['a', i][k]
-            q['a', i_env][k] = 1.0 - sum([q_new['a', i][k] for i in i_uds])
-
         # Solve for updraft velocity
         for i in i_uds:
             q_new['a', i][kb_1] = UpdVar[i].w_surface_bc
@@ -325,12 +319,12 @@ class EDMF_PrognosticTKE:
                     ρ_k = tmp['ρ_0'][k]
                     w_i = q['w', i][k]
                     w_env = q['w', i_env].values[k]
-                    a_k = q['a_tmp', i].Mid(k)
+                    a_k = q['a', i].Mid(k)
                     entr_w = tmp['entr_sc', i].Mid(k)
                     detr_w = tmp['detr_sc', i].Mid(k)
                     B_k = tmp['B', i].Mid(k)
 
-                    a_cut = q['a_tmp', i].DualCut(k)
+                    a_cut = q['a', i].DualCut(k)
                     ρ_cut = tmp['ρ_0'].Cut(k)
                     w_cut = q['w', i].Cut(k)
 
@@ -379,8 +373,8 @@ class EDMF_PrognosticTKE:
                 q_tot_env = q['q_tot', i_env][k]
 
                 if q_new['a', i][k] >= self.minimum_area:
-                    a_k = q['a_tmp', i][k]
-                    a_cut = q['a_tmp', i].Cut(k)
+                    a_k = q['a', i][k]
+                    a_cut = q['a', i].Cut(k)
                     a_k_new = q_new['a', i][k]
                     θ_liq_cut = q['θ_liq', i].Cut(k)
                     q_tot_cut = q['q_tot', i].Cut(k)
