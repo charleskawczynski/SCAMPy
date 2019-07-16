@@ -35,21 +35,6 @@ def update_updraftvars(grid, q, tmp, UpdVar):
             UpdVar.θ_liq.values[i][k] += tmp['prec_src_θ_liq', i][k]
     return
 
-def compute_update_combined_local_thetal(tmp, q_tot, q_rai, θ_liq, i, k, max_supersaturation):
-    p_0_k = tmp['p_0_half'][k]
-    q_tot_k = q_tot[i][k]
-    q_liq_k = tmp['q_liq', i][k]
-    T_k = tmp['T', i][k]
-    tmp_qr = acnv_instant(q_liq_k, q_tot_k, max_supersaturation, T_k, p_0_k)
-    s = -tmp_qr
-    tmp['prec_src_q_tot', i][k] = s
-    tmp['prec_src_θ_liq', i][k] = rain_source_to_thetal(p_0_k, T_k, q_tot_k, q_liq_k, 0.0, tmp_qr)
-    q_tot[i][k] += s
-    q_rai[i][k] -= s
-    θ_liq[i][k] += tmp['prec_src_θ_liq', i][k]
-    tmp['q_liq', i][k] += s
-    return
-
 def buoyancy(grid, q, tmp, UpdVar):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for i in i_uds:

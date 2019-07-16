@@ -138,19 +138,6 @@ def compute_tke_pressure(grid, q, tmp, tmp_O2, UpdVar, pressure_buoy_coeff, pres
             tmp_O2[cv]['press'][k] += (we_half - wu_half) * (press_buoy + press_drag)
     return
 
-def cleanup_covariance(grid, q, UpdVar):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    tmp_eps = 1e-18
-    for k in grid.over_elems_real(Center()):
-        if q['tke', i_gm][k] < tmp_eps:                        q['tke', i_gm][k]               = 0.0
-        if q['cv_θ_liq', i_gm][k] < tmp_eps:                   q['cv_θ_liq', i_gm][k]          = 0.0
-        if q['cv_q_tot', i_gm][k] < tmp_eps:                   q['cv_q_tot', i_gm][k]          = 0.0
-        if np.fabs(q['cv_θ_liq_q_tot', i_gm][k]) < tmp_eps:    q['cv_θ_liq_q_tot', i_gm][k]    = 0.0
-        if q['cv_θ_liq', i_env][k] < tmp_eps:                q['cv_θ_liq', i_env][k]       = 0.0
-        if q['tke', i_env][k] < tmp_eps:                     q['tke', i_env][k]            = 0.0
-        if q['cv_q_tot', i_env][k] < tmp_eps:                q['cv_q_tot', i_env][k]       = 0.0
-        if np.fabs(q['cv_θ_liq_q_tot', i_env][k]) < tmp_eps: q['cv_θ_liq_q_tot', i_env][k] = 0.0
-
 def compute_cv_env(grid, q, tmp, tmp_O2, UpdVar, ϕ_u, ψ_u, ϕ_e, ψ_e, covar_e, ϕ_gm, ψ_gm, gmv_covar, cv):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     is_tke = cv=='tke'
@@ -301,13 +288,14 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
 
 def assign_new_to_values(grid, q, tmp, UpdVar):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    slice_all_c = grid.slice_all(Center())
+    slice_all_n = grid.slice_all(Node())
     for i in i_uds:
-        for k in grid.over_elems(Center()):
-            UpdVar.W.new[i][k] = UpdVar.W.values[i][k]
-            UpdVar.Area.new[i][k] = UpdVar.Area.values[i][k]
-            UpdVar.q_tot.new[i][k] = UpdVar.q_tot.values[i][k]
-            UpdVar.q_rai.new[i][k] = UpdVar.q_rai.values[i][k]
-            UpdVar.θ_liq.new[i][k] = UpdVar.θ_liq.values[i][k]
+        UpdVar.W.new[i][slice_all_n]     = [UpdVar.W.values[i][k] for k in grid.over_elems(Node())]
+        UpdVar.Area.new[i][slice_all_c]  = [UpdVar.Area.values[i][k] for k in grid.over_elems(Center())]
+        UpdVar.q_tot.new[i][slice_all_c] = [UpdVar.q_tot.values[i][k] for k in grid.over_elems(Center())]
+        UpdVar.q_rai.new[i][slice_all_c] = [UpdVar.q_rai.values[i][k] for k in grid.over_elems(Center())]
+        UpdVar.θ_liq.new[i][slice_all_c] = [UpdVar.θ_liq.values[i][k] for k in grid.over_elems(Center())]
     return
 
 class EDMF_PrognosticTKE:
@@ -483,12 +471,7 @@ class EDMF_PrognosticTKE:
 
         compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag)
 
-        for k in grid.over_elems_real(Center()):
-            q['tke', i_env][k] = np.fmax(q['tke', i_env][k], 0.0)
-            q['cv_θ_liq', i_env][k] = np.fmax(q['cv_θ_liq', i_env][k], 0.0)
-            q['cv_q_tot', i_env][k] = np.fmax(q['cv_q_tot', i_env][k], 0.0)
-            q['cv_θ_liq_q_tot', i_env][k] = np.fmax(q['cv_θ_liq_q_tot', i_env][k], np.sqrt(q['cv_θ_liq', i_env][k]*q['cv_q_tot', i_env][k]))
-        cleanup_covariance(grid, q, UpdVar)
+        cleanup_covariance(grid, q)
         self.set_updraft_surface_bc(grid, q, Case, tmp)
 
     def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
@@ -696,17 +679,20 @@ class EDMF_PrognosticTKE:
         if self.use_local_micro:
             for i in i_uds:
                 for k in grid.over_elems_real(Center()):
-                    T, q_liq = eos(tmp['p_0_half'][k],
-                                UpdVar.q_tot.new[i][k],
-                                UpdVar.θ_liq.new[i][k])
+                    q_tot = UpdVar.q_tot.new[i][k]
+                    θ_liq = UpdVar.θ_liq.new[i][k]
+                    p_0 = tmp['p_0_half'][k]
+                    T, q_liq = eos(p_0, q_tot, θ_liq)
                     tmp['T', i][k] = T
-                    tmp['q_liq', i][k] = q_liq
-                    compute_update_combined_local_thetal(tmp,
-                                                         UpdVar.q_tot.new,
-                                                         UpdVar.q_rai.new,
-                                                         UpdVar.θ_liq.new,
-                                                         i, k, self.max_supersaturation)
+                    tmp_qr = acnv_instant(q_liq, q_tot, self.max_supersaturation, T, p_0)
+                    s = -tmp_qr
+                    tmp['prec_src_q_tot', i][k] = s
+                    r_src = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, tmp_qr)
+                    tmp['prec_src_θ_liq', i][k] = r_src
+                    UpdVar.q_tot.new[i][k] += s
+                    UpdVar.q_rai.new[i][k] -= s
+                    UpdVar.θ_liq.new[i][k] += r_src
+                    tmp['q_liq', i][k] = q_liq + s
                 UpdVar.q_rai.new[i][k_1] = 0.0
 
         return
-
