@@ -70,16 +70,16 @@ def compute_cloud_base_top_cover(grid, q, tmp, UpdVar):
                 UpdVar.cloud_cover[i] = np.fmax(UpdVar.cloud_cover[i], UpdVar.Area.values[i][k])
     return
 
-def assign_values_to_new(grid, q, tmp, UpdVar):
+def assign_values_to_new(grid, q, q_new, tmp, UpdVar):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     # slice_all_c = grid.slice_all(Center())
     for i in i_uds:
         for k in grid.over_elems(Center()):
-            UpdVar.W.values[i][k] = UpdVar.W.new[i][k]
-            UpdVar.Area.values[i][k] = UpdVar.Area.new[i][k]
-            UpdVar.q_tot.values[i][k] = UpdVar.q_tot.new[i][k]
-            UpdVar.q_rai.values[i][k] = UpdVar.q_rai.new[i][k]
-            UpdVar.θ_liq.values[i][k] = UpdVar.θ_liq.new[i][k]
+            UpdVar.W.values[i][k] = q_new['w', i][k]
+            UpdVar.Area.values[i][k] = q_new['a', i][k]
+            UpdVar.q_tot.values[i][k] = q_new['q_tot', i][k]
+            UpdVar.q_rai.values[i][k] = q_new['q_rai', i][k]
+            UpdVar.θ_liq.values[i][k] = q_new['θ_liq', i][k]
     return
 
 def initialize(grid, tmp, q, UpdVar, updraft_fraction):
@@ -110,7 +110,6 @@ def initialize(grid, tmp, q, UpdVar, updraft_fraction):
 class UpdraftVariable:
     def __init__(self, grid, nu, loc, bc):
         self.values     = [Field.field(grid, loc, bc) for i in range(nu)]
-        self.new        = [Field.field(grid, loc, bc) for i in range(nu)]
 
     def set_bcs(self, grid):
         n_updrafts = np.shape(self.values)[0]
