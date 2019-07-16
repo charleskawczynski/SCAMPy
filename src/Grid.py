@@ -136,10 +136,8 @@ class Grid:
 
     def over_elems(self, loc):
         if isinstance(loc, Center):
-            # return range(self.first_interior(Zmin())-1, self.first_interior(Zmax())+1+1)
             return range(0, self.first_interior(Zmax())+1+1)
         elif isinstance(loc, Node):
-            # return range(self.boundary(Zmin())-1, self.boundary(Zmax())+1+1)
             return range(0, self.boundary(Zmax())+1+1)
         else:
             raise TypeError("Bad location in over_elems in Grid.py")

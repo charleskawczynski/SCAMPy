@@ -244,7 +244,7 @@ class EDMF_PrognosticTKE:
             self.solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS)
             for i in i_uds: q['θ_liq_tmp', i].apply_bc(grid, 0.0)
             for i in i_uds: q['q_tot_tmp', i].apply_bc(grid, 0.0)
-            for i in i_uds: q['q_rai_tmp', i].apply_bc(grid, 0.0)
+            for i in i_uds: q['q_rai', i].apply_bc(grid, 0.0)
             q['w', i_env].apply_bc(grid, 0.0)
             q['θ_liq', i_env].apply_bc(grid, 0.0)
             q['q_tot', i_env].apply_bc(grid, 0.0)

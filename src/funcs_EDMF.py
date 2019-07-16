@@ -288,7 +288,7 @@ def compute_grid_means(grid, q, tmp):
     ae = q['a', i_env]
     for k in grid.over_elems_real(Center()):
         tmp['q_liq', i_gm][k] = ae[k] * tmp['q_liq', i_env][k] + sum([ q['a_tmp', i][k] * tmp['q_liq', i][k] for i in i_uds])
-        q['q_rai', i_gm][k]   = ae[k] * q['q_rai', i_env][k]   + sum([ q['a_tmp', i][k] * q['q_rai_tmp', i][k] for i in i_uds])
+        q['q_rai', i_gm][k]   = ae[k] * q['q_rai', i_env][k]   + sum([ q['a_tmp', i][k] * q['q_rai', i][k] for i in i_uds])
         tmp['T', i_gm][k]     = ae[k] * tmp['T', i_env][k]     + sum([ q['a_tmp', i][k] * tmp['T', i][k] for i in i_uds])
         tmp['B', i_gm][k]     = ae[k] * tmp['B', i_env][k]     + sum([ q['a_tmp', i][k] * tmp['B', i][k] for i in i_uds])
     return
@@ -500,7 +500,7 @@ def assign_new_to_values(grid, q_new, q, tmp):
         q_new['w', i][slice_all_n] = [q['w_tmp', i][k] for k in grid.over_elems(Node())]
         q_new['a', i][slice_all_c] = [q['a_tmp', i][k] for k in grid.over_elems(Center())]
         q_new['q_tot', i][slice_all_c] = [q['q_tot_tmp', i][k] for k in grid.over_elems(Center())]
-        q_new['q_rai', i][slice_all_c] = [q['q_rai_tmp', i][k] for k in grid.over_elems(Center())]
+        q_new['q_rai', i][slice_all_c] = [q['q_rai', i][k] for k in grid.over_elems(Center())]
         q_new['θ_liq', i][slice_all_c] = [q['θ_liq_tmp', i][k] for k in grid.over_elems(Center())]
     return
 
@@ -514,13 +514,13 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
             q['a_tmp', i][k] = 0.0
             q['q_tot_tmp', i][k] = q['q_tot', i_gm][k]
             tmp['q_liq', i][k] = tmp['q_liq', i_gm][k]
-            q['q_rai_tmp', i][k] = q['q_rai', i_gm][k]
+            q['q_rai', i][k] = q['q_rai', i_gm][k]
             q['θ_liq_tmp', i][k] = q['θ_liq', i_gm][k]
             tmp['T', i][k] = tmp['T', i_gm][k]
             tmp['B', i][k] = 0.0
         q['a_tmp', i][k_1] = updraft_fraction/n_updrafts
     for i in i_uds: q['q_tot_tmp', i].apply_bc(grid, 0.0)
-    for i in i_uds: q['q_rai_tmp', i].apply_bc(grid, 0.0)
+    for i in i_uds: q['q_rai', i].apply_bc(grid, 0.0)
     for i in i_uds: q['θ_liq_tmp', i].apply_bc(grid, 0.0)
     for k in grid.over_elems(Center()):
         for i in i_uds:
@@ -551,7 +551,7 @@ def update_updraftvars(grid, q, tmp):
             s = tmp['prec_src_q_tot', i][k]
             q['q_tot_tmp', i][k] += s
             tmp['q_liq', i][k] += s
-            q['q_rai_tmp', i][k] -= s
+            q['q_rai', i][k] -= s
             q['θ_liq_tmp', i][k] += tmp['prec_src_θ_liq', i][k]
     return
 
@@ -584,7 +584,7 @@ def assign_values_to_new(grid, q, q_new, tmp):
             q['w_tmp', i][k] = q_new['w', i][k]
             q['a_tmp', i][k] = q_new['a', i][k]
             q['q_tot_tmp', i][k] = q_new['q_tot', i][k]
-            q['q_rai_tmp', i][k] = q_new['q_rai', i][k]
+            q['q_rai', i][k] = q_new['q_rai', i][k]
             q['θ_liq_tmp', i][k] = q_new['θ_liq', i][k]
     return
 

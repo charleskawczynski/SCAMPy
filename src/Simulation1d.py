@@ -54,7 +54,6 @@ class Simulation1d:
          ('a_tmp'         , Center() , Neumann() , N_sd),
          ('w_tmp'         , Node()   , Dirichlet() , N_sd),
          ('q_tot_tmp'     , Center() , Neumann() , N_sd),
-         ('q_rai_tmp'     , Center() , Neumann() , N_sd),
          ('θ_liq_tmp'     , Center() , Neumann() , N_sd),
          ('tke'           , Center() , Neumann() , N_sd),
          ('cv_q_tot'      , Center() , Neumann() , N_sd),
@@ -214,7 +213,7 @@ class Simulation1d:
         sol.ud_W     = self.q['w_tmp', i_uds[0]]
         sol.ud_Area  = self.q['a_tmp', i_uds[0]]
         sol.ud_q_tot = self.q['q_tot_tmp', i_uds[0]]
-        sol.ud_q_rai = self.q['q_rai_tmp', i_uds[0]]
+        sol.ud_q_rai = self.q['q_rai', i_uds[0]]
         sol.ud_q_liq = self.tmp['q_liq', i_uds[0]]
         sol.ud_T     = self.tmp['T', i_uds[0]]
         sol.ud_B     = self.tmp['B', i_uds[0]]
