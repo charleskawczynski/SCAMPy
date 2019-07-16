@@ -6,42 +6,48 @@ from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from funcs_EDMF import *
 from NetCDFIO import NetCDFIO_Stats
+from funcs_utility import *
 import pylab as plt
 
 def compute_cloud_base_top_cover(grid, q, tmp, UpdVar):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    # k_2 = grid.first_interior(Zmax())
+    k_2 = grid.first_interior(Zmax())
     for i in i_uds:
-        UpdVar.cloud_base[i] = grid.z_half[grid.nzg-grid.gw-1]
-        # UpdVar.cloud_base[i] = grid.z_half[k_2]
-        UpdVar.cloud_top[i] = 0.0
-        UpdVar.cloud_cover[i] = 0.0
+        UpdVar[i].cloud_base = grid.z_half[k_2]
+        UpdVar[i].cloud_top = 0.0
+        UpdVar[i].cloud_cover = 0.0
         for k in grid.over_elems_real(Center()):
             if tmp['q_liq', i][k] > 1e-8 and q['a_tmp', i][k] > 1e-3:
-                UpdVar.cloud_base[i] = np.fmin(UpdVar.cloud_base[i], grid.z_half[k])
-                UpdVar.cloud_top[i] = np.fmax(UpdVar.cloud_top[i], grid.z_half[k])
-                UpdVar.cloud_cover[i] = np.fmax(UpdVar.cloud_cover[i], q['a_tmp', i][k])
+                UpdVar[i].cloud_base = np.fmin(UpdVar[i].cloud_base, grid.z_half[k])
+                UpdVar[i].cloud_top = np.fmax(UpdVar[i].cloud_top, grid.z_half[k])
+                UpdVar[i].cloud_cover = np.fmax(UpdVar[i].cloud_cover, q['a_tmp', i][k])
+    return
+
+def export_data_updrafts(grid, UpdVar, q, tmp, Stats):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    compute_cloud_base_top_cover(grid, q, tmp, UpdVar)
+    Stats.write_ts('updraft_cloud_cover', np.sum([UpdVar[i].cloud_cover for i in i_uds]))
+    Stats.write_ts('updraft_cloud_base' , np.amin([UpdVar[i].cloud_base for i in i_uds]))
+    Stats.write_ts('updraft_cloud_top'  , np.amax([UpdVar[i].cloud_top for i in i_uds]))
+    return
+
+def initialize_io_updrafts(UpdVar, Stats):
+    Stats.add_ts('updraft_cloud_cover')
+    Stats.add_ts('updraft_cloud_base')
+    Stats.add_ts('updraft_cloud_top')
     return
 
 class UpdraftVariables:
-    def __init__(self, nu, namelist, paramlist, grid):
-        self.n_updrafts = nu
-
-        self.cloud_base  = np.zeros((nu,), dtype=np.double, order='c')
-        self.cloud_top   = np.zeros((nu,), dtype=np.double, order='c')
-        self.cloud_cover = np.zeros((nu,), dtype=np.double, order='c')
+    def __init__(self, i, surface_area, n_updrafts):
+        self.cloud_base  = 0.0
+        self.cloud_top   = 0.0
+        self.cloud_cover = 0.0
+        self.area_surface_bc  = 0.0
+        self.w_surface_bc     = 0.0
+        self.θ_liq_surface_bc = 0.0
+        self.q_tot_surface_bc = 0.0
+        self.surface_scalar_coeff = 0.0
+        a_ = surface_area/n_updrafts
+        self.surface_scalar_coeff = percentile_bounds_mean_norm(1.0-surface_area + i    *a_,
+                                                                1.0-surface_area + (i+1)*a_ , 1000)
         return
-
-    def initialize_io(self, Stats):
-        Stats.add_ts('updraft_cloud_cover')
-        Stats.add_ts('updraft_cloud_base')
-        Stats.add_ts('updraft_cloud_top')
-        return
-
-    def export_data(self, grid, q, tmp, Stats):
-        compute_cloud_base_top_cover(grid, q, tmp, self)
-        Stats.write_ts('updraft_cloud_cover', np.sum(self.cloud_cover))
-        Stats.write_ts('updraft_cloud_base' , np.amin(self.cloud_base))
-        Stats.write_ts('updraft_cloud_top'  , np.amax(self.cloud_top))
-        return
-

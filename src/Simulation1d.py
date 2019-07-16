@@ -136,8 +136,8 @@ class Simulation1d:
 
         self.Ref        = ReferenceState(self.grid)
         self.Case       = CasesFactory(namelist, paramlist)
-        self.UpdVar     = UpdraftVariables(self.n_updrafts, namelist, paramlist, self.grid)
         self.Turb       = EDMF_PrognosticTKE(namelist, paramlist, self.grid)
+        self.UpdVar     = [UpdraftVariables(i, self.Turb.surface_area, self.n_updrafts) for i in range(self.n_updrafts)]
         self.TS         = TimeStepping(namelist)
         self.Stats      = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
         self.tri_diag   = type('', (), {})()
@@ -167,7 +167,7 @@ class Simulation1d:
         self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
-        self.Case, self.TS, self.tri_diag)
+        self.UpdVar, self.Case, self.TS, self.tri_diag)
         for k in self.grid.over_elems(Center()):
             self.q['tke', i_env][k]            = self.q['tke', i_gm][k]
             self.q['cv_θ_liq', i_env][k]       = self.q['cv_θ_liq', i_gm][k]
@@ -248,7 +248,7 @@ class Simulation1d:
 
         self.Stats.add_ts('lwp')
         self.Case.initialize_io(self.Stats)
-        self.Turb.initialize_io(self.Stats, self.UpdVar)
+        initialize_io_updrafts(self.UpdVar, self.Stats)
         return
 
     def export_data(self):
@@ -256,7 +256,8 @@ class Simulation1d:
         self.Stats.open_files()
         self.Stats.write_simulation_time(self.TS.t)
         self.Case.export_data(self.Stats)
-        self.Turb.export_data(self.grid, self.q, self.tmp, self.tmp_O2, self.Stats, self.UpdVar)
+        pre_export_data_compute(self.grid, self.q, self.tmp, self.tmp_O2, self.Stats, self.Turb.tke_diss_coeff)
+        export_data_updrafts(self.grid, self.UpdVar, self.q, self.tmp, self.Stats)
 
         lwp = 0.0
         for k in self.grid.over_elems_real(Center()):

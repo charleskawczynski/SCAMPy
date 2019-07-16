@@ -71,8 +71,8 @@ def compute_covariance_rain(grid, q, tmp, tmp_O2, TS, cv):
     for k in grid.over_elems_real(Center()):
         ρa_0 = tmp['ρ_0_half'][k]*ae[k]
         if cv=='tke':            tmp_O2[cv]['rain_src'][k] = 0.0
-        if cv=='cv_θ_liq':       tmp_O2[cv]['rain_src'][k]       = ρa_0 * 2. * tmp['cv_θ_liq_rain_dt'][k]       * TS.dti
-        if cv=='cv_q_tot':       tmp_O2[cv]['rain_src'][k]       = ρa_0 * 2. * tmp['cv_q_tot_rain_dt'][k]       * TS.dti
+        if cv=='cv_θ_liq':       tmp_O2[cv]['rain_src'][k] = ρa_0 * 2. * tmp['cv_θ_liq_rain_dt'][k]       * TS.dti
+        if cv=='cv_q_tot':       tmp_O2[cv]['rain_src'][k] = ρa_0 * 2. * tmp['cv_q_tot_rain_dt'][k]       * TS.dti
         if cv=='cv_θ_liq_q_tot': tmp_O2[cv]['rain_src'][k] = ρa_0 *      tmp['cv_θ_liq_q_tot_rain_dt'][k] * TS.dti
     return
 
@@ -584,3 +584,24 @@ def assign_values_to_new(grid, q, q_new, tmp):
             q['q_rai_tmp', i][k] = q_new['q_rai', i][k]
             q['θ_liq_tmp', i][k] = q_new['θ_liq', i][k]
     return
+
+def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    for k in grid.over_elems_real(Center()):
+        tmp['mf_θ_liq_half'][k] = tmp['mf_θ_liq'].Mid(k)
+        tmp['mf_q_tot_half'][k] = tmp['mf_q_tot'].Mid(k)
+        tmp['massflux_half'][k] = tmp['mf_tmp', 0].Mid(k)
+        a_bulk = sum([q['a', i][k] for i in i_uds])
+        if a_bulk > 0.0:
+            for i in i_uds:
+                tmp['mean_entr_sc'][k] += q['a', i][k] * tmp['entr_sc', i][k]/a_bulk
+                tmp['mean_detr_sc'][k] += q['a', i][k] * tmp['detr_sc', i][k]/a_bulk
+
+    compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, 'tke')
+    compute_covariance_detr(grid, q, tmp, tmp_O2, 'tke')
+    compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, 'cv_θ_liq')
+    compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, 'cv_q_tot')
+    compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, 'cv_θ_liq_q_tot')
+    compute_covariance_detr(grid, q, tmp, tmp_O2, 'cv_θ_liq')
+    compute_covariance_detr(grid, q, tmp, tmp_O2, 'cv_q_tot')
+    compute_covariance_detr(grid, q, tmp, tmp_O2, 'cv_θ_liq_q_tot')
