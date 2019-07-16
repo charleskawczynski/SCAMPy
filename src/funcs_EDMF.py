@@ -87,7 +87,6 @@ def compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, cv):
     for k in grid.over_elems_real(Center()):
         l_mix = np.fmax(tmp['l_mix'][k], 1.0)
         tke_env = np.fmax(q['tke', i_env][k], 0.0)
-
         tmp_O2[cv]['dissipation'][k] = (tmp['ρ_0_half'][k] * ae[k] * q[cv, i_env][k] * pow(tke_env, 0.5)/l_mix * tke_diss_coeff)
     return
 
@@ -207,7 +206,6 @@ def compute_eddy_diffusivities_similarity_Siebesma2007(grid, Case, tmp, zi, wsta
 def compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, cv):
     i_gm, i_env, i_uds, i_sd = q_tendencies.domain_idx()
     k_1 = grid.first_interior(Zmin())
-
     for k in grid.over_elems_real(Center()):
         q_tendencies[cv, i_env][k] = tmp_O2[cv]['press'][k] + tmp_O2[cv]['buoy'][k] + tmp_O2[cv]['shear'][k] + tmp_O2[cv]['entr_gain'][k] + tmp_O2[cv]['rain_src'][k]
     q_tendencies[cv, i_env][k_1] = 0.0
@@ -287,56 +285,33 @@ def compute_grid_means(grid, q, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     ae = q['a', i_env]
     for k in grid.over_elems_real(Center()):
-        tmp['q_liq', i_gm][k] = ae[k] * tmp['q_liq', i_env][k] + sum([ q['a', i][k] * tmp['q_liq', i][k] for i in i_uds])
-        q['q_rai', i_gm][k]   = ae[k] * q['q_rai', i_env][k]   + sum([ q['a', i][k] * q['q_rai', i][k] for i in i_uds])
-        tmp['T', i_gm][k]     = ae[k] * tmp['T', i_env][k]     + sum([ q['a', i][k] * tmp['T', i][k] for i in i_uds])
-        tmp['B', i_gm][k]     = ae[k] * tmp['B', i_env][k]     + sum([ q['a', i][k] * tmp['B', i][k] for i in i_uds])
+        tmp['q_liq', i_gm][k] = np.sum([ q['a', i][k] * tmp['q_liq', i][k] for i in i_sd])
+        q['q_rai', i_gm][k]   = np.sum([ q['a', i][k] * q['q_rai', i][k] for i in i_sd])
+        tmp['T', i_gm][k]     = np.sum([ q['a', i][k] * tmp['T', i][k] for i in i_sd])
+        tmp['B', i_gm][k]     = np.sum([ q['a', i][k] * tmp['B', i][k] for i in i_sd])
     return
 
-def compute_cv_gm(grid, q, ϕ, ψ, cv):
+def compute_cv_gm(grid, q, ϕ, ψ, cv, tke_factor, interp_func):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    is_tke = cv=='tke'
-    tke_factor = 0.5 if is_tke else 1.0
     ae = q['a', i_env]
     for k in grid.over_elems(Center()):
-        if is_tke:
-            Δϕ = q[ϕ, i_env].Mid(k) - q[ϕ, i_gm].Mid(k)
-            Δψ = q[ψ, i_env].Mid(k) - q[ψ, i_gm].Mid(k)
-        else:
-            Δϕ = q[ϕ, i_env][k]-q[ϕ, i_gm][k]
-            Δψ = q[ψ, i_env][k]-q[ψ, i_gm][k]
-
+        Δϕ = interp_func(q[ϕ, i_env], k) - interp_func(q[ϕ, i_gm], k)
+        Δψ = interp_func(q[ψ, i_env], k) - interp_func(q[ψ, i_gm], k)
         q[cv, i_gm][k] = tke_factor * ae[k] * Δϕ * Δψ + ae[k] * q[cv, i_env][k]
         for i in i_uds:
-            if is_tke:
-                Δϕ = q[ϕ, i].Mid(k) - q[ϕ, i_gm].Mid(k)
-                Δψ = q[ψ, i].Mid(k) - q[ψ, i_gm].Mid(k)
-            else:
-                Δϕ = q[ϕ, i][k]-q[ϕ, i_gm][k]
-                Δψ = q[ψ, i][k]-q[ψ, i_gm][k]
+            Δϕ = interp_func(q[ϕ, i], k) - interp_func(q[ϕ, i_gm], k)
+            Δψ = interp_func(q[ψ, i], k) - interp_func(q[ψ, i_gm], k)
             q[cv, i_gm][k] += tke_factor * q['a', i][k] * Δϕ * Δψ
     return
 
-def compute_covariance_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
+def compute_covariance_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    is_tke = cv=='tke'
-    tke_factor = 0.5 if is_tke else 1.0
     for k in grid.over_elems_real(Center()):
         tmp_O2[cv]['entr_gain'][k] = 0.0
         for i in i_uds:
-            if is_tke:
-                ϕ_u = q[ϕ, i].Mid(k)
-                ψ_u = q[ψ, i].Mid(k)
-                ϕ_e = q[ϕ, i_env].Mid(k)
-                ψ_e = q[ψ, i_env].Mid(k)
-            else:
-                ϕ_u = q[ϕ, i][k]
-                ψ_u = q[ψ, i][k]
-                ϕ_e = q[ϕ, i_env][k]
-                ψ_e = q[ψ, i_env][k]
-            w_u = q['w', i].Mid(k)
-            tmp_O2[cv]['entr_gain'][k] += tke_factor*q['a', i][k] * np.fabs(w_u) * tmp['detr_sc', i][k] * \
-                                         (ϕ_u - ϕ_e) * (ψ_u - ψ_e)
+            Δϕ = interp_func(q[ϕ, i], k) - interp_func(q[ϕ, i_env], k)
+            Δψ = interp_func(q[ψ, i], k) - interp_func(q[ψ, i_env], k)
+            tmp_O2[cv]['entr_gain'][k] += tke_factor*q['a', i][k] * np.fabs(q['w', i].Mid(k)) * tmp['detr_sc', i][k] * Δϕ * Δψ
         tmp_O2[cv]['entr_gain'][k] *= tmp['ρ_0_half'][k]
     return
 
@@ -360,31 +335,20 @@ def compute_covariance_shear(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
         tmp_O2[cv]['shear'][k] = tke_factor*2.0*ρaK * (grad_ϕ*grad_ψ + grad_u**2.0 + grad_v**2.0)
     return
 
-def compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
+def compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    is_tke = cv=='tke'
-    tke_factor = 0.5 if is_tke else 1.0
     for k in grid.over_elems(Center()):
         tmp_O2[cv]['interdomain'][k] = 0.0
         for i in i_uds:
-            if is_tke:
-                Δϕ = q[ϕ, i].Mid(k) - q[ϕ, i_env].Mid(k)
-                Δψ = q[ψ, i].Mid(k) - q[ψ, i_env].Mid(k)
-            else:
-                Δϕ = q[ϕ, i][k]-q[ϕ, i_env][k]
-                Δψ = q[ψ, i][k]-q[ψ, i_env][k]
+            Δϕ = interp_func(q[ϕ, i], k) - interp_func(q[ϕ, i_env], k)
+            Δψ = interp_func(q[ψ, i], k) - interp_func(q[ψ, i_env], k)
             tmp_O2[cv]['interdomain'][k] += tke_factor*q['a', i][k] * (1.0-q['a', i][k]) * Δϕ * Δψ
     return
 
 def compute_covariance_detr(grid, q, tmp, tmp_O2, cv):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    ae = q['a', i_env]
-
     for k in grid.over_elems_real(Center()):
-        tmp_O2[cv]['detr_loss'][k] = 0.0
-        for i in i_uds:
-            w_u = q['w', i].Mid(k)
-            tmp_O2[cv]['detr_loss'][k] += q['a', i][k] * np.fabs(w_u) * tmp['entr_sc', i][k]
+        tmp_O2[cv]['detr_loss'][k] = sum([q['a', i][k] * np.fabs(q['w', i].Mid(k)) * tmp['entr_sc', i][k] for i in i_uds])
         tmp_O2[cv]['detr_loss'][k] *= tmp['ρ_0_half'][k] * q[cv, i_env][k]
     return
 
@@ -403,30 +367,15 @@ def compute_tke_pressure(grid, q, tmp, tmp_O2, pressure_buoy_coeff, pressure_dra
             tmp_O2[cv]['press'][k] += (we_half - wu_half) * (press_buoy + press_drag)
     return
 
-def compute_cv_env(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
+def compute_cv_env(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    is_tke = cv=='tke'
-    tke_factor = 0.5 if is_tke else 1.0
     ae = q['a', i_env]
-
     for k in grid.over_elems(Center()):
         if ae[k] > 0.0:
-            if is_tke:
-                Δϕ = q[ϕ, i_env].Mid(k) - q[ϕ, i_gm].Mid(k)
-                Δψ = q[ψ, i_env].Mid(k) - q[ψ, i_gm].Mid(k)
-            else:
-                Δϕ = q[ϕ, i_env][k] - q[ϕ, i_gm][k]
-                Δψ = q[ψ, i_env][k] - q[ψ, i_gm][k]
-
-            q[cv, i_env][k] = q[cv, i_gm][k] - tke_factor * ae[k] * Δϕ * Δψ
-            for i in i_uds:
-                if is_tke:
-                    Δϕ = q[ϕ, i].Mid(k) - q[ϕ, i_gm].Mid(k)
-                    Δψ = q[ψ, i].Mid(k) - q[ψ, i_gm].Mid(k)
-                else:
-                    Δϕ = q[ϕ, i][k] - q[ϕ, i_gm][k]
-                    Δψ = q[ψ, i][k] - q[ψ, i_gm][k]
-
+            q[cv, i_env][k] = q[cv, i_gm][k]
+            for i in i_sd:
+                Δϕ = interp_func(q[ϕ, i], k) - interp_func(q[ϕ, i_gm], k)
+                Δψ = interp_func(q[ψ, i], k) - interp_func(q[ψ, i_gm], k)
                 q[cv, i_env][k] -= tke_factor * q['a', i][k] * Δϕ * Δψ
             q[cv, i_env][k] = q[cv, i_env][k]/ae[k]
         else:
@@ -437,11 +386,11 @@ def diagnose_environment(grid, q):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for k in grid.over_elems(Center()):
         a_env = q['a', i_env][k]
-        q['q_tot', i_env][k] = (q['q_tot', i_gm][k] - sum([q['a', i][k]*q['q_tot', i][k] for i in i_uds]))/a_env
-        q['θ_liq', i_env][k] = (q['θ_liq', i_gm][k] - sum([q['a', i][k]*q['θ_liq', i][k] for i in i_uds]))/a_env
+        q['q_tot', i_env][k] = (q['q_tot', i_gm][k] - np.sum([q['a', i][k]*q['q_tot', i][k] for i in i_uds]))/a_env
+        q['θ_liq', i_env][k] = (q['θ_liq', i_gm][k] - np.sum([q['a', i][k]*q['θ_liq', i][k] for i in i_uds]))/a_env
         # Assuming q['w', i_gm] = 0!
         a_env = q['a', i_env].Mid(k)
-        q['w', i_env][k] = (0.0 - sum([q['a', i][k]*q['w', i][k] for i in i_uds]))/a_env
+        q['w', i_env][k] = (0.0 - np.sum([q['a', i][k]*q['w', i][k] for i in i_uds]))/a_env
     return
 
 def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
@@ -512,7 +461,7 @@ def assign_values_to_new(grid, q, q_new, tmp):
             q['q_rai', i][k] = q_new['q_rai', i][k]
             q['θ_liq', i][k] = q_new['θ_liq', i][k]
             q['a', i][k] = q_new['a', i][k]
-        q['a', i_env][k] = 1.0 - sum([q_new['a', i][k] for i in i_uds])
+        q['a', i_env][k] = 1.0 - np.sum([q_new['a', i][k] for i in i_uds])
     return
 
 def initialize_updrafts(grid, tmp, q, updraft_fraction):
@@ -534,7 +483,7 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
     for i in i_uds: q['q_rai', i].apply_bc(grid, 0.0)
     for i in i_uds: q['θ_liq', i].apply_bc(grid, 0.0)
     for k in grid.over_elems(Center()):
-        q['a', i_env][k] = 1.0 - sum([q['a', i][k] for i in i_uds])
+        q['a', i_env][k] = 1.0 - np.sum([q['a', i][k] for i in i_uds])
     return
 
 def compute_sources(grid, q, tmp, max_supersaturation):
@@ -549,8 +498,8 @@ def compute_sources(grid, q, tmp, max_supersaturation):
             tmp['prec_src_θ_liq', i][k] = rain_source_to_thetal(p_0, T, q_tot, q_tot, 0.0, tmp_qr)
             tmp['prec_src_q_tot', i][k] = -tmp_qr
     for k in grid.over_elems(Center()):
-        tmp['prec_src_θ_liq', i_gm][k] = np.sum([tmp['prec_src_θ_liq', i][k] * q['a', i][k] for i in i_uds])
-        tmp['prec_src_q_tot', i_gm][k] = np.sum([tmp['prec_src_q_tot', i][k] * q['a', i][k] for i in i_uds])
+        tmp['prec_src_θ_liq', i_gm][k] = np.sum([tmp['prec_src_θ_liq', i][k] * q['a', i][k] for i in i_sd])
+        tmp['prec_src_q_tot', i_gm][k] = np.sum([tmp['prec_src_q_tot', i][k] * q['a', i][k] for i in i_sd])
     return
 
 def update_updraftvars(grid, q, tmp):
@@ -578,12 +527,9 @@ def buoyancy(grid, q, tmp):
                 tmp['B', i][k] = tmp['B', i_env][k]
     # Subtract grid mean buoyancy
     for k in grid.over_elems_real(Center()):
-        tmp['B', i_gm][k] = q['a', i_env][k] * tmp['B', i_env][k]
-        for i in i_uds:
-            tmp['B', i_gm][k] += q['a', i][k] * tmp['B', i][k]
-        for i in i_uds:
+        tmp['B', i_gm][k] = np.sum([q['a', i][k] * tmp['B', i][k] for i in i_sd])
+        for i in i_sd:
             tmp['B', i][k] -= tmp['B', i_gm][k]
-        tmp['B', i_env][k] -= tmp['B', i_gm][k]
     return
 
 def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):
@@ -592,7 +538,7 @@ def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):
         tmp['mf_θ_liq_half'][k] = tmp['mf_θ_liq'].Mid(k)
         tmp['mf_q_tot_half'][k] = tmp['mf_q_tot'].Mid(k)
         tmp['massflux_half'][k] = tmp['mf_tmp', 0].Mid(k)
-        a_bulk = sum([q['a', i][k] for i in i_uds])
+        a_bulk = np.sum([q['a', i][k] for i in i_uds])
         if a_bulk > 0.0:
             for i in i_uds:
                 tmp['mean_entr_sc'][k] += q['a', i][k] * tmp['entr_sc', i][k]/a_bulk

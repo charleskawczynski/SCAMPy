@@ -80,6 +80,9 @@ class Full(Field):
     def Mid(self, k):
         return 0.5*(self.values[k]+self.values[k-1])
 
+    def Identity(self, k):
+        return self.values[k]
+
     def Dual(self, key):
         return np.array([self.values[k] for k in [key-1, key]])
 
@@ -124,6 +127,9 @@ class Half(Field):
 
     def Mid(self, k):
         return 0.5*(self.values[k]+self.values[k+1])
+
+    def Identity(self, k):
+        return self.values[k]
 
     def Dual(self, key):
         return np.array([self.values[k] for k in [key, key+1]])
