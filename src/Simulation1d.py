@@ -51,6 +51,11 @@ class Simulation1d:
          ('q_tot'         , Center() , Neumann() , N_sd),
          ('q_rai'         , Center() , Neumann() , N_sd),
          ('θ_liq'         , Center() , Neumann() , N_sd),
+         ('a_tmp'         , Center() , Neumann() , N_sd),
+         ('w_tmp'         , Node()   , Dirichlet() , N_sd),
+         ('q_tot_tmp'     , Center() , Neumann() , N_sd),
+         ('q_rai_tmp'     , Center() , Neumann() , N_sd),
+         ('θ_liq_tmp'     , Center() , Neumann() , N_sd),
          ('tke'           , Center() , Neumann() , N_sd),
          ('cv_q_tot'      , Center() , Neumann() , N_sd),
          ('cv_θ_liq'      , Center() , Neumann() , N_sd),
@@ -129,18 +134,13 @@ class Simulation1d:
 
         self.n_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
 
-        self.Ref       = ReferenceState(self.grid)
-        self.Case      = CasesFactory(namelist, paramlist)
-
-        self.UpdVar    = UpdraftVariables(self.n_updrafts, namelist, paramlist, self.grid)
-
-        self.UpdThermo = UpdraftThermodynamics(self.n_updrafts, self.grid, self.UpdVar)
-        self.UpdMicro  = UpdraftMicrophysics(paramlist, self.n_updrafts, self.grid)
-
-        self.Turb  = EDMF_PrognosticTKE(namelist, paramlist, self.grid)
-        self.TS    = TimeStepping(namelist)
-        self.Stats = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
-        self.tri_diag = type('', (), {})()
+        self.Ref        = ReferenceState(self.grid)
+        self.Case       = CasesFactory(namelist, paramlist)
+        self.UpdVar     = UpdraftVariables(self.n_updrafts, namelist, paramlist, self.grid)
+        self.Turb       = EDMF_PrognosticTKE(namelist, paramlist, self.grid)
+        self.TS         = TimeStepping(namelist)
+        self.Stats      = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
+        self.tri_diag   = type('', (), {})()
         self.tri_diag.a = Half(self.grid)
         self.tri_diag.b = Half(self.grid)
         self.tri_diag.c = Half(self.grid)
@@ -156,7 +156,7 @@ class Simulation1d:
         self.Case.initialize_profiles(self.grid, self.Ref, self.tmp, self.q)
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.tmp)
-        initialize(self.grid, self.tmp, self.q, self.UpdVar)
+        initialize(self.grid, self.tmp, self.q, self.UpdVar, self.Turb.updraft_fraction)
         self.initialize_io()
         self.export_data()
         return
@@ -167,7 +167,7 @@ class Simulation1d:
         self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
-        self.UpdVar, self.UpdMicro, self.UpdThermo, self.Case, self.TS, self.tri_diag)
+        self.UpdVar, self.Case, self.TS, self.tri_diag)
         for k in self.grid.over_elems(Center()):
             self.q['tke', i_env][k]            = self.q['tke', i_gm][k]
             self.q['cv_θ_liq', i_env][k]       = self.q['cv_θ_liq', i_gm][k]
@@ -181,11 +181,11 @@ class Simulation1d:
             self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
             self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
             self.Turb.update(self.grid, self.q_new, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
-                             self.UpdVar, self.UpdMicro,
-                             self.UpdThermo, self.Case, self.TS, self.tri_diag)
+                             self.UpdVar,
+                             self.Case, self.TS, self.tri_diag)
 
             self.TS.update()
-            compute_grid_means(self.grid, self.q, self.tmp, self.UpdVar)
+            compute_grid_means(self.grid, self.q, self.tmp)
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 self.export_data()
         sol = self.package_sol()
@@ -198,7 +198,7 @@ class Simulation1d:
 
         i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
 
-        sol.e_W              = self.q['w', i_env].values
+        sol.e_W              = self.q['w', i_env]
         sol.e_q_tot          = self.q['q_tot', i_env]
         sol.e_q_liq          = self.tmp['q_liq', i_env]
         sol.e_q_rai          = self.q['q_rai', i_env]
@@ -211,13 +211,13 @@ class Simulation1d:
         sol.e_cv_q_tot       = self.q['cv_q_tot', i_env]
         sol.e_cv_θ_liq_q_tot = self.q['cv_θ_liq_q_tot', i_env]
 
-        sol.ud_W     = self.UpdVar.W.values[0]
-        sol.ud_Area  = self.UpdVar.Area.values[0]
-        sol.ud_q_tot = self.UpdVar.q_tot.values[0]
-        sol.ud_q_liq = self.UpdVar.q_liq.values[0]
-        sol.ud_q_rai = self.UpdVar.q_rai.values[0]
-        sol.ud_T     = self.UpdVar.T.values[0]
-        sol.ud_B     = self.UpdVar.B.values[0]
+        sol.ud_W     = self.q['w_tmp', i_uds[0]]
+        sol.ud_Area  = self.q['a_tmp', i_uds[0]]
+        sol.ud_q_tot = self.q['q_tot_tmp', i_uds[0]]
+        sol.ud_q_rai = self.q['q_rai_tmp', i_uds[0]]
+        sol.ud_q_liq = self.tmp['q_liq', i_uds[0]]
+        sol.ud_T     = self.tmp['T', i_uds[0]]
+        sol.ud_B     = self.tmp['B', i_uds[0]]
 
         sol.gm_q_tot = self.q['q_tot', i_gm]
         sol.gm_U     = self.q['U', i_gm]
@@ -256,7 +256,7 @@ class Simulation1d:
         self.Stats.open_files()
         self.Stats.write_simulation_time(self.TS.t)
         self.Case.export_data(self.Stats)
-        self.Turb.export_data(self.grid, self.q, self.tmp, self.tmp_O2, self.Stats, self.UpdVar, self.UpdMicro)
+        self.Turb.export_data(self.grid, self.q, self.tmp, self.tmp_O2, self.Stats, self.UpdVar)
 
         lwp = 0.0
         for k in self.grid.over_elems_real(Center()):

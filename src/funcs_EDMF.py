@@ -266,3 +266,16 @@ def apply_gm_bcs(grid, q):
     q['cv_q_tot', i_gm].apply_bc(grid, 0.0)
     q['cv_θ_liq', i_gm].apply_bc(grid, 0.0)
     q['cv_θ_liq_q_tot', i_gm].apply_bc(grid, 0.0)
+
+def cleanup_covariance(grid, q):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    tmp_eps = 1e-18
+    slice_real_c = grid.slice_real(Center())
+    q['tke',            i_gm][slice_real_c] = [0.0 if q['tke', i_gm][k] < tmp_eps else q['tke', i_gm][k] for k in grid.over_elems_real(Center())]
+    q['cv_θ_liq',       i_gm][slice_real_c] = [0.0 if q['cv_θ_liq', i_gm][k] < tmp_eps else q['cv_θ_liq', i_gm][k] for k in grid.over_elems_real(Center())]
+    q['cv_q_tot',       i_gm][slice_real_c] = [0.0 if q['cv_q_tot', i_gm][k] < tmp_eps else q['cv_q_tot', i_gm][k] for k in grid.over_elems_real(Center())]
+    q['cv_θ_liq_q_tot', i_gm][slice_real_c] = [0.0 if np.fabs(q['cv_θ_liq_q_tot', i_gm][k]) < tmp_eps else q['cv_θ_liq_q_tot', i_gm][k] for k in grid.over_elems_real(Center())]
+    q['cv_θ_liq',       i_env][slice_real_c] = [0.0 if q['cv_θ_liq', i_env][k] < tmp_eps else q['cv_θ_liq', i_env][k] for k in grid.over_elems_real(Center())]
+    q['tke',            i_env][slice_real_c] = [0.0 if q['tke', i_env][k] < tmp_eps else q['tke', i_env][k] for k in grid.over_elems_real(Center())]
+    q['cv_q_tot',       i_env][slice_real_c] = [0.0 if q['cv_q_tot', i_env][k] < tmp_eps else q['cv_q_tot', i_env][k] for k in grid.over_elems_real(Center())]
+    q['cv_θ_liq_q_tot', i_env][slice_real_c] = [0.0 if np.fabs(q['cv_θ_liq_q_tot', i_env][k]) < tmp_eps else q['cv_θ_liq_q_tot', i_env][k] for k in grid.over_elems_real(Center())]
