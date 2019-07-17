@@ -9,7 +9,7 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     dzi = grid.dzi
     dzi2 = grid.dzi**2.0
-    dti = TS.dti
+    dti = TS.Δti
     k_1 = grid.first_interior(Zmin())
     k_2 = grid.first_interior(Zmax())
 

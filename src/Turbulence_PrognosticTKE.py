@@ -91,6 +91,30 @@ class EDMF_PrognosticTKE:
         self.tke_diss_coeff         = paramlist['turbulence']['EDMF_PrognosticTKE']['tke_diss_coeff']
         self.max_supersaturation    = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
         self.updraft_fraction       = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
+        self.vel_pressure_coeff = self.pressure_drag_coeff/self.pressure_plume_spacing
+        self.vel_buoy_coeff = 1.0-self.pressure_buoy_coeff
+        self.minimum_area = 1e-3
+
+        self.params = type('', (), {})()
+        self.params.n_updrafts             = self.n_updrafts
+        self.params.use_local_micro        = self.use_local_micro
+        self.params.similarity_diffusivity = self.similarity_diffusivity
+        self.params.prandtl_number         = self.prandtl_number
+        self.params.Ri_bulk_crit           = self.Ri_bulk_crit
+        self.params.surface_area           = self.surface_area
+        self.params.max_area_factor        = self.max_area_factor
+        self.params.entrainment_factor     = self.entrainment_factor
+        self.params.detrainment_factor     = self.detrainment_factor
+        self.params.pressure_buoy_coeff    = self.pressure_buoy_coeff
+        self.params.pressure_drag_coeff    = self.pressure_drag_coeff
+        self.params.pressure_plume_spacing = self.pressure_plume_spacing
+        self.params.tke_ed_coeff           = self.tke_ed_coeff
+        self.params.tke_diss_coeff         = self.tke_diss_coeff
+        self.params.max_supersaturation    = self.max_supersaturation
+        self.params.updraft_fraction       = self.updraft_fraction
+        self.params.vel_pressure_coeff     = self.vel_pressure_coeff
+        self.params.vel_buoy_coeff         = self.vel_buoy_coeff
+        self.params.minimum_area           = self.minimum_area
 
         entr_src = namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']
         if str(entr_src) == 'inverse_z':        self.entr_detr_fp = entr_detr_inverse_z
@@ -102,10 +126,6 @@ class EDMF_PrognosticTKE:
         elif str(entr_src) == 'suselj':         self.entr_detr_fp = entr_detr_suselj
         elif str(entr_src) == 'none':           self.entr_detr_fp = entr_detr_none
         else: raise ValueError('Bad entr_detr_fp in Turbulence_PrognosticTKE.py')
-
-        self.vel_pressure_coeff = self.pressure_drag_coeff/self.pressure_plume_spacing
-        self.vel_buoy_coeff = 1.0-self.pressure_buoy_coeff
-        self.minimum_area = 1e-3
         return
 
     def initialize_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
@@ -231,189 +251,38 @@ class EDMF_PrognosticTKE:
         time_elapsed = 0.0
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Node())])
-        self.dt_upd = np.minimum(TS.dt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
-        while time_elapsed < TS.dt:
+        TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
+        while time_elapsed < TS.Δt:
             compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
             eos_update_SA_mean(grid, q, False, tmp, self.max_supersaturation)
             buoyancy(grid, q, tmp)
             compute_sources(grid, q, tmp, self.max_supersaturation)
             update_updraftvars(grid, q, tmp)
 
-            self.solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS)
-            self.solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS)
+            solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+
+            # solve_updraft_tendencies_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+            # solve_updraft_tendencies_velocity(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+            # compute_limiters(grid, tmp, q, q_tendencies, name, ['S_a_min', 'S_a_max'], Δt, [0.0, 1.0])
+            # compute_limiters(grid, tmp, q, q_tendencies, name, ['S_w_min', 'S_w_max'], Δt, [0.0, 10000.0])
+            # compute_limiters(grid, tmp, q, q_tendencies, name, ['S_q_tot_min', 'S_q_tot_max'], Δt, [0.0, 1.0])
+            # add_detrainment_tendency(grid, tmp, q, q_tendencies, name, 'a'    , ['S_a_min', 'S_a_max'], Δt)
+            # add_detrainment_tendency(grid, tmp, q, q_tendencies, name, 'a'    , ['S_w_min', 'S_w_max'], Δt)
+            # add_detrainment_tendency(grid, tmp, q, q_tendencies, name, 'q_tot', ['S_q_tot_min', 'S_q_tot_max'], Δt)
+            # solve_updraft_tendencies_tracers(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+            # update_updrafts(grid, tmp, q, q_tendencies, name, ['a', 'w', 'q_tot', 'θ_liq', 'q_rai'], Δt)
+
+            solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
             assign_values_to_new(grid, q, q_new, tmp)
             for i in i_sd:
                 q['θ_liq', i].apply_bc(grid, 0.0)
                 q['q_tot', i].apply_bc(grid, 0.0)
                 q['q_rai', i].apply_bc(grid, 0.0)
             q['w', i_env].apply_bc(grid, 0.0)
-            time_elapsed += self.dt_upd
+            time_elapsed += TS.Δt_up
             u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Node())])
-            self.dt_upd = np.minimum(TS.dt-time_elapsed,  0.5 * grid.dz/np.fmax(u_max,1e-10))
+            TS.Δt_up = np.minimum(TS.Δt-time_elapsed,  0.5 * grid.dz/np.fmax(u_max,1e-10))
             diagnose_environment(grid, q)
         eos_update_SA_mean(grid, q, True, tmp, self.max_supersaturation)
         buoyancy(grid, q, tmp)
-        return
-
-    def solve_updraft_velocity_area(self, grid, q_new, q, q_tendencies, tmp, UpdVar, TS):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        k_1 = grid.first_interior(Zmin())
-        kb_1 = grid.boundary(Zmin())
-        dzi = grid.dzi
-        dti_ = 1.0/self.dt_upd
-        dt_ = 1.0/dti_
-
-        # Solve for area fraction
-        for i in i_uds:
-            au_lim = UpdVar[i].area_surface_bc * self.max_area_factor
-            for k in grid.over_elems_real(Center()):
-
-                a_k = q['a', i][k]
-                α_0_kp = tmp['α_0_half'][k]
-                w_k = q['w', i].Mid(k)
-
-                w_cut = q['w', i].DualCut(k)
-                a_cut = q['a', i].Cut(k)
-                ρ_cut = tmp['ρ_0_half'].Cut(k)
-                tendencies = 0.0
-
-                ρaw_cut = ρ_cut*a_cut*w_cut
-                adv = - α_0_kp * advect(ρaw_cut, w_cut, grid)
-                tendencies+=adv
-
-                ε_term = a_k * w_k * (+ tmp['entr_sc', i][k])
-                tendencies+=ε_term
-                δ_term = a_k * w_k * (- tmp['detr_sc', i][k])
-                tendencies+=δ_term
-
-                a_predict = a_k + dt_ * tendencies
-
-                needs_limiter = a_predict>au_lim
-                q_new['a', i][k] = np.fmin(np.fmax(a_predict, 0.0), au_lim)
-
-                unsteady = (q_new['a', i][k]-a_k)*dti_
-                # δ_limiter = unsteady - tendencies if needs_limiter else 0.0
-                # tendencies+=δ_limiter
-                # a_correct = a_k + dt_ * tendencies
-
-                if needs_limiter:
-                    δ_term_new = unsteady - adv - ε_term
-                    if a_k > 0.0:
-                        tmp['detr_sc', i][k] = δ_term_new/(-a_k  * w_k)
-                    else:
-                        tmp['detr_sc', i][k] = δ_term_new/(-au_lim  * w_k)
-
-            tmp['entr_sc', i][k_1] = 2.0 * dzi
-            tmp['detr_sc', i][k_1] = 0.0
-            q_new['a', i][k_1] = UpdVar[i].area_surface_bc
-
-        # Solve for updraft velocity
-        for i in i_uds:
-            q_new['a', i][kb_1] = UpdVar[i].w_surface_bc
-            for k in grid.over_elems_real(Center()):
-                a_new_k = q_new['a', i].Mid(k)
-                if a_new_k >= self.minimum_area:
-
-                    ρ_k = tmp['ρ_0'][k]
-                    w_i = q['w', i][k]
-                    w_env = q['w', i_env].values[k]
-                    a_k = q['a', i].Mid(k)
-                    entr_w = tmp['entr_sc', i].Mid(k)
-                    detr_w = tmp['detr_sc', i].Mid(k)
-                    B_k = tmp['B', i].Mid(k)
-
-                    a_cut = q['a', i].DualCut(k)
-                    ρ_cut = tmp['ρ_0'].Cut(k)
-                    w_cut = q['w', i].Cut(k)
-
-                    ρa_k = ρ_k * a_k
-                    ρa_new_k = ρ_k * a_new_k
-                    ρaw_k = ρa_k * w_i
-                    ρaww_cut = ρ_cut*a_cut*w_cut*w_cut
-
-                    adv = -advect(ρaww_cut, w_cut, grid)
-                    exch = ρaw_k * (- detr_w * w_i + entr_w * w_env)
-                    buoy = ρa_k * B_k
-                    press_buoy = - ρa_k * B_k * self.pressure_buoy_coeff
-                    press_drag = - ρa_k * (self.pressure_drag_coeff/self.pressure_plume_spacing * (w_i - w_env)**2.0/np.sqrt(np.fmax(a_k, self.minimum_area)))
-                    nh_press = press_buoy + press_drag
-
-                    q_new['w', i][k] = ρaw_k/ρa_new_k + dt_/ρa_new_k*(adv + exch + buoy + nh_press)
-
-        # Filter results
-        for i in i_uds:
-            for k in grid.over_elems_real(Center()):
-                if q_new['a', i].Mid(k) >= self.minimum_area:
-                    if q_new['w', i][k] <= 0.0:
-                        q_new['w', i][k:] = 0.0
-                        q_new['a', i][k+1:] = 0.0
-                        break
-                else:
-                    q_new['w', i][k:] = 0.0
-                    q_new['a', i][k+1:] = 0.0
-                    break
-
-        return
-
-    def solve_updraft_scalars(self, grid, q_new, q, q_tendencies, tmp, UpdVar, TS):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        dzi = grid.dzi
-        dti_ = 1.0/self.dt_upd
-        k_1 = grid.first_interior(Zmin())
-
-        for i in i_uds:
-            q_new['θ_liq', i][k_1] = UpdVar[i].θ_liq_surface_bc
-            q_new['q_tot', i][k_1] = UpdVar[i].q_tot_surface_bc
-
-            for k in grid.over_elems_real(Center())[1:]:
-                dt_ = 1.0/dti_
-                θ_liq_env = q['θ_liq', i_env][k]
-                q_tot_env = q['q_tot', i_env][k]
-
-                if q_new['a', i][k] >= self.minimum_area:
-                    a_k = q['a', i][k]
-                    a_cut = q['a', i].Cut(k)
-                    a_k_new = q_new['a', i][k]
-                    θ_liq_cut = q['θ_liq', i].Cut(k)
-                    q_tot_cut = q['q_tot', i].Cut(k)
-                    ρ_k = tmp['ρ_0_half'][k]
-                    ρ_cut = tmp['ρ_0_half'].Cut(k)
-                    w_cut = q['w', i].DualCut(k)
-                    ε_sc = tmp['entr_sc', i][k]
-                    δ_sc = tmp['detr_sc', i][k]
-                    ρa_k = ρ_k*a_k
-
-                    ρaw_cut = ρ_cut * a_cut * w_cut
-                    ρawθ_liq_cut = ρaw_cut * θ_liq_cut
-                    ρawq_tot_cut = ρaw_cut * q_tot_cut
-                    ρa_new_k = ρ_k * a_k_new
-
-                    tendencies_θ_liq = -advect(ρawθ_liq_cut, w_cut, grid) + ρaw_cut[1] * (ε_sc * θ_liq_env - δ_sc * θ_liq_cut[1])
-                    tendencies_q_tot = -advect(ρawq_tot_cut, w_cut, grid) + ρaw_cut[1] * (ε_sc * q_tot_env - δ_sc * q_tot_cut[1])
-
-                    q_new['θ_liq', i][k] = ρa_k/ρa_new_k * θ_liq_cut[1] + dt_*tendencies_θ_liq/ρa_new_k
-                    q_new['q_tot', i][k] = ρa_k/ρa_new_k * q_tot_cut[1] + dt_*tendencies_q_tot/ρa_new_k
-                else:
-                    q_new['θ_liq', i][k] = q['θ_liq', i_gm][k]
-                    q_new['q_tot', i][k] = q['q_tot', i_gm][k]
-
-        if self.use_local_micro:
-            for i in i_uds:
-                for k in grid.over_elems_real(Center()):
-                    θ_liq = q_new['θ_liq', i][k]
-                    q_tot = q_new['q_tot', i][k]
-                    p_0 = tmp['p_0_half'][k]
-                    T, q_liq = eos(p_0, q_tot, θ_liq)
-                    tmp['T', i][k] = T
-                    tmp_qr = acnv_instant(q_liq, q_tot, self.max_supersaturation, T, p_0)
-                    s = -tmp_qr
-                    tmp['prec_src_q_tot', i][k] = s
-                    r_src = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, tmp_qr)
-                    tmp['prec_src_θ_liq', i][k] = r_src
-                    q_new['q_tot', i][k] += s
-                    q_new['q_rai', i][k] -= s
-                    q_new['θ_liq', i][k] += r_src
-                    tmp['q_liq', i][k] = q_liq + s
-                q_new['q_rai', i][k_1] = 0.0
-
         return

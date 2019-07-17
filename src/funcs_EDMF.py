@@ -12,6 +12,172 @@ from funcs_thermo import  *
 from funcs_turbulence import  *
 from funcs_micro import *
 
+def compute_limiters(grid, tmp, q, q_tendencies, name, names_limiter, Δt, bounds_field):
+    for k in grid.over_elems_real(q.data_location(name)):
+        for i in q.over_sub_domains(name):
+            tmp[names_limiter[0], i][k] = (bounds_field[0] - q[name, i][k])/Δt - q_tendencies[name, i][k]
+            tmp[names_limiter[1], i][k] = (bounds_field[1] - q[name, i][k])/Δt - q_tendencies[name, i][k]
+
+def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    dzi = grid.dzi
+    k_1 = grid.first_interior(Zmin())
+
+    for i in i_uds:
+        q_new['θ_liq', i][k_1] = UpdVar[i].θ_liq_surface_bc
+        q_new['q_tot', i][k_1] = UpdVar[i].q_tot_surface_bc
+
+        for k in grid.over_elems_real(Center())[1:]:
+            θ_liq_env = q['θ_liq', i_env][k]
+            q_tot_env = q['q_tot', i_env][k]
+
+            if q_new['a', i][k] >= params.minimum_area:
+                a_k = q['a', i][k]
+                a_cut = q['a', i].Cut(k)
+                a_k_new = q_new['a', i][k]
+                θ_liq_cut = q['θ_liq', i].Cut(k)
+                q_tot_cut = q['q_tot', i].Cut(k)
+                ρ_k = tmp['ρ_0_half'][k]
+                ρ_cut = tmp['ρ_0_half'].Cut(k)
+                w_cut = q['w', i].DualCut(k)
+                ε_sc = tmp['entr_sc', i][k]
+                δ_sc = tmp['detr_sc', i][k]
+                ρa_k = ρ_k*a_k
+
+                ρaw_cut = ρ_cut * a_cut * w_cut
+                ρawθ_liq_cut = ρaw_cut * θ_liq_cut
+                ρawq_tot_cut = ρaw_cut * q_tot_cut
+                ρa_new_k = ρ_k * a_k_new
+
+                tendencies_θ_liq = -advect(ρawθ_liq_cut, w_cut, grid) + ρaw_cut[1] * (ε_sc * θ_liq_env - δ_sc * θ_liq_cut[1])
+                tendencies_q_tot = -advect(ρawq_tot_cut, w_cut, grid) + ρaw_cut[1] * (ε_sc * q_tot_env - δ_sc * q_tot_cut[1])
+
+                q_new['θ_liq', i][k] = ρa_k/ρa_new_k * θ_liq_cut[1] + TS.Δt_up*tendencies_θ_liq/ρa_new_k
+                q_new['q_tot', i][k] = ρa_k/ρa_new_k * q_tot_cut[1] + TS.Δt_up*tendencies_q_tot/ρa_new_k
+            else:
+                q_new['θ_liq', i][k] = q['θ_liq', i_gm][k]
+                q_new['q_tot', i][k] = q['q_tot', i_gm][k]
+
+    if params.use_local_micro:
+        for i in i_uds:
+            for k in grid.over_elems_real(Center()):
+                θ_liq = q_new['θ_liq', i][k]
+                q_tot = q_new['q_tot', i][k]
+                p_0 = tmp['p_0_half'][k]
+                T, q_liq = eos(p_0, q_tot, θ_liq)
+                tmp['T', i][k] = T
+                tmp_qr = acnv_instant(q_liq, q_tot, params.max_supersaturation, T, p_0)
+                s = -tmp_qr
+                tmp['prec_src_q_tot', i][k] = s
+                r_src = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, tmp_qr)
+                tmp['prec_src_θ_liq', i][k] = r_src
+                q_new['q_tot', i][k] += s
+                q_new['q_rai', i][k] -= s
+                q_new['θ_liq', i][k] += r_src
+                tmp['q_liq', i][k] = q_liq + s
+            q_new['q_rai', i][k_1] = 0.0
+
+    return
+
+def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    k_1 = grid.first_interior(Zmin())
+    kb_1 = grid.boundary(Zmin())
+    dzi = grid.dzi
+
+    # Solve for area fraction
+    for i in i_uds:
+        au_lim = UpdVar[i].area_surface_bc * params.max_area_factor
+        for k in grid.over_elems_real(Center()):
+
+            a_k = q['a', i][k]
+            α_0_kp = tmp['α_0_half'][k]
+            w_k = q['w', i].Mid(k)
+
+            w_cut = q['w', i].DualCut(k)
+            a_cut = q['a', i].Cut(k)
+            ρ_cut = tmp['ρ_0_half'].Cut(k)
+            tendencies = 0.0
+
+            ρaw_cut = ρ_cut*a_cut*w_cut
+            adv = - α_0_kp * advect(ρaw_cut, w_cut, grid)
+            tendencies+=adv
+
+            ε_term = a_k * w_k * (+ tmp['entr_sc', i][k])
+            tendencies+=ε_term
+            δ_term = a_k * w_k * (- tmp['detr_sc', i][k])
+            tendencies+=δ_term
+
+            a_predict = a_k + TS.Δt_up * tendencies
+
+            needs_limiter = a_predict>au_lim
+            q_new['a', i][k] = np.fmin(np.fmax(a_predict, 0.0), au_lim)
+
+            unsteady = (q_new['a', i][k]-a_k)/TS.Δt_up
+            # δ_limiter = unsteady - tendencies if needs_limiter else 0.0
+            # tendencies+=δ_limiter
+            # a_correct = a_k + TS.Δt_up * tendencies
+
+            if needs_limiter:
+                δ_term_new = unsteady - adv - ε_term
+                if a_k > 0.0:
+                    tmp['detr_sc', i][k] = δ_term_new/(-a_k  * w_k)
+                else:
+                    tmp['detr_sc', i][k] = δ_term_new/(-au_lim  * w_k)
+
+        tmp['entr_sc', i][k_1] = 2.0 * dzi
+        tmp['detr_sc', i][k_1] = 0.0
+        q_new['a', i][k_1] = UpdVar[i].area_surface_bc
+
+    # Solve for updraft velocity
+    for i in i_uds:
+        q_new['a', i][kb_1] = UpdVar[i].w_surface_bc
+        for k in grid.over_elems_real(Center()):
+            a_new_k = q_new['a', i].Mid(k)
+            if a_new_k >= params.minimum_area:
+
+                ρ_k = tmp['ρ_0'][k]
+                w_i = q['w', i][k]
+                w_env = q['w', i_env].values[k]
+                a_k = q['a', i].Mid(k)
+                entr_w = tmp['entr_sc', i].Mid(k)
+                detr_w = tmp['detr_sc', i].Mid(k)
+                B_k = tmp['B', i].Mid(k)
+
+                a_cut = q['a', i].DualCut(k)
+                ρ_cut = tmp['ρ_0'].Cut(k)
+                w_cut = q['w', i].Cut(k)
+
+                ρa_k = ρ_k * a_k
+                ρa_new_k = ρ_k * a_new_k
+                ρaw_k = ρa_k * w_i
+                ρaww_cut = ρ_cut*a_cut*w_cut*w_cut
+
+                adv = -advect(ρaww_cut, w_cut, grid)
+                exch = ρaw_k * (- detr_w * w_i + entr_w * w_env)
+                buoy = ρa_k * B_k
+                press_buoy = - ρa_k * B_k * params.pressure_buoy_coeff
+                p_coeff = params.pressure_drag_coeff/params.pressure_plume_spacing
+                press_drag = - ρa_k * (p_coeff * (w_i - w_env)**2.0/np.sqrt(np.fmax(a_k, params.minimum_area)))
+                nh_press = press_buoy + press_drag
+
+                q_new['w', i][k] = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
+
+    # Filter results
+    for i in i_uds:
+        for k in grid.over_elems_real(Center()):
+            if q_new['a', i].Mid(k) >= params.minimum_area:
+                if q_new['w', i][k] <= 0.0:
+                    q_new['w', i][k:] = 0.0
+                    q_new['a', i][k+1:] = 0.0
+                    break
+            else:
+                q_new['w', i][k:] = 0.0
+                q_new['a', i][k+1:] = 0.0
+                break
+
+    return
+
 def update_env(q, tmp, k, T, θ_liq, q_tot, q_liq, q_rai, alpha):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     tmp['T', i_env][k]      = T
@@ -76,9 +242,9 @@ def compute_covariance_rain(grid, q, tmp, tmp_O2, TS, cv):
     for k in grid.over_elems_real(Center()):
         ρa_0 = tmp['ρ_0_half'][k]*ae[k]
         if cv=='tke':            tmp_O2[cv]['rain_src'][k] = 0.0
-        if cv=='cv_θ_liq':       tmp_O2[cv]['rain_src'][k] = ρa_0 * 2. * tmp['cv_θ_liq_rain_dt'][k]       * TS.dti
-        if cv=='cv_q_tot':       tmp_O2[cv]['rain_src'][k] = ρa_0 * 2. * tmp['cv_q_tot_rain_dt'][k]       * TS.dti
-        if cv=='cv_θ_liq_q_tot': tmp_O2[cv]['rain_src'][k] = ρa_0 *      tmp['cv_θ_liq_q_tot_rain_dt'][k] * TS.dti
+        if cv=='cv_θ_liq':       tmp_O2[cv]['rain_src'][k] = ρa_0 * 2. * tmp['cv_θ_liq_rain_dt'][k]       * TS.Δti
+        if cv=='cv_q_tot':       tmp_O2[cv]['rain_src'][k] = ρa_0 * 2. * tmp['cv_q_tot_rain_dt'][k]       * TS.Δti
+        if cv=='cv_θ_liq_q_tot': tmp_O2[cv]['rain_src'][k] = ρa_0 *      tmp['cv_θ_liq_q_tot_rain_dt'][k] * TS.Δti
     return
 
 def compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, cv):
@@ -113,17 +279,17 @@ def update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag):
     slice_all_c = grid.slice_all(Center())
 
     tri_diag.ρaK[slice_real_n] = [ae.Mid(k)*tmp['K_h'].Mid(k)*ρ_0_half.Mid(k) for k in grid.over_elems_real(Node())]
-    construct_tridiag_diffusion_O1(grid, TS.dt, tri_diag, ρ_0_half, ae)
-    tri_diag.f[slice_all_c] = [q['q_tot', i_gm][k] + TS.dt*q_tendencies['q_tot', i_gm][k] for k in grid.over_elems(Center())]
+    construct_tridiag_diffusion_O1(grid, TS.Δt, tri_diag, ρ_0_half, ae)
+    tri_diag.f[slice_all_c] = [q['q_tot', i_gm][k] + TS.Δt*q_tendencies['q_tot', i_gm][k] for k in grid.over_elems(Center())]
     solve_tridiag_wrapper(grid, q_new['q_tot', i_gm], tri_diag)
-    tri_diag.f[slice_all_c] = [q['θ_liq', i_gm][k] + TS.dt*q_tendencies['θ_liq', i_gm][k] for k in grid.over_elems(Center())]
+    tri_diag.f[slice_all_c] = [q['θ_liq', i_gm][k] + TS.Δt*q_tendencies['θ_liq', i_gm][k] for k in grid.over_elems(Center())]
     solve_tridiag_wrapper(grid, q_new['θ_liq', i_gm], tri_diag)
 
     tri_diag.ρaK[slice_real_n] = [ae.Mid(k)*tmp['K_m'].Mid(k)*ρ_0_half.Mid(k) for k in grid.over_elems_real(Node())]
-    construct_tridiag_diffusion_O1(grid, TS.dt, tri_diag, ρ_0_half, ae)
-    tri_diag.f[slice_all_c] = [q['U', i_gm][k] + TS.dt*q_tendencies['U', i_gm][k] for k in grid.over_elems(Center())]
+    construct_tridiag_diffusion_O1(grid, TS.Δt, tri_diag, ρ_0_half, ae)
+    tri_diag.f[slice_all_c] = [q['U', i_gm][k] + TS.Δt*q_tendencies['U', i_gm][k] for k in grid.over_elems(Center())]
     solve_tridiag_wrapper(grid, q_new['U', i_gm], tri_diag)
-    tri_diag.f[slice_all_c] = [q['V', i_gm][k] + TS.dt*q_tendencies['V', i_gm][k] for k in grid.over_elems(Center())]
+    tri_diag.f[slice_all_c] = [q['V', i_gm][k] + TS.Δt*q_tendencies['V', i_gm][k] for k in grid.over_elems(Center())]
     solve_tridiag_wrapper(grid, q_new['V', i_gm], tri_diag)
     return
 
@@ -401,10 +567,10 @@ def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
     ae_1 = q['a', i_env][k_1]
     slice_all_c = grid.slice_all(Center())
 
-    q_tendencies['q_tot', i_gm][slice_all_c] += [tmp['mf_tend_q_tot'][k] + tmp['prec_src_q_tot', i_gm][k]*TS.dti for k in grid.over_elems(Center())]
+    q_tendencies['q_tot', i_gm][slice_all_c] += [tmp['mf_tend_q_tot'][k] + tmp['prec_src_q_tot', i_gm][k]*TS.Δti for k in grid.over_elems(Center())]
     q_tendencies['q_tot', i_gm][k_1] += Case.Sur.rho_q_tot_flux * dzi * α_1/ae_1
 
-    q_tendencies['θ_liq', i_gm][slice_all_c] += [tmp['mf_tend_θ_liq'][k] + tmp['prec_src_θ_liq', i_gm][k]*TS.dti for k in grid.over_elems(Center())]
+    q_tendencies['θ_liq', i_gm][slice_all_c] += [tmp['mf_tend_θ_liq'][k] + tmp['prec_src_θ_liq', i_gm][k]*TS.Δti for k in grid.over_elems(Center())]
     q_tendencies['θ_liq', i_gm][k_1] += Case.Sur.rho_θ_liq_flux * dzi * α_1/ae_1
 
     q_tendencies['U', i_gm][k_1] += Case.Sur.rho_uflux * dzi * α_1/ae_1
@@ -414,13 +580,12 @@ def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
 def update_cv_env(grid, q, q_tendencies, tmp, tmp_O2, TS, cv, tri_diag, tke_diss_coeff):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff)
-    dti = TS.dti
     k_1 = grid.first_interior(Zmin())
 
     slice_all_c = grid.slice_all(Center())
     a_e = q['a', i_env]
-    tri_diag.f[slice_all_c] = [tmp['ρ_0_half'][k] * a_e[k] * q[cv, i_env][k] * dti + q_tendencies[cv, i_env][k] for k in grid.over_elems(Center())]
-    tri_diag.f[k_1] = tmp['ρ_0_half'][k_1] * a_e[k_1] * q[cv, i_env][k_1] * dti + q[cv, i_env][k_1]
+    tri_diag.f[slice_all_c] = [tmp['ρ_0_half'][k] * a_e[k] * q[cv, i_env][k] * TS.Δti + q_tendencies[cv, i_env][k] for k in grid.over_elems(Center())]
+    tri_diag.f[k_1] = tmp['ρ_0_half'][k_1] * a_e[k_1] * q[cv, i_env][k_1] * TS.Δti + q[cv, i_env][k_1]
     solve_tridiag_wrapper(grid, q[cv, i_env], tri_diag)
 
     return
