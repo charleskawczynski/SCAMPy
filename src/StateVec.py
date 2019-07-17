@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import copy
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
@@ -44,6 +45,7 @@ class StateVec:
 
         self.n_vars = sum([nsd for var_name, loc, bc, nsd in var_tuple])
         self.var_names, self.var_mapper = get_var_mapper(var_tuple)
+        self.var_names = [sys.intern(x) for x in self.var_names]
         n = len(list(grid.over_elems(Center())))
         self.locs = {var_name : loc for var_name, loc, bc, nsd in var_tuple}
         self.nsd = {var_name : nsd for var_name, loc, bc, nsd in var_tuple}
@@ -53,11 +55,12 @@ class StateVec:
 
     def __getitem__(self, tup):
         if isinstance(tup, tuple):
-            name, i = tup
+            # name, i = tup
+            return self.fields[self.var_mapper[tup[0]][tup[1]]]
         else:
-            name = tup
-            i = 0
-        return self.fields[self.var_mapper[name][i]]
+            # name = tup
+            # i = 0
+            return self.fields[self.var_mapper[tup][0]]
 
     def __str__(self):
         s = ''

@@ -3,7 +3,7 @@ import pylab as plt
 from NetCDFIO import NetCDFIO_Stats
 import numpy as np
 from parameters import *
-from TriDiagSolver import solve_tridiag_wrapper, construct_tridiag_diffusion_O1, construct_tridiag_diffusion_O2
+from TriDiagSolver import *
 from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name

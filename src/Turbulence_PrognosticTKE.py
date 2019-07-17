@@ -5,7 +5,6 @@ from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 from Field import Field, Full, Half, Dirichlet, Neumann
 
-from TriDiagSolver import solve_tridiag_wrapper, construct_tridiag_diffusion_O1, construct_tridiag_diffusion_O2
 from Surface import SurfaceBase
 from Cases import  CasesBase
 from TimeStepping import TimeStepping
@@ -243,9 +242,10 @@ class EDMF_PrognosticTKE:
             self.solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS)
             self.solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS)
             assign_values_to_new(grid, q, q_new, tmp)
-            for i in i_sd: q['θ_liq', i].apply_bc(grid, 0.0)
-            for i in i_sd: q['q_tot', i].apply_bc(grid, 0.0)
-            for i in i_uds: q['q_rai', i].apply_bc(grid, 0.0)
+            for i in i_sd:
+                q['θ_liq', i].apply_bc(grid, 0.0)
+                q['q_tot', i].apply_bc(grid, 0.0)
+                q['q_rai', i].apply_bc(grid, 0.0)
             q['w', i_env].apply_bc(grid, 0.0)
             time_elapsed += self.dt_upd
             u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Node())])

@@ -1149,7 +1149,7 @@ class DYCOMS_RF01(CasesBase):
             # thermodynamic variable profile (either entropy or thetal)
             # (calculated based on T and q_liq profiles.
             # Here we use Rd, cp and L constants as defined in scampy)
-            q['θ_liq', i_gm][k] = t_to_thetali_c(tmp['p_0_half'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], tmp['q_liq', i_gm][k], q_ice)
+            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0_half'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], tmp['q_liq', i_gm][k], q_ice)
 
             # buoyancy profile
             q_vap = q['q_tot', i_gm][k] - q_ice - tmp['q_liq', i_gm][k]

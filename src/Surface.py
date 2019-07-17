@@ -153,7 +153,7 @@ class SurfaceMoninObukhov(SurfaceBase):
         theta_rho_b = theta_rho_c(p_1, T_1, self.qsurface, self.qsurface)
         lv = latent_heat(T_1)
 
-        θ_liq_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
+        θ_liq_star = thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
 
         self.windspeed = compute_windspeed(grid, q, 0.0)
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/z_1
@@ -205,7 +205,7 @@ class SurfaceSullivanPatton(SurfaceBase):
 
         theta_flux = 0.24
 
-        θ_liq_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
+        θ_liq_star = thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
 
         self.windspeed = compute_windspeed(grid, q, 0.0)
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/z_1
