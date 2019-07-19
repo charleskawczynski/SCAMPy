@@ -90,6 +90,5 @@ class ReferenceState:
 
     def initialize(self, grid, Stats, tmp):
         self.sg = t_to_entropy_c(self.Pg, self.Tg, self.qtg, 0.0, 0.0)
-        initialize_ref_state(grid, Stats, tmp['p_0']     , tmp['ρ_0']     , tmp['α_0']     , Node()  , self.sg, self.Pg, self.Tg, self.qtg)
-        initialize_ref_state(grid, Stats, tmp['p_0_half'], tmp['ρ_0_half'], tmp['α_0_half'], Center(), self.sg, self.Pg, self.Tg, self.qtg)
+        initialize_ref_state(grid, Stats, tmp['p_0'], tmp['ρ_0'], tmp['α_0'], Center(), self.sg, self.Pg, self.Tg, self.qtg)
         return

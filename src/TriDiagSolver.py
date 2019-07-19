@@ -15,7 +15,7 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
 
     a_env = q['a', i_env]
     w_env = q['w', i_env]
-    ρ_0_half = tmp['ρ_0_half']
+    ρ_0_half = tmp['ρ_0']
     for k in grid.over_elems_real(Center()):
         ρ_0_cut = ρ_0_half.Cut(k)
         ae_cut = a_env.Cut(k)

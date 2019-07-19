@@ -179,12 +179,12 @@ z_max        = 1.0
 n_elems_real = 10
 n_ghost      = 1
 grid = Grid(z_min, z_max, n_elems_real, n_ghost)
-unknowns = (('ρ_0', Center(), 1), ('w', Node(), 3), ('a', Center(), 3), ('alpha_0', Center(), 1))
+unknowns = (('rho_0', Center(), 1), ('w', Node(), 3), ('a', Center(), 3), ('alpha_0', Center(), 1))
 state_vec = StateVec(unknowns, grid)
 print(state_vec)
 
-state_vec['ρ_0'][1] = 1.0
-state_vec['ρ_0'][3] = 4.0
+state_vec['rho_0'][1] = 1.0
+state_vec['rho_0'][3] = 4.0
 print(state_vec)
 state_vec['w', 2][2] = 3.0
 print(state_vec)
@@ -192,15 +192,15 @@ print('grid.z      = ', grid.z)
 print('grid.z_half = ', grid.z_half)
 print(state_vec.over_sub_domains())
 print(state_vec.over_sub_domains(1))
-print(state_vec.over_sub_domains('ρ_0'))
-print(state_vec.var_names_except('ρ_0'))
+print(state_vec.over_sub_domains('rho_0'))
+print(state_vec.var_names_except('rho_0'))
 
 for k in grid.over_elems(Center()):
-    state_vec['ρ_0'][k] = 2.0
+    state_vec['rho_0'][k] = 2.0
     print('k = ', k)
 
 for k in grid.over_elems_real(Center()):
-    state_vec['ρ_0'][k] = 3.0
+    state_vec['rho_0'][k] = 3.0
     print('k = ', k)
 
 state_vec.plot_state(grid, './', 'test')

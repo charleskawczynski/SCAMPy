@@ -47,8 +47,8 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.env_Hvar         = q['cv_θ_liq', i_env][k]
             input_st.env_QTvar        = q['cv_q_tot', i_env][k]
             input_st.env_HQTcov       = q['cv_θ_liq_q_tot', i_env][k]
-            input_st.p0               = tmp['p_0_half'][k]
-            input_st.alpha0           = tmp['α_0_half'][k]
+            input_st.p0               = tmp['p_0'][k]
+            input_st.alpha0           = tmp['α_0'][k]
             input_st.tke              = q['tke', i_env][k]
             input_st.tke_ed_coeff     = tke_ed_coeff
             input_st.L                = 20000.0 # need to define the scale of the GCM grid resolution
@@ -160,7 +160,7 @@ class EDMF_PrognosticTKE:
         zLL = grid.z_half[k_1]
         θ_liq_1 = q['θ_liq', i_gm][k_1]
         q_tot_1 = q['q_tot', i_gm][k_1]
-        alpha0LL  = tmp['α_0_half'][k_1]
+        alpha0LL  = tmp['α_0'][k_1]
         S = Case.Sur
         cv_q_tot = surface_variance(S.rho_q_tot_flux*alpha0LL, S.rho_q_tot_flux*alpha0LL, S.ustar, zLL, S.obukhov_length)
         cv_θ_liq = surface_variance(S.rho_θ_liq_flux*alpha0LL, S.rho_θ_liq_flux*alpha0LL, S.ustar, zLL, S.obukhov_length)
@@ -258,20 +258,7 @@ class EDMF_PrognosticTKE:
             buoyancy(grid, q, tmp)
             compute_sources(grid, q, tmp, self.max_supersaturation)
             update_updraftvars(grid, q, tmp)
-
             solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-
-            # solve_updraft_tendencies_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-            # solve_updraft_tendencies_velocity(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-            # compute_limiters(grid, tmp, q, q_tendencies, name, ['S_a_min', 'S_a_max'], Δt, [0.0, 1.0])
-            # compute_limiters(grid, tmp, q, q_tendencies, name, ['S_w_min', 'S_w_max'], Δt, [0.0, 10000.0])
-            # compute_limiters(grid, tmp, q, q_tendencies, name, ['S_q_tot_min', 'S_q_tot_max'], Δt, [0.0, 1.0])
-            # add_detrainment_tendency(grid, tmp, q, q_tendencies, name, 'a'    , ['S_a_min', 'S_a_max'], Δt)
-            # add_detrainment_tendency(grid, tmp, q, q_tendencies, name, 'a'    , ['S_w_min', 'S_w_max'], Δt)
-            # add_detrainment_tendency(grid, tmp, q, q_tendencies, name, 'q_tot', ['S_q_tot_min', 'S_q_tot_max'], Δt)
-            # solve_updraft_tendencies_tracers(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-            # update_updrafts(grid, tmp, q, q_tendencies, name, ['a', 'w', 'q_tot', 'θ_liq', 'q_rai'], Δt)
-
             solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
             assign_values_to_new(grid, q, q_new, tmp)
             for i in i_sd:

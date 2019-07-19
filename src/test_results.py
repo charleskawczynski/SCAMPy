@@ -48,7 +48,7 @@ def run_all_cases():
     # all_cases = ('Soares', 'Bomex', 'life_cycle_Tan2018', 'Rico', 'TRMM_LBA', 'ARM_SGP', 'DYCOMS_RF01', 'GABLS', 'SP')
     # all_cases = ('DYCOMS_RF01', 'GABLS', 'SP')
     tol_rel_local = 0.1
-    score_tol = 0.05
+    score_tol = 0.055
     sol_expected = expected_solutions(all_cases)
 
     cases = ('Soares', 'Bomex')
