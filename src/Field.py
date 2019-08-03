@@ -84,13 +84,13 @@ class Full(Field):
         return self.values[k]
 
     def Dual(self, key):
-        return np.array([self.values[k] for k in [key-1, key]])
+        return np.array([self.values[k] for k in range(key-1, key+1)])
 
     def Cut(self, key):
-        return np.array([self.values[k] for k in [key-1, key, key+1]])
+        return np.array([self.values[k] for k in range(key-1, key+2)])
 
     def DualCut(self, key):
-        return np.array([0.5*(self.values[k]+self.values[k+1]) for k in [key-2, key-1, key]])
+        return np.array([0.5*(self.values[k]+self.values[k+1]) for k in range(key-2, key+1)])
 
     def surface(self, grid):
         return self.values[grid.boundary(Zmin())]
@@ -132,13 +132,13 @@ class Half(Field):
         return self.values[k]
 
     def Dual(self, key):
-        return np.array([self.values[k] for k in [key, key+1]])
+        return np.array([self.values[k] for k in range(key, key+2)])
 
     def Cut(self, key):
-        return np.array([self.values[k] for k in [key-1, key, key+1]])
+        return np.array([self.values[k] for k in range(key-1, key+2)])
 
     def DualCut(self, key):
-        return np.array([0.5*(self.values[k]+self.values[k+1]) for k in [key-1, key, key+1]])
+        return np.array([0.5*(self.values[k]+self.values[k+1]) for k in range(key-1, key+2)])
 
     def surface(self, grid):
         k_i = grid.first_interior(Zmin())

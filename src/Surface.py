@@ -24,7 +24,7 @@ class SurfaceBase:
         theta_rho = Half(grid)
         for k in grid.over_elems(Center()):
             q_vap = q['q_tot', i_gm][k] - tmp['q_liq', i_gm][k]
-            theta_rho[k] = theta_rho_c(tmp['p_0_half'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
+            theta_rho[k] = theta_rho_c(tmp['p_0'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
         zi = compute_inversion_height(theta_rho, q['U', i_gm], q['V', i_gm], grid, self.Ri_bulk_crit)
         wstar = compute_convective_velocity(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
@@ -52,8 +52,8 @@ class SurfaceFixedFlux(SurfaceBase):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         k_1 = grid.first_interior(Zmin())
         z_1 = grid.z_half[k_1]
-        ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
-        α_0_surf = tmp.surface(grid, 'α_0_half')
+        ρ_0_surf = tmp.surface(grid, 'ρ_0')
+        α_0_surf = tmp.surface(grid, 'α_0')
         T_1 = tmp['T', i_gm][k_1]
         θ_liq_1 = q['θ_liq', i_gm][k_1]
         q_tot_1 = q['q_tot', i_gm][k_1]
@@ -104,8 +104,8 @@ class SurfaceFixedCoeffs(SurfaceBase):
     def update(self, grid, q, tmp):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         k_1 = grid.first_interior(Zmin())
-        ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
-        α_0_surf = tmp.surface(grid, 'α_0_half')
+        ρ_0_surf = tmp.surface(grid, 'ρ_0')
+        α_0_surf = tmp.surface(grid, 'α_0')
         T_1 = tmp['T', i_gm][k_1]
         θ_liq_1 = q['θ_liq', i_gm][k_1]
         q_tot_1 = q['q_tot', i_gm][k_1]
@@ -139,9 +139,9 @@ class SurfaceMoninObukhov(SurfaceBase):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         k_1 = grid.first_interior(Zmin())
         z_1 = grid.z_half[k_1]
-        ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
-        α_0_surf = tmp.surface(grid, 'α_0_half')
-        p_1 = tmp['p_0_half'][k_1]
+        ρ_0_surf = tmp.surface(grid, 'ρ_0')
+        α_0_surf = tmp.surface(grid, 'α_0')
+        p_1 = tmp['p_0'][k_1]
         T_1 = tmp['T', i_gm][k_1]
         θ_liq_1 = q['θ_liq', i_gm][k_1]
         q_tot_1 = q['q_tot', i_gm][k_1]
@@ -153,7 +153,7 @@ class SurfaceMoninObukhov(SurfaceBase):
         theta_rho_b = theta_rho_c(p_1, T_1, self.qsurface, self.qsurface)
         lv = latent_heat(T_1)
 
-        θ_liq_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
+        θ_liq_star = thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
 
         self.windspeed = compute_windspeed(grid, q, 0.0)
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/z_1
@@ -187,9 +187,9 @@ class SurfaceSullivanPatton(SurfaceBase):
         i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
         k_1 = grid.first_interior(Zmin())
         z_1 = grid.z_half[k_1]
-        p_0_1 = tmp['p_0_half'][k_1]
-        α_0_1 = tmp['α_0_half'][k_1]
-        ρ_0_surf = tmp.surface(grid, 'ρ_0_half')
+        p_0_1 = tmp['p_0'][k_1]
+        α_0_1 = tmp['α_0'][k_1]
+        ρ_0_surf = tmp.surface(grid, 'ρ_0')
         T_1 = tmp['T', i_gm][k_1]
         θ_liq_1 = q['θ_liq', i_gm][k_1]
         q_tot_1 = q['q_tot', i_gm][k_1]
@@ -205,7 +205,7 @@ class SurfaceSullivanPatton(SurfaceBase):
 
         theta_flux = 0.24
 
-        θ_liq_star = t_to_thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
+        θ_liq_star = thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
 
         self.windspeed = compute_windspeed(grid, q, 0.0)
         Nb2 = g/theta_rho_g*(theta_rho_b-theta_rho_g)/z_1

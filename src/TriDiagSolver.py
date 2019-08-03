@@ -9,13 +9,13 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     dzi = grid.dzi
     dzi2 = grid.dzi**2.0
-    dti = TS.dti
+    dti = TS.Δti
     k_1 = grid.first_interior(Zmin())
     k_2 = grid.first_interior(Zmax())
 
     a_env = q['a', i_env]
     w_env = q['w', i_env]
-    ρ_0_half = tmp['ρ_0_half']
+    ρ_0_half = tmp['ρ_0']
     for k in grid.over_elems_real(Center()):
         ρ_0_cut = ρ_0_half.Cut(k)
         ae_cut = a_env.Cut(k)

@@ -16,16 +16,18 @@ def exner_c(p_0, kappa = kappa):
 def theta_c(p_0, T):
     return T / exner_c(p_0)
 
-def thetali_c(p_0, T, q_tot, q_liq, q_ice, L):
+def thetali_c(p_0, T, q_tot, q_liq, q_ice):
     # Liquid ice potential temperature consistent with Triopoli and Cotton (1981)
-    return theta_c(p_0, T) * np.exp(-latent_heat(T)*(q_liq/(1.0 - q_tot) + q_ice/(1.0 -q_tot))/(T*cpd))
+    q_dry = (1.0 - q_tot)
+    return theta_c(p_0, T) * np.exp(-latent_heat(T)*(q_liq/q_dry + q_ice/q_dry)/(T*cpd))
 
 def theta_virt_c( p_0, T, q_tot, q_liq, qr):
     # Virtual potential temperature, mixing ratios are approximated by specific humidities.
     return theta_c(p_0, T) * (1.0 + 0.61 * (qr) - q_liq);
 
 def pd_c(p_0, q_tot, q_vap):
-    return p_0*(1.0-q_tot)/(1.0 - q_tot + eps_vi * q_vap)
+    q_dry = (1.0 - q_tot)
+    return p_0*q_dry/(q_dry + eps_vi * q_vap)
 
 def pv_c(p_0, q_tot, q_vap):
     return p_0 * eps_vi * q_vap /(1.0 - q_tot + eps_vi * q_vap)
@@ -68,10 +70,6 @@ def t_to_entropy_c(p_0, T,  q_tot, q_liq, q_ice):
     L = latent_heat(T)
     return sd_c(p_dry,T) * (1.0 - q_tot) + sv_c(p_vap,T) * q_tot + sc_c(L,T)*(q_liq + q_ice)
 
-def t_to_thetali_c(p_0, T,  q_tot, q_liq, q_ice):
-    L = latent_heat(T)
-    return thetali_c(p_0, T, q_tot, q_liq, q_ice, L)
-
 def pv_star(T):
     #    Magnus formula
     T_C = T - 273.15
@@ -110,7 +108,7 @@ def eos(p_0, q_tot, prog):
         q_liq = 0.0
     else:
         ql_1 = q_tot - qv_star_1
-        prog_1 = t_to_thetali_c(p_0, T_1, q_tot, ql_1, 0.0)
+        prog_1 = thetali_c(p_0, T_1, q_tot, ql_1, 0.0)
         f_1 = prog - prog_1
         T_2 = T_1 + ql_1 * latent_heat(T_1) /((1.0 - q_tot)*cpd + qv_star_1 * cpv)
         delta_T  = np.fabs(T_2 - T_1)
@@ -121,7 +119,7 @@ def eos(p_0, q_tot, prog):
             pv_2 = pv_c(p_0, q_tot, qv_star_2)
             pd_2 = p_0 - pv_2
             ql_2 = q_tot - qv_star_2
-            prog_2 =  t_to_thetali_c(p_0,T_2,q_tot, ql_2, 0.0   )
+            prog_2 =  thetali_c(p_0,T_2,q_tot, ql_2, 0.0   )
             f_2 = prog - prog_2
             T_n = T_2 - f_2*(T_2 - T_1)/(f_2 - f_1)
             T_1 = T_2

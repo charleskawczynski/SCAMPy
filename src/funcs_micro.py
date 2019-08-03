@@ -10,8 +10,8 @@ def q2r(q_, q_tot):
     return q_ / (1. - q_tot)
 
 def rain_source_to_thetal(p_0, T, q_tot, q_liq, q_ice, q_rai):
-    θ_liq_ice_old = t_to_thetali_c(p_0, T, q_tot, q_liq, q_ice)
-    θ_liq_ice_new = t_to_thetali_c(p_0, T, q_tot - q_rai, q_liq - q_rai, q_ice)
+    θ_liq_ice_old = thetali_c(p_0, T, q_tot, q_liq, q_ice)
+    θ_liq_ice_new = thetali_c(p_0, T, q_tot - q_rai, q_liq - q_rai, q_ice)
     return θ_liq_ice_new - θ_liq_ice_old
 
 # instantly convert all cloud water exceeding a threshold to rain water
@@ -59,13 +59,13 @@ def terminal_velocity(rho, rho_0, q_rai, q_tot):
 def microphysics(T, q_liq, p_0, q_tot, max_supersat, in_Env):
     _ret = type('', (), {})()
     _ret.T     = T
-    _ret.q_liq    = q_liq
-    _ret.θ_liq   = t_to_thetali_c(p_0, T, q_tot, q_liq, 0.0)
-    _ret.θ    = theta_c(p_0, T)
-    _ret.q_vap    = q_tot - q_liq
+    _ret.q_liq = q_liq
+    _ret.θ_liq = thetali_c(p_0, T, q_tot, q_liq, 0.0)
+    _ret.θ     = theta_c(p_0, T)
+    _ret.q_vap = q_tot - q_liq
     _ret.alpha = alpha_c(p_0, T, q_tot, _ret.q_vap)
-    _ret.q_rai    = 0.0
-    _ret.q_tot    = q_tot
+    _ret.q_rai = 0.0
+    _ret.q_tot = q_tot
 
     if in_Env:
         _ret.q_rai          = acnv_instant(q_liq, q_tot, max_supersat, T, p_0)

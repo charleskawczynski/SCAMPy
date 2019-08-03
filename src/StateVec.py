@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import copy
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
@@ -44,6 +45,7 @@ class StateVec:
 
         self.n_vars = sum([nsd for var_name, loc, bc, nsd in var_tuple])
         self.var_names, self.var_mapper = get_var_mapper(var_tuple)
+        self.var_names = [sys.intern(x) for x in self.var_names]
         n = len(list(grid.over_elems(Center())))
         self.locs = {var_name : loc for var_name, loc, bc, nsd in var_tuple}
         self.nsd = {var_name : nsd for var_name, loc, bc, nsd in var_tuple}
@@ -53,11 +55,12 @@ class StateVec:
 
     def __getitem__(self, tup):
         if isinstance(tup, tuple):
-            name, i = tup
+            # name, i = tup
+            return self.fields[self.var_mapper[tup[0]][tup[1]]]
         else:
-            name = tup
-            i = 0
-        return self.fields[self.var_mapper[name][i]]
+            # name = tup
+            # i = 0
+            return self.fields[self.var_mapper[tup][0]]
 
     def __str__(self):
         s = ''
@@ -176,12 +179,12 @@ z_max        = 1.0
 n_elems_real = 10
 n_ghost      = 1
 grid = Grid(z_min, z_max, n_elems_real, n_ghost)
-unknowns = (('ρ_0', Center(), 1), ('w', Node(), 3), ('a', Center(), 3), ('alpha_0', Center(), 1))
+unknowns = (('rho_0', Center(), 1), ('w', Node(), 3), ('a', Center(), 3), ('alpha_0', Center(), 1))
 state_vec = StateVec(unknowns, grid)
 print(state_vec)
 
-state_vec['ρ_0'][1] = 1.0
-state_vec['ρ_0'][3] = 4.0
+state_vec['rho_0'][1] = 1.0
+state_vec['rho_0'][3] = 4.0
 print(state_vec)
 state_vec['w', 2][2] = 3.0
 print(state_vec)
@@ -189,15 +192,15 @@ print('grid.z      = ', grid.z)
 print('grid.z_half = ', grid.z_half)
 print(state_vec.over_sub_domains())
 print(state_vec.over_sub_domains(1))
-print(state_vec.over_sub_domains('ρ_0'))
-print(state_vec.var_names_except('ρ_0'))
+print(state_vec.over_sub_domains('rho_0'))
+print(state_vec.var_names_except('rho_0'))
 
 for k in grid.over_elems(Center()):
-    state_vec['ρ_0'][k] = 2.0
+    state_vec['rho_0'][k] = 2.0
     print('k = ', k)
 
 for k in grid.over_elems_real(Center()):
-    state_vec['ρ_0'][k] = 3.0
+    state_vec['rho_0'][k] = 3.0
     print('k = ', k)
 
 state_vec.plot_state(grid, './', 'test')

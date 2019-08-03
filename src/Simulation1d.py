@@ -60,43 +60,48 @@ class Simulation1d:
         )
 
         temp_vars = (
-                     ('mean_entr_sc'  , Center() , Neumann(), 1),
-                     ('mean_detr_sc'  , Center() , Neumann(), 1),
-                     ('massflux_half' , Center() , Neumann(), 1),
-                     ('mf_q_tot_half' , Center() , Neumann(), 1),
-                     ('mf_θ_liq_half' , Center() , Neumann(), 1),
-                     ('temp_C'        , Center() , Neumann(), 1),
-                     ('ρ_0'           , Node()   , Neumann(), 1),
-                     ('α_0'           , Node()   , Neumann(), 1),
-                     ('p_0'           , Node()   , Neumann(), 1),
-                     ('ρ_0_half'      , Center() , Neumann(), 1),
-                     ('α_0_half'      , Center() , Neumann(), 1),
-                     ('p_0_half'      , Center() , Neumann(), 1),
-                     ('K_m'           , Center() , Neumann(), 1),
-                     ('K_h'           , Center() , Neumann(), 1),
-                     ('l_mix'         , Center() , Neumann(), 1),
-                     ('q_tot_dry'             , Center(), Neumann(), 1),
-                     ('θ_dry'                 , Center(), Neumann(), 1),
-                     ('t_cloudy'              , Center(), Neumann(), 1),
-                     ('q_vap_cloudy'          , Center(), Neumann(), 1),
-                     ('q_tot_cloudy'          , Center(), Neumann(), 1),
-                     ('θ_cloudy'              , Center(), Neumann(), 1),
-                     ('cv_θ_liq_rain_dt'      , Center(), Neumann(), 1),
-                     ('cv_q_tot_rain_dt'      , Center(), Neumann(), 1),
-                     ('cv_θ_liq_q_tot_rain_dt', Center(), Neumann(), 1),
-                     ('CF'            , Center() , Neumann(), 1),
-                     ('entr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
-                     ('detr_sc'       , Center() , Neumann(), 1), # Entrainment/Detrainment rates
-                     ('q_liq'         , Center() , Neumann(), N_sd),
-                     ('prec_src_θ_liq', Center() , Neumann(), N_sd),
-                     ('prec_src_q_tot', Center() , Neumann(), N_sd),
-                     ('T'             , Center() , Neumann(), N_sd),
-                     ('B'             , Center() , Neumann(), N_sd),
-                     ('mf_θ_liq'      , Node() , Neumann(), N_sd),
-                     ('mf_q_tot'      , Node() , Neumann(), N_sd),
-                     ('mf_tend_θ_liq' , Node() , Neumann(), N_sd),
-                     ('mf_tend_q_tot' , Node() , Neumann(), N_sd),
-                     ('mf_tmp'        , Node() , Neumann(), N_sd),
+                     ('mean_entr_sc'           , Center() , Neumann(), 1),
+                     ('mean_detr_sc'           , Center() , Neumann(), 1),
+                     ('massflux_half'          , Center() , Neumann(), 1),
+                     ('mf_q_tot_half'          , Center() , Neumann(), 1),
+                     ('mf_θ_liq_half'          , Center() , Neumann(), 1),
+                     ('temp_C'                 , Center() , Neumann(), 1),
+                     ('ρ_0'                    , Center() , Neumann(), 1),
+                     ('α_0'                    , Center() , Neumann(), 1),
+                     ('p_0'                    , Center() , Neumann(), 1),
+                     ('K_m'                    , Center() , Neumann(), 1),
+                     ('K_h'                    , Center() , Neumann(), 1),
+                     ('l_mix'                  , Center() , Neumann(), 1),
+                     ('q_tot_dry'              , Center() , Neumann(), 1),
+                     ('θ_dry'                  , Center() , Neumann(), 1),
+                     ('t_cloudy'               , Center() , Neumann(), 1),
+                     ('q_vap_cloudy'           , Center() , Neumann(), 1),
+                     ('q_tot_cloudy'           , Center() , Neumann(), 1),
+                     ('θ_cloudy'               , Center() , Neumann(), 1),
+                     ('cv_θ_liq_rain_dt'       , Center() , Neumann(), 1),
+                     ('cv_q_tot_rain_dt'       , Center() , Neumann(), 1),
+                     ('cv_θ_liq_q_tot_rain_dt' , Center() , Neumann(), 1),
+                     ('CF'                     , Center() , Neumann(), 1),
+                     ('entr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
+                     ('detr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
+                     ('δ_src_a'                , Center() , Neumann(), N_sd),
+                     ('δ_src_w'                , Center() , Neumann(), N_sd),
+                     ('δ_src_q_tot'            , Center() , Neumann(), N_sd),
+                     ('δ_src_θ_liq'            , Center() , Neumann(), N_sd),
+                     ('δ_src_a_model'          , Center() , Neumann(), N_sd),
+                     ('δ_src_w_model'          , Center() , Neumann(), N_sd),
+                     ('δ_src_q_tot_model'      , Center() , Neumann(), N_sd),
+                     ('δ_src_θ_liq_model'      , Center() , Neumann(), N_sd),
+                     ('q_liq'                  , Center() , Neumann(), N_sd),
+                     ('prec_src_θ_liq'         , Center() , Neumann(), N_sd),
+                     ('prec_src_q_tot'         , Center() , Neumann(), N_sd),
+                     ('T'                      , Center() , Neumann(), N_sd),
+                     ('B'                      , Center() , Neumann(), N_sd),
+                     ('mf_θ_liq'               , Center() , Neumann(), N_sd),
+                     ('mf_q_tot'               , Center() , Neumann(), N_sd),
+                     ('mf_tend_θ_liq'          , Center() , Neumann(), N_sd),
+                     ('mf_tend_q_tot'          , Center() , Neumann(), N_sd),
+                     ('mf_tmp'                 , Center() , Neumann(), N_sd),
                      )
 
         q_2MO = (
@@ -254,7 +259,7 @@ class Simulation1d:
 
         lwp = 0.0
         for k in self.grid.over_elems_real(Center()):
-            lwp += self.tmp['ρ_0_half'][k]*self.tmp['q_liq', i_gm][k]*self.grid.dz
+            lwp += self.tmp['ρ_0'][k]*self.tmp['q_liq', i_gm][k]*self.grid.dz
         self.Stats.write_ts('lwp', lwp)
 
         for v in self.q.var_names:

@@ -61,7 +61,7 @@ class ForcingStandard(ForcingBase):
             # Apply large-scale horizontal advection tendencies
             q_tot = q['q_tot', i_gm][k]
             q_vap = q_tot - tmp['q_liq', i_gm][k]
-            q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0_half'][k],
+            q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0'][k],
                                                                     q_tot,
                                                                     q_vap,
                                                                     tmp['T', i_gm][k],
@@ -96,7 +96,7 @@ class ForcingStandard(ForcingBase):
 #         for k in grid.over_elems_real(Center()):
 #             # Apply large-scale horizontal advection tendencies
 #             q_vap = q['q_tot', i_gm][k] - tmp['q_liq', i_gm][k]
-#             q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0_half'][k],q['q_tot', i_gm][k], q_vap,
+#             q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0'][k],q['q_tot', i_gm][k], q_vap,
 #                                                                 tmp['T', i_gm][k], self.dqtdt[k], self.dTdt[k])
 #             q_tendencies['q_tot', i_gm][k] += self.dqtdt[k]
 #
@@ -144,7 +144,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
                 idx_zi = k
                 # will be used at cell edges
                 z_i  = grid.z[idx_zi]
-                rhoi = tmp['ρ_0_half'][idx_zi]
+                rhoi = tmp['ρ_0'][idx_zi]
                 break
 
         self.f_rad = Full(grid)
@@ -157,14 +157,14 @@ class ForcingDYCOMS_RF01(ForcingBase):
 
         self.f_rad[k_2] = self.F0 * np.exp(-q_0)
         for k in range(k_2 - 1, -1, -1):
-            q_0           += self.kappa * tmp['ρ_0_half'][k] * tmp['q_liq', i_gm][k] * grid.dz
+            q_0           += self.kappa * tmp['ρ_0'][k] * tmp['q_liq', i_gm][k] * grid.dz
             self.f_rad[k]  = self.F0 * np.exp(-q_0)
 
         # cloud-base warming
         q_1 = 0.0
         self.f_rad[k_1] += self.F1 * np.exp(-q_1)
         for k in range(1, k_2 + 1):
-            q_1           += self.kappa * tmp['ρ_0_half'][k - 1] * tmp['q_liq', i_gm][k - 1] * grid.dz
+            q_1           += self.kappa * tmp['ρ_0'][k - 1] * tmp['q_liq', i_gm][k - 1] * grid.dz
             self.f_rad[k] += self.F1 * np.exp(-q_1)
 
         # cooling in free troposphere
@@ -177,7 +177,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
         self.f_rad[k_2] += rhoi * dycoms_cp * self.divergence * self.alpha_z * (np.power(cbrt_z, 4) / 4.0 + z_i * cbrt_z)
 
         for k in grid.over_elems_real(Center()):
-            self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / grid.dz / tmp['ρ_0_half'][k] / dycoms_cp
+            self.dTdt[k] = - (self.f_rad[k + 1] - self.f_rad[k]) / grid.dz / tmp['ρ_0'][k] / dycoms_cp
 
         return
 
@@ -193,7 +193,7 @@ class ForcingDYCOMS_RF01(ForcingBase):
             # Apply large-scale horizontal advection tendencies
             q_tot = q['q_tot', i_gm][k]
             q_vap = q_tot - tmp['q_liq', i_gm][k]
-            q_tendencies['θ_liq', i_gm][k]  += convert_forcing_thetal(tmp['p_0_half'][k],
+            q_tendencies['θ_liq', i_gm][k]  += convert_forcing_thetal(tmp['p_0'][k],
                                                                  q_tot,
                                                                  q_vap,
                                                                  tmp['T', i_gm][k],

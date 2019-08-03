@@ -1,3 +1,4 @@
+import cProfile
 import argparse
 import sys
 import os
@@ -31,7 +32,7 @@ def run(case):
 
 def main(**kwargs):
     case = kwargs['case']
-    run(case)
+    sol = run(case)
 
 def main1d(namelist, paramlist, root_dir):
     import Simulation1d
