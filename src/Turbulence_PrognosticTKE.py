@@ -40,7 +40,7 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.q_liq_env        = tmp['q_liq', i_env][k]
             input_st.θ_liq_env        = q['θ_liq', i_env][k]
             input_st.b_env            = tmp['B', i_env][k]
-            input_st.w_env            = q['w', i_env].values[k]
+            input_st.w_env            = q['w', i_env][k]
             input_st.θ_liq_up         = q['θ_liq', i][k]
             input_st.qt_up            = q['q_tot', i][k]
             input_st.q_liq_up         = tmp['q_liq', i][k]

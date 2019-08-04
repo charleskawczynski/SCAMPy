@@ -88,7 +88,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
                 ρ_k = tmp['ρ_0'].Mid(k)
                 w_i = q['w', i][k]
-                w_env = q['w', i_env].values[k]
+                w_env = q['w', i_env][k]
                 a_k = q['a', i].Mid(k)
                 entr_w = tmp['entr_sc', i].Mid(k)
                 detr_w = tmp['detr_sc', i].Mid(k)
