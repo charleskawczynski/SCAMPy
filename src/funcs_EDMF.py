@@ -42,9 +42,9 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
             a_k = q['a', i][k]
             α_0_kp = tmp['α_0'][k]
-            w_k = q['w', i].Mid(k)
+            w_k = q['w_half', i][k]
 
-            w_cut = q['w', i].DualCut(k)
+            w_cut = q['w_half', i].Cut(k)
             a_cut = q['a', i].Cut(k)
             ρ_cut = tmp['ρ_0'].Cut(k)
             tendencies = 0.0
@@ -87,8 +87,8 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             if a_new_k >= params.minimum_area:
 
                 ρ_k = tmp['ρ_0'].Mid(k)
-                w_i = q['w', i][k]
-                w_env = q['w', i_env][k]
+                w_i = q['w_half', i].Mid(k)
+                w_env = q['w_half', i_env][k]
                 a_k = q['a', i].Mid(k)
                 entr_w = tmp['entr_sc', i].Mid(k)
                 detr_w = tmp['detr_sc', i].Mid(k)
@@ -96,7 +96,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
                 a_cut = q['a', i].DualCut(k)
                 ρ_cut = tmp['ρ_0'].DualCut(k)
-                w_cut = q['w', i].Cut(k)
+                w_cut = q['w_half', i].DualCut(k)
 
                 ρa_k = ρ_k * a_k
                 ρa_new_k = ρ_k * a_new_k
@@ -149,7 +149,7 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
                 q_tot_cut = q['q_tot', i].Cut(k)
                 ρ_k = tmp['ρ_0'][k]
                 ρ_cut = tmp['ρ_0'].Cut(k)
-                w_cut = q['w', i].DualCut(k)
+                w_cut = q['w_half', i].Cut(k)
                 ε_sc = tmp['entr_sc', i][k]
                 δ_sc = tmp['detr_sc', i][k]
                 ρa_k = ρ_k*a_k
@@ -488,7 +488,7 @@ def compute_covariance_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp
         for i in i_uds:
             Δϕ = interp_func(q[ϕ, i], k) - interp_func(q[ϕ, i_env], k)
             Δψ = interp_func(q[ψ, i], k) - interp_func(q[ψ, i_env], k)
-            tmp_O2[cv]['entr_gain'][k] += tke_factor*q['a', i][k] * np.fabs(q['w', i].Mid(k)) * tmp['detr_sc', i][k] * Δϕ * Δψ
+            tmp_O2[cv]['entr_gain'][k] += tke_factor*q['a', i][k] * np.fabs(q['w_half', i][k]) * tmp['detr_sc', i][k] * Δϕ * Δψ
         tmp_O2[cv]['entr_gain'][k] *= tmp['ρ_0'][k]
     return
 
@@ -525,7 +525,7 @@ def compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_fac
 def compute_covariance_detr(grid, q, tmp, tmp_O2, cv):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for k in grid.over_elems_real(Center()):
-        tmp_O2[cv]['detr_loss'][k] = sum([q['a', i][k] * np.fabs(q['w', i].Mid(k)) * tmp['entr_sc', i][k] for i in i_uds])
+        tmp_O2[cv]['detr_loss'][k] = sum([q['a', i][k] * np.fabs(q['w_half', i][k]) * tmp['entr_sc', i][k] for i in i_uds])
         tmp_O2[cv]['detr_loss'][k] *= tmp['ρ_0'][k] * q[cv, i_env][k]
     return
 
@@ -534,8 +534,8 @@ def compute_tke_pressure(grid, q, tmp, tmp_O2, pressure_buoy_coeff, pressure_dra
     for k in grid.over_elems_real(Center()):
         tmp_O2[cv]['press'][k] = 0.0
         for i in i_uds:
-            wu_half = q['w', i].Mid(k)
-            we_half = q['w', i_env].Mid(k)
+            wu_half = q['w_half', i][k]
+            we_half = q['w_half', i_env][k]
             a_i = q['a', i][k]
             ρ_0_k = tmp['ρ_0'][k]
             press_buoy = (-1.0 * ρ_0_k * a_i * tmp['B', i][k] * pressure_buoy_coeff)
@@ -565,7 +565,7 @@ def diagnose_environment(grid, q):
         a_env = q['a', i_env][k]
         q['q_tot', i_env][k] = (q['q_tot', i_gm][k] - np.sum([q['a', i][k]*q['q_tot', i][k] for i in i_uds]))/a_env
         q['θ_liq', i_env][k] = (q['θ_liq', i_gm][k] - np.sum([q['a', i][k]*q['θ_liq', i][k] for i in i_uds]))/a_env
-        # Assuming q['w', i_gm] = 0!
+        # Assuming w_gm = 0!
         a_env = q['a', i_env].Mid(k)
         q['w', i_env][k] = (0.0 - np.sum([q['a', i][k]*q['w', i][k] for i in i_uds]))/a_env
     return
@@ -607,7 +607,7 @@ def update_GMV_MF(grid, q, TS, tmp):
     domain_c = grid.over_elems_real(Center())
 
     for i in i_uds:
-        tmp['mf_tmp', i][slice_all_c] = [((q['w', i].Mid(k) - q['w', i_env].Mid(k)) * tmp['ρ_0'][k]
+        tmp['mf_tmp', i][slice_all_c] = [((q['w_half', i][k] - q['w_half', i_env][k]) * tmp['ρ_0'][k]
                        * q['a', i][k]) for k in domain_c]
 
     for k in domain_c:
@@ -648,6 +648,7 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
     for i in i_uds:
         for k in grid.over_elems(Center()):
             q['w', i][k] = 0.0
+            q['w_half', i][k] = 0.0
             q['a', i][k] = 0.0
             q['q_tot', i][k] = q['q_tot', i_gm][k]
             tmp['q_liq', i][k] = tmp['q_liq', i_gm][k]

@@ -33,14 +33,14 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.z                = grid.z_half[k]
             input_st.ml               = tmp['l_mix'][k]
             input_st.b                = tmp['B', i][k]
-            input_st.w                = q['w', i].Mid(k)
+            input_st.w                = q['w_half', i][k]
             input_st.af               = q['a', i][k]
             input_st.tke              = q['tke', i_env][k]
             input_st.qt_env           = q['q_tot', i_env][k]
             input_st.q_liq_env        = tmp['q_liq', i_env][k]
             input_st.θ_liq_env        = q['θ_liq', i_env][k]
             input_st.b_env            = tmp['B', i_env][k]
-            input_st.w_env            = q['w', i_env][k]
+            input_st.w_env            = q['w_half', i_env].Mid(k)
             input_st.θ_liq_up         = q['θ_liq', i][k]
             input_st.qt_up            = q['q_tot', i][k]
             input_st.q_liq_up         = tmp['q_liq', i][k]
@@ -54,8 +54,8 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.L                = 20000.0 # need to define the scale of the GCM grid resolution
             input_st.n_up             = n_updrafts
 
-            w_cut = q['w', i].DualCut(k)
-            w_env_cut = q['w', i_env].DualCut(k)
+            w_cut = q['w_half', i].Cut(k)
+            w_env_cut = q['w_half', i_env].Cut(k)
             a_cut = q['a', i].Cut(k)
             a_env_cut = (1.0-q['a', i].Cut(k))
             aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
@@ -176,18 +176,17 @@ class EDMF_PrognosticTKE:
         self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
         diagnose_environment(grid, q)
-        compute_cv_gm(grid, q, 'w'    , 'w'    , 'tke'           , 0.5, Full.Mid)
+        compute_cv_gm(grid, q, 'w_half'    , 'w_half'    , 'tke'           , 0.5, Half.Identity)
         compute_cv_gm(grid, q, 'θ_liq', 'θ_liq', 'cv_θ_liq'      , 1.0, Half.Identity)
         compute_cv_gm(grid, q, 'q_tot', 'q_tot', 'cv_q_tot'      , 1.0, Half.Identity)
         compute_cv_gm(grid, q, 'θ_liq', 'q_tot', 'cv_θ_liq_q_tot', 1.0, Half.Identity)
         update_GMV_MF(grid, q, TS, tmp)
         compute_eddy_diffusivities_tke(grid, q, tmp, Case, self.zi, self.wstar, self.prandtl_number, self.tke_ed_coeff, self.similarity_diffusivity)
 
-        we = q['w', i_env]
         compute_tke_buoy(grid, q, tmp, tmp_O2, 'tke')
-        compute_covariance_entr(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Full.Mid)
-        compute_covariance_shear(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke')
-        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Full.Mid)
+        compute_covariance_entr(grid, q, tmp, tmp_O2, 'w_half'    , 'w_half'    , 'tke'           , 0.5, Half.Identity)
+        compute_covariance_shear(grid, q, tmp, tmp_O2, 'w_half'    , 'w_half'    , 'tke')
+        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w_half'    , 'w_half'    , 'tke'           , 0.5, Half.Identity)
         compute_tke_pressure(grid, q, tmp, tmp_O2, self.pressure_buoy_coeff, self.pressure_drag_coeff, self.pressure_plume_spacing, 'tke')
         compute_covariance_entr(grid, q, tmp, tmp_O2, 'θ_liq', 'θ_liq', 'cv_θ_liq'      , 1.0, Half.Identity)
         compute_covariance_entr(grid, q, tmp, tmp_O2, 'q_tot', 'q_tot', 'cv_q_tot'      , 1.0, Half.Identity)
@@ -205,7 +204,7 @@ class EDMF_PrognosticTKE:
 
         reset_surface_covariance(grid, q, tmp, Case, self.wstar)
 
-        compute_cv_env(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Full.Mid)
+        compute_cv_env(grid, q, tmp, tmp_O2, 'w_half'    , 'w_half'    , 'tke'           , 0.5, Half.Identity)
         compute_cv_env(grid, q, tmp, tmp_O2, 'θ_liq', 'θ_liq', 'cv_θ_liq'      , 1.0, Half.Identity)
         compute_cv_env(grid, q, tmp, tmp_O2, 'q_tot', 'q_tot', 'cv_q_tot'      , 1.0, Half.Identity)
         compute_cv_env(grid, q, tmp, tmp_O2, 'θ_liq', 'q_tot', 'cv_θ_liq_q_tot', 1.0, Half.Identity)
@@ -223,6 +222,10 @@ class EDMF_PrognosticTKE:
     def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
 
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        for k in grid.over_elems(Center()):
+            for i in i_sd:
+                q['w_half', i][k] = q['w', i].Mid(k)
+            q['w_half', i_gm][k] = q['w', i_gm].Mid(k)
         self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
 
         assign_new_to_values(grid, q_new, q, tmp)
@@ -250,9 +253,14 @@ class EDMF_PrognosticTKE:
     def compute_prognostic_updrafts(self, grid, q_new, q, q_tendencies, tmp, UpdVar, Case, TS):
         time_elapsed = 0.0
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Node())])
+        u_max = np.max([q['w_half', i][k] for i in i_uds for k in grid.over_elems(Center())])
         TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
         while time_elapsed < TS.Δt:
+            for k in grid.over_elems(Center()):
+                for i in i_sd:
+                    q['w_half', i][k] = q['w', i].Mid(k)
+                q['w_half', i_gm][k] = q['w', i_gm].Mid(k)
+
             compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
             eos_update_SA_mean(grid, q, False, tmp, self.max_supersaturation)
             buoyancy(grid, q, tmp)
@@ -266,6 +274,7 @@ class EDMF_PrognosticTKE:
                 q['q_tot', i].apply_bc(grid, 0.0)
                 q['q_rai', i].apply_bc(grid, 0.0)
             q['w', i_env].apply_bc(grid, 0.0)
+            q['w_half', i_env].apply_bc(grid, 0.0)
             time_elapsed += TS.Δt_up
             u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Node())])
             TS.Δt_up = np.minimum(TS.Δt-time_elapsed,  0.5 * grid.dz/np.fmax(u_max,1e-10))

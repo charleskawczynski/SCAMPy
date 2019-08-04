@@ -48,6 +48,7 @@ class Simulation1d:
         unkowns = (
          ('a'             , Center() , Neumann() , N_sd),
          ('w'             , Node()   , Dirichlet() , N_sd),
+         ('w_half'        , Center() , Dirichlet() , N_sd),
          ('q_tot'         , Center() , Neumann() , N_sd),
          ('q_rai'         , Center() , Neumann() , N_sd),
          ('θ_liq'         , Center() , Neumann() , N_sd),
@@ -210,6 +211,7 @@ class Simulation1d:
         sol.e_cv_θ_liq_q_tot = self.q['cv_θ_liq_q_tot', i_env]
 
         sol.ud_W     = self.q['w', i_uds[0]]
+        sol.ud_W_half = self.q['w_half', i_uds[0]]
         sol.ud_Area  = self.q['a', i_uds[0]]
         sol.ud_q_tot = self.q['q_tot', i_uds[0]]
         sol.ud_q_rai = self.q['q_rai', i_uds[0]]
