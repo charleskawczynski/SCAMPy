@@ -83,20 +83,20 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
     for i in i_uds:
         q_new['a', i][kb_1] = UpdVar[i].w_surface_bc
         for k in grid.over_elems_real(Center()):
-            a_new_k = q_new['a', i].Mid(k)
+            a_new_k = q_new['a', i][k]
             if a_new_k >= params.minimum_area:
 
-                ρ_k = tmp['ρ_0'].Mid(k)
-                w_i = q['w_half', i].Mid(k)
                 w_env = q['w_half', i_env][k]
-                a_k = q['a', i].Mid(k)
-                entr_w = tmp['entr_sc', i].Mid(k)
-                detr_w = tmp['detr_sc', i].Mid(k)
-                B_k = tmp['B', i].Mid(k)
+                ρ_k = tmp['ρ_0'][k]
+                w_i = q['w_half', i][k]
+                a_k = q['a', i][k]
+                entr_w = tmp['entr_sc', i][k]
+                detr_w = tmp['detr_sc', i][k]
+                B_k = tmp['B', i][k]
 
-                a_cut = q['a', i].DualCut(k)
-                ρ_cut = tmp['ρ_0'].DualCut(k)
-                w_cut = q['w_half', i].DualCut(k)
+                a_cut = q['a', i].Cut(k)
+                ρ_cut = tmp['ρ_0'].Cut(k)
+                w_cut = q['w_half', i].Cut(k)
 
                 ρa_k = ρ_k * a_k
                 ρa_new_k = ρ_k * a_new_k
@@ -111,19 +111,19 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
                 press_drag = - ρa_k * (p_coeff * (w_i - w_env)**2.0/np.sqrt(np.fmax(a_k, params.minimum_area)))
                 nh_press = press_buoy + press_drag
 
-                q_new['w', i][k] = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
+                q_new['w_half', i][k] = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
 
     # Filter results
     for i in i_uds:
         for k in grid.over_elems_real(Center()):
-            if q_new['a', i].Mid(k) >= params.minimum_area:
-                if q_new['w', i][k] <= 0.0:
-                    q_new['w', i][k:] = 0.0
-                    q_new['a', i][k+1:] = 0.0
+            if q_new['a', i][k] >= params.minimum_area:
+                if q_new['w_half', i][k] <= 0.0:
+                    q_new['w_half', i][k:] = 0.0
+                    q_new['a', i][k:] = 0.0
                     break
             else:
-                q_new['w', i][k:] = 0.0
-                q_new['a', i][k+1:] = 0.0
+                q_new['w_half', i][k:] = 0.0
+                q_new['a', i][k:] = 0.0
                 break
 
     return
@@ -566,8 +566,7 @@ def diagnose_environment(grid, q):
         q['q_tot', i_env][k] = (q['q_tot', i_gm][k] - np.sum([q['a', i][k]*q['q_tot', i][k] for i in i_uds]))/a_env
         q['θ_liq', i_env][k] = (q['θ_liq', i_gm][k] - np.sum([q['a', i][k]*q['θ_liq', i][k] for i in i_uds]))/a_env
         # Assuming w_gm = 0!
-        a_env = q['a', i_env].Mid(k)
-        q['w', i_env][k] = (0.0 - np.sum([q['a', i][k]*q['w', i][k] for i in i_uds]))/a_env
+        q['w_half', i_env][k] = (0.0 - np.sum([q['a', i][k]*q['w_half', i][k] for i in i_uds]))/a_env
     return
 
 def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
@@ -621,9 +620,8 @@ def update_GMV_MF(grid, q, TS, tmp):
 def assign_new_to_values(grid, q_new, q, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     slice_all_c = grid.slice_all(Center())
-    slice_all_n = grid.slice_all(Node())
     for i in i_uds:
-        q_new['w', i][slice_all_n] = [q['w', i][k] for k in grid.over_elems(Node())]
+        q_new['w_half', i][slice_all_c] = [q['w_half', i][k] for k in grid.over_elems(Center())]
         q_new['q_tot', i][slice_all_c] = [q['q_tot', i][k] for k in grid.over_elems(Center())]
         q_new['q_rai', i][slice_all_c] = [q['q_rai', i][k] for k in grid.over_elems(Center())]
         q_new['θ_liq', i][slice_all_c] = [q['θ_liq', i][k] for k in grid.over_elems(Center())]
@@ -633,7 +631,7 @@ def assign_values_to_new(grid, q, q_new, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for k in grid.over_elems(Center()):
         for i in i_uds:
-            q['w', i][k] = q_new['w', i][k]
+            q['w_half', i][k] = q_new['w_half', i][k]
             q['q_tot', i][k] = q_new['q_tot', i][k]
             q['q_rai', i][k] = q_new['q_rai', i][k]
             q['θ_liq', i][k] = q_new['θ_liq', i][k]
@@ -647,7 +645,6 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
     n_updrafts = len(i_uds)
     for i in i_uds:
         for k in grid.over_elems(Center()):
-            q['w', i][k] = 0.0
             q['w_half', i][k] = 0.0
             q['a', i][k] = 0.0
             q['q_tot', i][k] = q['q_tot', i_gm][k]

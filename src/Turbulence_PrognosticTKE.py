@@ -222,14 +222,9 @@ class EDMF_PrognosticTKE:
     def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
 
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        for k in grid.over_elems(Center()):
-            for i in i_sd:
-                q['w_half', i][k] = q['w', i].Mid(k)
-            q['w_half', i_gm][k] = q['w', i_gm].Mid(k)
         self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
 
         assign_new_to_values(grid, q_new, q, tmp)
-
         self.compute_prognostic_updrafts(grid, q_new, q, q_tendencies, tmp, UpdVar, Case, TS)
 
         update_cv_env(grid, q, q_tendencies, tmp, tmp_O2, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
@@ -256,10 +251,15 @@ class EDMF_PrognosticTKE:
         u_max = np.max([q['w_half', i][k] for i in i_uds for k in grid.over_elems(Center())])
         TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
         while time_elapsed < TS.Δt:
-            for k in grid.over_elems(Center()):
-                for i in i_sd:
-                    q['w_half', i][k] = q['w', i].Mid(k)
-                q['w_half', i_gm][k] = q['w', i_gm].Mid(k)
+            # Needed for Soares:
+            # for k in grid.over_elems(Node()):
+            #     for i in i_sd:
+            #         tmp['tmp_n', i][k] = q['w_half', i].Mid(k)
+            #     tmp['tmp_n', i_gm][k] = q['w_half', i_gm].Mid(k)
+            # for k in grid.over_elems(Center()):
+            #     for i in i_sd:
+            #         q['w_half', i][k] = tmp['tmp_n', i].Mid(k)
+            #     q['w_half', i_gm][k] = tmp['tmp_n', i_gm].Mid(k)
 
             compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
             eos_update_SA_mean(grid, q, False, tmp, self.max_supersaturation)
@@ -267,16 +267,16 @@ class EDMF_PrognosticTKE:
             compute_sources(grid, q, tmp, self.max_supersaturation)
             update_updraftvars(grid, q, tmp)
             solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+
             solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
             assign_values_to_new(grid, q, q_new, tmp)
             for i in i_sd:
                 q['θ_liq', i].apply_bc(grid, 0.0)
                 q['q_tot', i].apply_bc(grid, 0.0)
                 q['q_rai', i].apply_bc(grid, 0.0)
-            q['w', i_env].apply_bc(grid, 0.0)
             q['w_half', i_env].apply_bc(grid, 0.0)
             time_elapsed += TS.Δt_up
-            u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Node())])
+            u_max = np.max([q['w_half', i][k] for i in i_uds for k in grid.over_elems(Center())])
             TS.Δt_up = np.minimum(TS.Δt-time_elapsed,  0.5 * grid.dz/np.fmax(u_max,1e-10))
             diagnose_environment(grid, q)
         eos_update_SA_mean(grid, q, True, tmp, self.max_supersaturation)

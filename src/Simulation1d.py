@@ -103,6 +103,7 @@ class Simulation1d:
                      ('mf_tend_θ_liq'          , Center() , Neumann(), N_sd),
                      ('mf_tend_q_tot'          , Center() , Neumann(), N_sd),
                      ('mf_tmp'                 , Center() , Neumann(), N_sd),
+                     ('tmp_n'                  , Node() , Neumann(), N_sd),
                      )
 
         q_2MO = (
