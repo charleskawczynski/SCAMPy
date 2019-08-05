@@ -165,9 +165,7 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
                 tmp['T', i][k] = T
                 tmp_qr = acnv_instant(q_liq, q_tot, params.max_supersaturation, T, p_0)
                 s = -tmp_qr
-                tmp['prec_src_q_tot', i][k] = s
                 r_src = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, tmp_qr)
-                tmp['prec_src_θ_liq', i][k] = r_src
                 q_new['q_tot', i][k] += s
                 q_new['q_rai', i][k] -= s
                 q_new['θ_liq', i][k] += r_src
@@ -185,7 +183,6 @@ def eos_update_SA_mean(grid, q, tmp):
         T, q_liq  = eos(p_0, q_tot, θ_liq)
         tmp['T', i_env][k]      = T
         tmp['q_liq', i_env][k]  = q_liq
-        q['θ_liq', i_env][k]  = thetali_c(p_0, T, q_tot, q_liq, 0.0)
         q_vap = q_tot - q_liq
         alpha = alpha_c(p_0, T, q_tot, q_vap)
         tmp['B', i_env][k]   = buoyancy_c(tmp['α_0'][k], alpha)
@@ -541,10 +538,10 @@ def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
     ae_1 = q['a', i_env][k_1]
     slice_all_c = grid.slice_all(Center())
 
-    q_tendencies['q_tot', i_gm][slice_all_c] += [tmp['mf_tend_q_tot'][k] + tmp['prec_src_q_tot', i_gm][k]*TS.Δti for k in grid.over_elems(Center())]
+    q_tendencies['q_tot', i_gm][slice_all_c] += [tmp['mf_tend_q_tot'][k] for k in grid.over_elems(Center())]
     q_tendencies['q_tot', i_gm][k_1] += Case.Sur.rho_q_tot_flux * dzi * α_1/ae_1
 
-    q_tendencies['θ_liq', i_gm][slice_all_c] += [tmp['mf_tend_θ_liq'][k] + tmp['prec_src_θ_liq', i_gm][k]*TS.Δti for k in grid.over_elems(Center())]
+    q_tendencies['θ_liq', i_gm][slice_all_c] += [tmp['mf_tend_θ_liq'][k] for k in grid.over_elems(Center())]
     q_tendencies['θ_liq', i_gm][k_1] += Case.Sur.rho_θ_liq_flux * dzi * α_1/ae_1
 
     q_tendencies['U', i_gm][k_1] += Case.Sur.rho_uflux * dzi * α_1/ae_1
@@ -623,33 +620,6 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
     for i in i_uds: q['θ_liq', i].apply_bc(grid, 0.0)
     for k in grid.over_elems(Center()):
         q['a', i_env][k] = 1.0 - np.sum([q['a', i][k] for i in i_uds])
-    return
-
-def compute_sources(grid, q, tmp, max_supersaturation):
-    i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
-    for i in i_uds:
-        for k in grid.over_elems(Center()):
-            q_tot = q['q_tot', i][k]
-            q_tot = tmp['q_liq', i][k]
-            T = tmp['T', i][k]
-            p_0 = tmp['p_0'][k]
-            tmp_qr = acnv_instant(q_tot, q_tot, max_supersaturation, T, p_0)
-            tmp['prec_src_θ_liq', i][k] = rain_source_to_thetal(p_0, T, q_tot, q_tot, 0.0, tmp_qr)
-            tmp['prec_src_q_tot', i][k] = -tmp_qr
-    for k in grid.over_elems(Center()):
-        tmp['prec_src_θ_liq', i_gm][k] = np.sum([tmp['prec_src_θ_liq', i][k] * q['a', i][k] for i in i_sd])
-        tmp['prec_src_q_tot', i_gm][k] = np.sum([tmp['prec_src_q_tot', i][k] * q['a', i][k] for i in i_sd])
-    return
-
-def update_updraftvars(grid, q, tmp):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    for i in i_uds:
-        for k in grid.over_elems(Center()):
-            s = tmp['prec_src_q_tot', i][k]
-            q['q_tot', i][k] += s
-            tmp['q_liq', i][k] += s
-            q['q_rai', i][k] -= s
-            q['θ_liq', i][k] += tmp['prec_src_θ_liq', i][k]
     return
 
 def buoyancy(grid, q, tmp):
