@@ -20,10 +20,6 @@ class ForcingBase:
     def update(self, grid, q, q_tendencies, tmp):
         return
     def coriolis_force(self, grid, q, q_tendencies):
-        i_gm, i_env, i_uds, i_sd = q_tendencies.domain_idx()
-        for k in grid.over_elems_real(Center()):
-            q_tendencies['U', i_gm][k] -= self.coriolis_param * (self.vg[k] - q['V', i_gm][k])
-            q_tendencies['V', i_gm][k] += self.coriolis_param * (self.ug[k] - q['U', i_gm][k])
         return
     def initialize_io(self, Stats):
         return

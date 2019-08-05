@@ -265,13 +265,6 @@ def update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag):
     solve_tridiag_wrapper(grid, q_new['q_tot', i_gm], tri_diag)
     tri_diag.f[slice_all_c] = [q['θ_liq', i_gm][k] + TS.Δt*q_tendencies['θ_liq', i_gm][k] for k in grid.over_elems(Center())]
     solve_tridiag_wrapper(grid, q_new['θ_liq', i_gm], tri_diag)
-
-    tri_diag.ρaK[slice_real_n] = [ae.Mid(k)*tmp['K_m'].Mid(k)*ρ_0_half.Mid(k) for k in grid.over_elems_real(Node())]
-    construct_tridiag_diffusion_O1(grid, TS.Δt, tri_diag, ρ_0_half, ae)
-    tri_diag.f[slice_all_c] = [q['U', i_gm][k] + TS.Δt*q_tendencies['U', i_gm][k] for k in grid.over_elems(Center())]
-    solve_tridiag_wrapper(grid, q_new['U', i_gm], tri_diag)
-    tri_diag.f[slice_all_c] = [q['V', i_gm][k] + TS.Δt*q_tendencies['V', i_gm][k] for k in grid.over_elems(Center())]
-    solve_tridiag_wrapper(grid, q_new['V', i_gm], tri_diag)
     return
 
 def compute_zbl_qt_grad(grid, q):
@@ -312,17 +305,7 @@ def compute_inversion(grid, q, option, tmp, Ri_bulk_crit, temp_C):
     return zi
 
 def compute_mixing_length(grid, q, tmp, obukhov_length, zi, wstar):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    tau = compute_mixing_tau(zi, wstar)
     for k in grid.over_elems_real(Center()):
-        l1 = tau * np.sqrt(np.fmax(q['tke', i_env][k],0.0))
-        z_ = grid.z_half[k]
-        if obukhov_length < 0.0: #unstable
-            l2 = vkb * z_ * ( (1.0 - 100.0 * z_/obukhov_length)**0.2 )
-        elif obukhov_length > 0.0: #stable
-            l2 = vkb * z_ /  (1. + 2.7 *z_/obukhov_length)
-        else:
-            l2 = vkb * z_
         tmp['l_mix'][k] = 100.0
     return
 
@@ -330,24 +313,20 @@ def compute_eddy_diffusivities_tke(grid, q, tmp, Case, zi, wstar, prandtl_number
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, zi, wstar)
     if similarity_diffusivity:
-        compute_eddy_diffusivities_similarity_Siebesma2007(grid, Case, tmp, zi, wstar, prandtl_number)
+        ustar = Case.Sur.ustar
+        for k in grid.over_elems_real(Center()):
+            zzi = grid.z_half[k]/zi
+            tmp['K_h'][k] = 0.0
+            tmp['K_m'][k] = 0.0
+            if zzi <= 1.0 and not (wstar<1e-6):
+                tmp['K_h'][k] = vkb * ( (ustar/wstar)**3.0 + 39.0*vkb*zzi)**(1.0/3.0) * zzi * (1.0-zzi) * (1.0-zzi) * wstar * zi
+                tmp['K_m'][k] = tmp['K_h'][k] * prandtl_number
     else:
         for k in grid.over_elems_real(Center()):
             lm = tmp['l_mix'][k]
             K_m_k = tke_ed_coeff * lm * np.sqrt(np.fmax(q['tke', i_env][k],0.0) )
             tmp['K_m'][k] = K_m_k
             tmp['K_h'][k] = K_m_k / prandtl_number
-    return
-
-def compute_eddy_diffusivities_similarity_Siebesma2007(grid, Case, tmp, zi, wstar, prandtl_number):
-    ustar = Case.Sur.ustar
-    for k in grid.over_elems_real(Center()):
-        zzi = grid.z_half[k]/zi
-        tmp['K_h'][k] = 0.0
-        tmp['K_m'][k] = 0.0
-        if zzi <= 1.0 and not (wstar<1e-6):
-            tmp['K_h'][k] = vkb * ( (ustar/wstar)**3.0 + 39.0*vkb*zzi)**(1.0/3.0) * zzi * (1.0-zzi) * (1.0-zzi) * wstar * zi
-            tmp['K_m'][k] = tmp['K_h'][k] * prandtl_number
     return
 
 def compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, cv):
@@ -405,8 +384,6 @@ def compute_tke_buoy(grid, q, tmp, tmp_O2, cv):
 
 def apply_gm_bcs(grid, q):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    q['U', i_gm].apply_bc(grid, 0.0)
-    q['V', i_gm].apply_bc(grid, 0.0)
     q['θ_liq', i_gm].apply_bc(grid, 0.0)
     q['q_tot', i_gm].apply_bc(grid, 0.0)
     q['q_rai', i_gm].apply_bc(grid, 0.0)
@@ -543,9 +520,6 @@ def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
 
     q_tendencies['θ_liq', i_gm][slice_all_c] += [tmp['mf_tend_θ_liq'][k] for k in grid.over_elems(Center())]
     q_tendencies['θ_liq', i_gm][k_1] += Case.Sur.rho_θ_liq_flux * dzi * α_1/ae_1
-
-    q_tendencies['U', i_gm][k_1] += Case.Sur.rho_uflux * dzi * α_1/ae_1
-    q_tendencies['V', i_gm][k_1] += Case.Sur.rho_vflux * dzi * α_1/ae_1
     return
 
 def update_cv_env(grid, q, q_tendencies, tmp, tmp_O2, TS, cv, tri_diag, tke_diss_coeff):

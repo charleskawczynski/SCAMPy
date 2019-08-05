@@ -192,8 +192,6 @@ class EDMF_PrognosticTKE:
         update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag)
 
         for k in grid.over_elems_real(Center()):
-            q['U', i_gm][k]     = q_new['U', i_gm][k]
-            q['V', i_gm][k]     = q_new['V', i_gm][k]
             q['θ_liq', i_gm][k] = q_new['θ_liq', i_gm][k]
             q['q_tot', i_gm][k] = q_new['q_tot', i_gm][k]
             q['q_rai', i_gm][k] = q_new['q_rai', i_gm][k]
