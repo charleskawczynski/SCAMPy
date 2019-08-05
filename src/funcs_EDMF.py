@@ -167,10 +167,8 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
                 s = -tmp_qr
                 r_src = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, tmp_qr)
                 q_new['q_tot', i][k] += s
-                q_new['q_rai', i][k] -= s
                 q_new['θ_liq', i][k] += r_src
                 tmp['q_liq', i][k] = q_liq + s
-            q_new['q_rai', i][k_1] = 0.0
 
     return
 
@@ -386,7 +384,6 @@ def apply_gm_bcs(grid, q):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     q['θ_liq', i_gm].apply_bc(grid, 0.0)
     q['q_tot', i_gm].apply_bc(grid, 0.0)
-    q['q_rai', i_gm].apply_bc(grid, 0.0)
     q['tke', i_gm].apply_bc(grid, 0.0)
 
 def cleanup_covariance(grid, q):
@@ -401,7 +398,6 @@ def compute_grid_means(grid, q, tmp):
     ae = q['a', i_env]
     for k in grid.over_elems_real(Center()):
         tmp['q_liq', i_gm][k] = np.sum([ q['a', i][k] * tmp['q_liq', i][k] for i in i_sd])
-        q['q_rai', i_gm][k]   = np.sum([ q['a', i][k] * q['q_rai', i][k] for i in i_sd])
         tmp['T', i_gm][k]     = np.sum([ q['a', i][k] * tmp['T', i][k] for i in i_sd])
         tmp['B', i_gm][k]     = np.sum([ q['a', i][k] * tmp['B', i][k] for i in i_sd])
     return
@@ -558,7 +554,6 @@ def assign_new_to_values(grid, q_new, q, tmp):
     for i in i_uds:
         q_new['w_half', i][slice_all_c] = [q['w_half', i][k] for k in grid.over_elems(Center())]
         q_new['q_tot', i][slice_all_c] = [q['q_tot', i][k] for k in grid.over_elems(Center())]
-        q_new['q_rai', i][slice_all_c] = [q['q_rai', i][k] for k in grid.over_elems(Center())]
         q_new['θ_liq', i][slice_all_c] = [q['θ_liq', i][k] for k in grid.over_elems(Center())]
     return
 
@@ -568,7 +563,6 @@ def assign_values_to_new(grid, q, q_new, tmp):
         for i in i_uds:
             q['w_half', i][k] = q_new['w_half', i][k]
             q['q_tot', i][k] = q_new['q_tot', i][k]
-            q['q_rai', i][k] = q_new['q_rai', i][k]
             q['θ_liq', i][k] = q_new['θ_liq', i][k]
             q['a', i][k] = q_new['a', i][k]
         q['a', i_env][k] = 1.0 - np.sum([q_new['a', i][k] for i in i_uds])
@@ -584,13 +578,11 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
             q['a', i][k] = 0.0
             q['q_tot', i][k] = q['q_tot', i_gm][k]
             tmp['q_liq', i][k] = tmp['q_liq', i_gm][k]
-            q['q_rai', i][k] = q['q_rai', i_gm][k]
             q['θ_liq', i][k] = q['θ_liq', i_gm][k]
             tmp['T', i][k] = tmp['T', i_gm][k]
             tmp['B', i][k] = 0.0
         q['a', i][k_1] = updraft_fraction/n_updrafts
     for i in i_uds: q['q_tot', i].apply_bc(grid, 0.0)
-    for i in i_uds: q['q_rai', i].apply_bc(grid, 0.0)
     for i in i_uds: q['θ_liq', i].apply_bc(grid, 0.0)
     for k in grid.over_elems(Center()):
         q['a', i_env][k] = 1.0 - np.sum([q['a', i][k] for i in i_uds])
