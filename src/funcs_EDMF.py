@@ -60,20 +60,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
             a_predict = a_k + TS.Δt_up * tendencies
 
-            needs_limiter = a_predict>au_lim
             q_new['a', i][k] = np.fmin(np.fmax(a_predict, 0.0), au_lim)
-
-            unsteady = (q_new['a', i][k]-a_k)/TS.Δt_up
-            # δ_limiter = unsteady - tendencies if needs_limiter else 0.0
-            # tendencies+=δ_limiter
-            # a_correct = a_k + TS.Δt_up * tendencies
-
-            if needs_limiter:
-                δ_term_new = unsteady - adv - ε_term
-                if a_k > 0.0:
-                    tmp['detr_sc', i][k] = δ_term_new/(-a_k  * w_k)
-                else:
-                    tmp['detr_sc', i][k] = δ_term_new/(-au_lim  * w_k)
 
         tmp['entr_sc', i][k_1] = 2.0 * dzi
         tmp['detr_sc', i][k_1] = 0.0
@@ -189,38 +176,30 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
 
     return
 
-def update_env(q, tmp, k, T, θ_liq, q_tot, q_liq, q_rai, alpha):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    tmp['T', i_env][k]      = T
-    q['θ_liq', i_env][k]  = θ_liq
-    q['q_tot', i_env][k]  = q_tot
-    tmp['q_liq', i_env][k]  = q_liq
-    q['q_rai', i_env][k] += q_rai
-    tmp['B', i_env][k]   = buoyancy_c(tmp['α_0'][k], alpha)
-    return
-
-def update_cloud_dry(k, T, θ, q_tot, q_liq, q_vap, tmp):
-    i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
-    if q_liq > 0.0:
-        tmp['CF'][k] = 1.
-        tmp['θ_cloudy'][k]     = θ
-        tmp['t_cloudy'][k]     = T
-        tmp['q_tot_cloudy'][k] = q_tot
-        tmp['q_vap_cloudy'][k] = q_vap
-    else:
-        tmp['CF'][k] = 0.
-        tmp['θ_dry'][k]     = θ
-        tmp['q_tot_dry'][k] = q_tot
-    return
-
-def eos_update_SA_mean(grid, q, in_Env, tmp, max_supersaturation):
+def eos_update_SA_mean(grid, q, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for k in grid.over_elems_real(Center()):
-        p_0_k = tmp['p_0'][k]
-        T, q_liq  = eos(p_0_k, q['q_tot', i_env][k], q['θ_liq', i_env][k])
-        mph = microphysics(T, q_liq, p_0_k, q['q_tot', i_env][k], max_supersaturation, in_Env)
-        update_env(q, tmp, k, mph.T, mph.θ_liq, mph.q_tot, mph.q_liq, mph.q_rai, mph.alpha)
-        update_cloud_dry(k, mph.T, mph.θ,  mph.q_tot, mph.q_liq, mph.q_vap, tmp)
+        p_0 = tmp['p_0'][k]
+        θ_liq = q['θ_liq', i_env][k]
+        q_tot = q['q_tot', i_env][k]
+        T, q_liq  = eos(p_0, q_tot, θ_liq)
+        tmp['T', i_env][k]      = T
+        tmp['q_liq', i_env][k]  = q_liq
+        q['θ_liq', i_env][k]  = thetali_c(p_0, T, q_tot, q_liq, 0.0)
+        q_vap = q_tot - q_liq
+        alpha = alpha_c(p_0, T, q_tot, q_vap)
+        tmp['B', i_env][k]   = buoyancy_c(tmp['α_0'][k], alpha)
+        θ = theta_c(p_0, T)
+        if q_liq > 0.0:
+            tmp['CF'][k] = 1.
+            tmp['θ_cloudy'][k]     = θ
+            tmp['t_cloudy'][k]     = T
+            tmp['q_tot_cloudy'][k] = q_tot
+            tmp['q_vap_cloudy'][k] = q_vap
+        else:
+            tmp['CF'][k] = 0.
+            tmp['θ_dry'][k]     = θ
+            tmp['q_tot_dry'][k] = q_tot
     return
 
 def satadjust(grid, q, tmp):
@@ -253,9 +232,6 @@ def compute_covariance_rain(grid, q, tmp, tmp_O2, TS, cv):
     for k in grid.over_elems_real(Center()):
         ρa_0 = tmp['ρ_0'][k]*ae[k]
         if cv=='tke':            tmp_O2[cv]['rain_src'][k] = 0.0
-        if cv=='cv_θ_liq':       tmp_O2[cv]['rain_src'][k] = ρa_0 * 2. * tmp['cv_θ_liq_rain_dt'][k]       * TS.Δti
-        if cv=='cv_q_tot':       tmp_O2[cv]['rain_src'][k] = ρa_0 * 2. * tmp['cv_q_tot_rain_dt'][k]       * TS.Δti
-        if cv=='cv_θ_liq_q_tot': tmp_O2[cv]['rain_src'][k] = ρa_0 *      tmp['cv_θ_liq_q_tot_rain_dt'][k] * TS.Δti
     return
 
 def compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, cv):
@@ -277,9 +253,6 @@ def reset_surface_covariance(grid, q, tmp, Case, wstar):
     ustar = Case.Sur.ustar
     oblength = Case.Sur.obukhov_length
     q['tke', i_gm][k_1]            = surface_tke(Case.Sur.ustar, wstar, zLL, Case.Sur.obukhov_length)
-    q['cv_θ_liq', i_gm][k_1]       = surface_variance(flux1*alpha0LL,flux1*alpha0LL, ustar, zLL, oblength)
-    q['cv_q_tot', i_gm][k_1]       = surface_variance(flux2*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
-    q['cv_θ_liq_q_tot', i_gm][k_1] = surface_variance(flux1*alpha0LL,flux2*alpha0LL, ustar, zLL, oblength)
     return
 
 def update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag):
@@ -353,7 +326,7 @@ def compute_mixing_length(grid, q, tmp, obukhov_length, zi, wstar):
             l2 = vkb * z_ /  (1. + 2.7 *z_/obukhov_length)
         else:
             l2 = vkb * z_
-        tmp['l_mix'][k] = np.fmax( 1.0/(1.0/np.fmax(l1,1e-10) + 1.0/l2), 1e-3)
+        tmp['l_mix'][k] = 100.0
     return
 
 def compute_eddy_diffusivities_tke(grid, q, tmp, Case, zi, wstar, prandtl_number, tke_ed_coeff, similarity_diffusivity):
@@ -441,22 +414,13 @@ def apply_gm_bcs(grid, q):
     q['q_tot', i_gm].apply_bc(grid, 0.0)
     q['q_rai', i_gm].apply_bc(grid, 0.0)
     q['tke', i_gm].apply_bc(grid, 0.0)
-    q['cv_q_tot', i_gm].apply_bc(grid, 0.0)
-    q['cv_θ_liq', i_gm].apply_bc(grid, 0.0)
-    q['cv_θ_liq_q_tot', i_gm].apply_bc(grid, 0.0)
 
 def cleanup_covariance(grid, q):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     tmp_eps = 1e-18
     slice_real_c = grid.slice_real(Center())
     q['tke',            i_gm][slice_real_c] = [0.0 if q['tke', i_gm][k] < tmp_eps else q['tke', i_gm][k] for k in grid.over_elems_real(Center())]
-    q['cv_θ_liq',       i_gm][slice_real_c] = [0.0 if q['cv_θ_liq', i_gm][k] < tmp_eps else q['cv_θ_liq', i_gm][k] for k in grid.over_elems_real(Center())]
-    q['cv_q_tot',       i_gm][slice_real_c] = [0.0 if q['cv_q_tot', i_gm][k] < tmp_eps else q['cv_q_tot', i_gm][k] for k in grid.over_elems_real(Center())]
-    q['cv_θ_liq_q_tot', i_gm][slice_real_c] = [0.0 if np.fabs(q['cv_θ_liq_q_tot', i_gm][k]) < tmp_eps else q['cv_θ_liq_q_tot', i_gm][k] for k in grid.over_elems_real(Center())]
-    q['cv_θ_liq',       i_env][slice_real_c] = [0.0 if q['cv_θ_liq', i_env][k] < tmp_eps else q['cv_θ_liq', i_env][k] for k in grid.over_elems_real(Center())]
     q['tke',            i_env][slice_real_c] = [0.0 if q['tke', i_env][k] < tmp_eps else q['tke', i_env][k] for k in grid.over_elems_real(Center())]
-    q['cv_q_tot',       i_env][slice_real_c] = [0.0 if q['cv_q_tot', i_env][k] < tmp_eps else q['cv_q_tot', i_env][k] for k in grid.over_elems_real(Center())]
-    q['cv_θ_liq_q_tot', i_env][slice_real_c] = [0.0 if np.fabs(q['cv_θ_liq_q_tot', i_env][k]) < tmp_eps else q['cv_θ_liq_q_tot', i_env][k] for k in grid.over_elems_real(Center())]
 
 def compute_grid_means(grid, q, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
@@ -710,9 +674,3 @@ def buoyancy(grid, q, tmp):
 def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):
     compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, 'tke')
     compute_covariance_detr(grid, q, tmp, tmp_O2, 'tke')
-    compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, 'cv_θ_liq')
-    compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, 'cv_q_tot')
-    compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, 'cv_θ_liq_q_tot')
-    compute_covariance_detr(grid, q, tmp, tmp_O2, 'cv_θ_liq')
-    compute_covariance_detr(grid, q, tmp, tmp_O2, 'cv_q_tot')
-    compute_covariance_detr(grid, q, tmp, tmp_O2, 'cv_θ_liq_q_tot')
