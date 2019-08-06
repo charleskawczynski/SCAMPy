@@ -166,7 +166,6 @@ class EDMF_PrognosticTKE:
         compute_covariance_shear(grid, q, tmp, tmp_O2, 'w_half'    , 'w_half'    , 'tke')
         compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w_half'    , 'w_half'    , 'tke'           , 0.5, Half.Identity)
         compute_tke_pressure(grid, q, tmp, tmp_O2, self.pressure_buoy_coeff, self.pressure_drag_coeff, self.pressure_plume_spacing, 'tke')
-        compute_covariance_rain(grid, q, tmp, tmp_O2, TS, 'tke')
 
         reset_surface_covariance(grid, q, tmp, Case, self.wstar)
 
@@ -194,34 +193,25 @@ class EDMF_PrognosticTKE:
         for k in grid.over_elems_real(Center()):
             q['θ_liq', i_gm][k] = q_new['θ_liq', i_gm][k]
             q['q_tot', i_gm][k] = q_new['q_tot', i_gm][k]
-            q['q_rai', i_gm][k] = q_new['q_rai', i_gm][k]
 
         apply_gm_bcs(grid, q)
 
         return
 
     def compute_prognostic_updrafts(self, grid, q_new, q, q_tendencies, tmp, UpdVar, Case, TS):
-        time_elapsed = 0.0
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         u_max = np.max([q['w_half', i][k] for i in i_uds for k in grid.over_elems(Center())])
         TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
-        while time_elapsed < TS.Δt:
-            compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
-            eos_update_SA_mean(grid, q, tmp)
-            buoyancy(grid, q, tmp)
-            solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-
-            solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-            assign_values_to_new(grid, q, q_new, tmp)
-            for i in i_sd:
-                q['θ_liq', i].apply_bc(grid, 0.0)
-                q['q_tot', i].apply_bc(grid, 0.0)
-                q['q_rai', i].apply_bc(grid, 0.0)
-            q['w_half', i_env].apply_bc(grid, 0.0)
-            time_elapsed += TS.Δt_up
-            u_max = np.max([q['w_half', i][k] for i in i_uds for k in grid.over_elems(Center())])
-            TS.Δt_up = np.minimum(TS.Δt-time_elapsed,  0.5 * grid.dz/np.fmax(u_max,1e-10))
-            diagnose_environment(grid, q)
+        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
         eos_update_SA_mean(grid, q, tmp)
         buoyancy(grid, q, tmp)
+        solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+
+        solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+        assign_values_to_new(grid, q, q_new, tmp)
+        for i in i_sd:
+            q['θ_liq', i].apply_bc(grid, 0.0)
+            q['q_tot', i].apply_bc(grid, 0.0)
+        q['w_half', i_env].apply_bc(grid, 0.0)
+        diagnose_environment(grid, q)
         return

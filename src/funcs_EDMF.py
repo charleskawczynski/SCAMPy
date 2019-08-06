@@ -221,14 +221,6 @@ def residual(grid, tmp, q_new, q, q_tendencies, name, name_res, Δt):
         for i in q.over_sub_domains(name):
             tmp[name_res, i][k] = (q_new[name, i][k] - q[name, i][k])/Δt - q_tendencies[name, i][k]
 
-def compute_covariance_rain(grid, q, tmp, tmp_O2, TS, cv):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    ae = q['a', i_env]
-    for k in grid.over_elems_real(Center()):
-        ρa_0 = tmp['ρ_0'][k]*ae[k]
-        if cv=='tke':            tmp_O2[cv]['rain_src'][k] = 0.0
-    return
-
 def compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, cv):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     ae = q['a', i_env]
@@ -265,33 +257,22 @@ def update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag):
     solve_tridiag_wrapper(grid, q_new['θ_liq', i_gm], tri_diag)
     return
 
-def compute_zbl_qt_grad(grid, q):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    # computes inversion height as z with max gradient of q_tot
-    zbl_q_tot = 0.0
-    q_tot_grad = 0.0
-    for k in grid.over_elems_real(Center()):
-        q_tot_grad_new = grad(q['q_tot', i_gm].Dual(k), grid)
-        if np.fabs(q_tot_grad) > q_tot_grad:
-            q_tot_grad = np.fabs(q_tot_grad_new)
-            zbl_q_tot = grid.z_half[k]
-    return zbl_q_tot
-
 def compute_inversion(grid, q, option, tmp, Ri_bulk_crit, temp_C):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     maxgrad = 0.0
+    domain = grid.over_elems_real(Center())
     theta_rho_bl = temp_C.first_interior(grid)
-    for k in grid.over_elems_real(Center()):
+    for k in domain:
         q_tot = q['q_tot', i_gm][k]
         q_vap = q_tot - tmp['q_liq', i_gm][k]
         temp_C[k] = theta_rho_c(tmp['p_0'][k], tmp['T', i_gm][k], q_tot, q_vap)
     if option == 'theta_rho':
-        for k in grid.over_elems_real(Center()):
+        for k in domain:
             if temp_C[k] > theta_rho_bl:
                 zi = grid.z_half[k]
                 break
     elif option == 'thetal_maxgrad':
-        for k in grid.over_elems_real(Center()):
+        for k in domain:
             grad_TH = grad(q['θ_liq', i_gm].Dual(k), grid)
             if grad_TH > maxgrad:
                 maxgrad = grad_TH
@@ -390,8 +371,9 @@ def cleanup_covariance(grid, q):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     tmp_eps = 1e-18
     slice_real_c = grid.slice_real(Center())
-    q['tke',            i_gm][slice_real_c] = [0.0 if q['tke', i_gm][k] < tmp_eps else q['tke', i_gm][k] for k in grid.over_elems_real(Center())]
-    q['tke',            i_env][slice_real_c] = [0.0 if q['tke', i_env][k] < tmp_eps else q['tke', i_env][k] for k in grid.over_elems_real(Center())]
+    domain = grid.over_elems_real(Center())
+    q['tke', i_gm][slice_real_c] = [0.0 if q['tke', i_gm][k] < tmp_eps else q['tke', i_gm][k] for k in domain]
+    q['tke', i_env][slice_real_c] = [0.0 if q['tke', i_env][k] < tmp_eps else q['tke', i_env][k] for k in domain]
 
 def compute_grid_means(grid, q, tmp):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
