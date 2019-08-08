@@ -82,6 +82,7 @@ class EDMF_PrognosticTKE:
         self.minimum_area = 1e-3
 
         self.params = type('', (), {})()
+        self.params.minimum_area           = self.minimum_area
         self.params.n_updrafts             = self.n_updrafts
         self.params.use_local_micro        = self.use_local_micro
         self.params.similarity_diffusivity = self.similarity_diffusivity
@@ -100,7 +101,7 @@ class EDMF_PrognosticTKE:
         self.params.updraft_fraction       = self.updraft_fraction
         self.params.vel_pressure_coeff     = self.vel_pressure_coeff
         self.params.vel_buoy_coeff         = self.vel_buoy_coeff
-        self.params.minimum_area           = self.minimum_area
+        self.params.a_bounds               = [self.minimum_area, 1.0-self.minimum_area]
 
         entr_src = namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']
         if str(entr_src) == 'inverse_z':        self.entr_detr_fp = entr_detr_inverse_z
