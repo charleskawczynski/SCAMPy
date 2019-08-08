@@ -55,24 +55,3 @@ def evap_rate(rho, q_vap, q_rai, q_tot, T, p_0):
 def terminal_velocity(rho, rho_0, q_rai, q_tot):
     r_rai = q2r(q_rai, q_tot)
     return 14.34 * rho_0**0.5 * rho**-0.3654 * r_rai**0.1346
-
-def microphysics(T, q_liq, p_0, q_tot, max_supersat, in_Env):
-    _ret = type('', (), {})()
-    _ret.T     = T
-    _ret.q_liq = q_liq
-    _ret.θ_liq = thetali_c(p_0, T, q_tot, q_liq, 0.0)
-    _ret.θ     = theta_c(p_0, T)
-    _ret.q_vap = q_tot - q_liq
-    _ret.alpha = alpha_c(p_0, T, q_tot, _ret.q_vap)
-    _ret.q_rai = 0.0
-    _ret.q_tot = q_tot
-
-    if in_Env:
-        _ret.q_rai          = acnv_instant(q_liq, q_tot, max_supersat, T, p_0)
-        _ret.θ_liq_rain_src = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, _ret.q_rai)
-
-        _ret.q_tot -= _ret.q_rai
-        _ret.q_liq -= _ret.q_rai
-        _ret.θ_liq += _ret.θ_liq_rain_src
-
-    return _ret

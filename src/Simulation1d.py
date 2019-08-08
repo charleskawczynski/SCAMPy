@@ -93,6 +93,8 @@ class Simulation1d:
                      ('δ_src_w_model'          , Center() , Neumann(), N_sd),
                      ('δ_src_q_tot_model'      , Center() , Neumann(), N_sd),
                      ('δ_src_θ_liq_model'      , Center() , Neumann(), N_sd),
+                     ('cloud_water_excess'     , Center() , Neumann(), N_sd),
+                     ('θ_liq_src_rain'         , Center() , Neumann(), N_sd),
                      ('q_liq'                  , Center() , Neumann(), N_sd),
                      ('prec_src_θ_liq'         , Center() , Neumann(), N_sd),
                      ('prec_src_q_tot'         , Center() , Neumann(), N_sd),

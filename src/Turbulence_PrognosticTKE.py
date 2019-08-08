@@ -40,7 +40,6 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.w_env            = q['w_half', i_env].Mid(k)
             input_st.θ_liq_up         = q['θ_liq', i][k]
             input_st.qt_up            = q['q_tot', i][k]
-            input_st.q_liq_up         = tmp['q_liq', i][k]
             input_st.p0               = tmp['p_0'][k]
             input_st.alpha0           = tmp['α_0'][k]
             input_st.tke              = q['tke', i_env][k]
@@ -152,10 +151,24 @@ class EDMF_PrognosticTKE:
             UpdVar[i].q_tot_surface_bc = (q_tot_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_q_tot))
         return
 
+    def aux_rain(self, grid, q, tmp, TS):
+        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        for i in i_uds:
+            for k in grid.over_elems_real(Center()):
+                θ_liq = q['θ_liq', i][k]
+                q_tot = q['q_tot', i][k]
+                p_0 = tmp['p_0'][k]
+                T, q_liq = eos(p_0, q_tot, θ_liq)
+                tmp['T', i][k] = T
+                cwe = acnv_instant(q_liq, q_tot, self.params.max_supersaturation, T, p_0)
+                tmp['cloud_water_excess', i][k] = cwe
+                tmp['θ_liq_src_rain', i][k] = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, cwe)
+
     def pre_compute_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
+        self.aux_rain(grid, q, tmp, TS)
         diagnose_environment(grid, q)
         compute_cv_gm(grid, q, 'w_half'    , 'w_half'    , 'tke'           , 0.5, Half.Identity)
         update_GMV_MF(grid, q, TS, tmp)
