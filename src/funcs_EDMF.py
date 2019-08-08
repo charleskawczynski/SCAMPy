@@ -37,7 +37,6 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
     # Solve for area fraction
     for i in i_uds:
-        au_lim = UpdVar[i].area_surface_bc * params.max_area_factor
         for k in grid.over_elems_real(Center()):
 
             a_k = q['a', i][k]
@@ -60,7 +59,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
             a_predict = a_k + TS.Δt_up * tendencies
 
-            q_new['a', i][k] = np.fmin(np.fmax(a_predict, 0.0), au_lim)
+            q_new['a', i][k] = np.fmin(np.fmax(a_predict, 0.0), params.a_bounds[1])
 
         tmp['entr_sc', i][k_1] = 2.0 * dzi
         tmp['detr_sc', i][k_1] = 0.0
