@@ -58,7 +58,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
             a_predict = a_k + TS.Δt_up * tendencies
 
-            q_new['a', i][k] = np.fmin(np.fmax(a_predict, 0.0), params.a_bounds[1])
+            q_new['a', i][k] = np.fmin(np.fmax(a_predict, params.a_bounds[0]), params.a_bounds[1])
 
         tmp['entr_sc', i][k_1] = 2.0 * dzi
         tmp['detr_sc', i][k_1] = 0.0
@@ -69,34 +69,33 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
         q_new['w', i][k_1] = UpdVar[i].w_surface_bc
         for k in grid.over_elems_real(Center()):
             a_new_k = q_new['a', i][k]
-            if a_new_k >= params.minimum_area:
+            w_env = q['w_half', i_env][k]
+            ρ_k = tmp['ρ_0'][k]
+            w_i = q['w_half', i][k]
+            a_k = q['a', i][k]
+            entr_w = tmp['entr_sc', i][k]
+            detr_w = tmp['detr_sc', i][k]
+            B_k = tmp['B', i][k]
 
-                w_env = q['w_half', i_env][k]
-                ρ_k = tmp['ρ_0'][k]
-                w_i = q['w_half', i][k]
-                a_k = q['a', i][k]
-                entr_w = tmp['entr_sc', i][k]
-                detr_w = tmp['detr_sc', i][k]
-                B_k = tmp['B', i][k]
+            a_cut = q['a', i].Cut(k)
+            ρ_cut = tmp['ρ_0'].Cut(k)
+            w_cut = q['w_half', i].Cut(k)
 
-                a_cut = q['a', i].Cut(k)
-                ρ_cut = tmp['ρ_0'].Cut(k)
-                w_cut = q['w_half', i].Cut(k)
+            ρa_k = ρ_k * a_k
+            ρa_new_k = ρ_k * a_new_k
+            ρaw_k = ρa_k * w_i
+            ρaww_cut = ρ_cut*a_cut*w_cut*w_cut
 
-                ρa_k = ρ_k * a_k
-                ρa_new_k = ρ_k * a_new_k
-                ρaw_k = ρa_k * w_i
-                ρaww_cut = ρ_cut*a_cut*w_cut*w_cut
+            adv = -advect(ρaww_cut, w_cut, grid)
+            exch = ρaw_k * (- detr_w * w_i + entr_w * w_env)
+            buoy = ρa_k * B_k
+            press_buoy = - ρa_k * B_k * params.pressure_buoy_coeff
+            p_coeff = params.pressure_drag_coeff/params.pressure_plume_spacing
+            a_k_bounded = np.fmax(a_k, params.minimum_area)
+            press_drag = - ρa_k * (p_coeff * (w_i - w_env)**2.0/np.sqrt(a_k_bounded))
+            nh_press = press_buoy + press_drag
 
-                adv = -advect(ρaww_cut, w_cut, grid)
-                exch = ρaw_k * (- detr_w * w_i + entr_w * w_env)
-                buoy = ρa_k * B_k
-                press_buoy = - ρa_k * B_k * params.pressure_buoy_coeff
-                p_coeff = params.pressure_drag_coeff/params.pressure_plume_spacing
-                press_drag = - ρa_k * (p_coeff * (w_i - w_env)**2.0/np.sqrt(np.fmax(a_k, params.minimum_area)))
-                nh_press = press_buoy + press_drag
-
-                q_new['w_half', i][k] = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
+            q_new['w_half', i][k] = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
 
     # Filter results
     for i in i_uds:
