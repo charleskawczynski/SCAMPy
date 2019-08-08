@@ -160,6 +160,7 @@ class EDMF_PrognosticTKE:
                 p_0 = tmp['p_0'][k]
                 T, q_liq = eos(p_0, q_tot, θ_liq)
                 tmp['T', i][k] = T
+                tmp['q_liq', i][k] = q_liq
                 cwe = acnv_instant(q_liq, q_tot, self.params.max_supersaturation, T, p_0)
                 tmp['cloud_water_excess', i][k] = cwe
                 tmp['θ_liq_src_rain', i][k] = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, cwe)

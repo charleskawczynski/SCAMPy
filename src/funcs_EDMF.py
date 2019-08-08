@@ -160,22 +160,6 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
             else:
                 q_new['θ_liq', i][k] = q['θ_liq', i_gm][k]
                 q_new['q_tot', i][k] = q['q_tot', i_gm][k]
-
-    if params.use_local_micro:
-        for i in i_uds:
-            for k in grid.over_elems_real(Center()):
-                θ_liq = q_new['θ_liq', i][k]
-                q_tot = q_new['q_tot', i][k]
-                p_0 = tmp['p_0'][k]
-                T, q_liq = eos(p_0, q_tot, θ_liq)
-                tmp['T', i][k] = T
-                tmp_qr = acnv_instant(q_liq, q_tot, params.max_supersaturation, T, p_0)
-                s = -tmp_qr
-                r_src = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, tmp_qr)
-                q_new['q_tot', i][k] += s
-                q_new['θ_liq', i][k] += r_src
-                tmp['q_liq', i][k] = q_liq + s
-
     return
 
 def eos_update_SA_mean(grid, q, tmp):
