@@ -32,7 +32,6 @@ def compute_src_limited(grid, tmp, name_src_limited, src_name, names_limiter_min
 def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
-    kb_1 = grid.boundary(Zmin())
     dzi = grid.dzi
 
     # Solve for area fraction
@@ -67,7 +66,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
     # Solve for updraft velocity
     for i in i_uds:
-        q_new['a', i][kb_1] = UpdVar[i].w_surface_bc
+        q_new['w', i][k_1] = UpdVar[i].w_surface_bc
         for k in grid.over_elems_real(Center()):
             a_new_k = q_new['a', i][k]
             if a_new_k >= params.minimum_area:
