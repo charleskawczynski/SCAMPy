@@ -202,6 +202,7 @@ class EDMF_PrognosticTKE:
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
         u_max = np.max([q['w_half', i][k] for i in i_uds for k in grid.over_elems(Center())])
         TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
+        TS.Δti_up = 1.0/TS.Δt_up
         compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
         eos_update_SA_mean(grid, q, tmp)
         buoyancy(grid, q, tmp)

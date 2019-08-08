@@ -146,8 +146,14 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
                 ρawq_tot_cut = ρaw_cut * q_tot_cut
                 ρa_new_k = ρ_k * a_k_new
 
-                tendencies_θ_liq = -advect(ρawθ_liq_cut, w_cut, grid) + ρaw_cut[1] * (ε_sc * θ_liq_env - δ_sc * θ_liq_cut[1])
-                tendencies_q_tot = -advect(ρawq_tot_cut, w_cut, grid) + ρaw_cut[1] * (ε_sc * q_tot_env - δ_sc * q_tot_cut[1])
+                tendencies_θ_liq = 0.0
+                tendencies_q_tot = 0.0
+
+                tendencies_θ_liq += -advect(ρawθ_liq_cut, w_cut, grid)
+                tendencies_q_tot += -advect(ρawq_tot_cut, w_cut, grid)
+
+                tendencies_θ_liq += ρaw_cut[1] * (ε_sc * θ_liq_env - δ_sc * θ_liq_cut[1])
+                tendencies_q_tot += ρaw_cut[1] * (ε_sc * q_tot_env - δ_sc * q_tot_cut[1])
 
                 q_new['θ_liq', i][k] = ρa_k/ρa_new_k * θ_liq_cut[1] + TS.Δt_up*tendencies_θ_liq/ρa_new_k
                 q_new['q_tot', i][k] = ρa_k/ρa_new_k * q_tot_cut[1] + TS.Δt_up*tendencies_q_tot/ρa_new_k
