@@ -47,7 +47,6 @@ class Simulation1d:
 
         unkowns = (
          ('a'             , Center() , Neumann() , N_sd),
-         ('w'             , Node()   , Dirichlet() , N_sd),
          ('w_half'        , Center() , Dirichlet() , N_sd),
          ('q_tot'         , Center() , Neumann() , N_sd),
          ('q_rai'         , Center() , Neumann() , N_sd),
@@ -200,7 +199,7 @@ class Simulation1d:
 
         i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
 
-        sol.e_W              = self.q['w', i_env]
+        sol.e_W              = self.q['w_half', i_env]
         sol.e_q_tot          = self.q['q_tot', i_env]
         sol.e_q_liq          = self.tmp['q_liq', i_env]
         sol.e_q_rai          = self.q['q_rai', i_env]

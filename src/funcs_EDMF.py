@@ -66,7 +66,6 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
     # Solve for updraft velocity
     for i in i_uds:
-        q_new['w', i][k_1] = UpdVar[i].w_surface_bc
         for k in grid.over_elems_real(Center()):
             a_new_k = q_new['a', i][k]
             w_env = q['w_half', i_env][k]
