@@ -100,7 +100,8 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             press_drag = - ρa_k * (p_coeff * (w_i - w_env)**2.0/np.sqrt(a_k))
             nh_press = press_buoy + press_drag
 
-            q_new['w_half', i][k] = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
+            w_predict = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
+            q_new['w_half', i][k] = bound(w_predict, params.w_bounds)
     return
 
 def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
