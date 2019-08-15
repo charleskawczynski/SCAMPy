@@ -101,6 +101,12 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             nh_press = press_buoy + press_drag
 
             q_new['w_half', i][k] = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
+    return
+
+def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    dzi = grid.dzi
+    k_1 = grid.first_interior(Zmin())
 
     # Filter results
     for i in i_uds:
@@ -109,13 +115,6 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
                 q_new['w_half', i][k:] = 0.0
                 q_new['a', i][k:] = 0.0
                 break
-
-    return
-
-def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    dzi = grid.dzi
-    k_1 = grid.first_interior(Zmin())
 
     for i in i_uds:
         q_new['θ_liq', i][k_1] = UpdVar[i].θ_liq_surface_bc
