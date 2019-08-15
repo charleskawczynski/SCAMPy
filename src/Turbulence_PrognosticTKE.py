@@ -103,6 +103,8 @@ class EDMF_PrognosticTKE:
         self.params.vel_buoy_coeff         = self.vel_buoy_coeff
         self.params.a_bounds               = [self.minimum_area, 1.0-self.minimum_area]
         self.params.w_bounds               = [0.0, 1000.0]
+        # self.params.w_bounds               = [10.0*np.finfo(float).eps, 1000.0]
+        # self.params.w_bounds               = [0.000001, 1000.0]
 
         entr_src = namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']
         if str(entr_src) == 'inverse_z':        self.entr_detr_fp = entr_detr_inverse_z

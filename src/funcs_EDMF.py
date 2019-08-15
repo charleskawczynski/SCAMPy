@@ -32,6 +32,9 @@ def compute_src_limited(grid, tmp, name_src_limited, src_name, names_limiter_min
 def bound(x, x_bounds):
     return np.fmin(np.fmax(x, x_bounds[0]), x_bounds[1])
 
+def bound_with_buffer(x, x_bounds):
+    return np.fmin(np.fmax(x, x_bounds[0]+0.0000001), x_bounds[1]-0.0000001)
+
 def inside_bounds(x, x_bounds):
     return x > x_bounds[0] and x < x_bounds[1]
 
@@ -109,14 +112,6 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
     dzi = grid.dzi
     k_1 = grid.first_interior(Zmin())
 
-    # Filter results
-    for i in i_uds:
-        for k in grid.over_elems_real(Center()):
-            if not inside_bounds(q_new['w_half', i][k], params.w_bounds):
-                q_new['w_half', i][k:] = 0.0
-                q_new['a', i][k:] = 0.0
-                break
-
     for i in i_uds:
         q_new['θ_liq', i][k_1] = UpdVar[i].θ_liq_surface_bc
         q_new['q_tot', i][k_1] = UpdVar[i].q_tot_surface_bc
@@ -125,7 +120,7 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
             θ_liq_env = q['θ_liq', i_env][k]
             q_tot_env = q['q_tot', i_env][k]
 
-            if inside_bounds(q_new['a', i][k], params.a_bounds):
+            if inside_bounds(q_new['w_half', i][k], params.w_bounds):
                 a_k = q['a', i][k]
                 a_cut = q['a', i].Cut(k)
                 a_k_new = q_new['a', i][k]
@@ -155,6 +150,9 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
                 q_new['θ_liq', i][k] = ρa_k/ρa_new_k * θ_liq_cut[1] + TS.Δt_up*tendencies_θ_liq/ρa_new_k
                 q_new['q_tot', i][k] = ρa_k/ρa_new_k * q_tot_cut[1] + TS.Δt_up*tendencies_q_tot/ρa_new_k
             else:
+                # print('w_half = ', q_new['w_half', i][k])
+                q_new['w_half', i][k:] = 0.0
+                q_new['a', i][k:] = 0.0
                 q_new['θ_liq', i][k] = q['θ_liq', i_gm][k]
                 q_new['q_tot', i][k] = q['q_tot', i_gm][k]
     return
