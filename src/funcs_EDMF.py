@@ -78,6 +78,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             ρ_k = tmp['ρ_0'][k]
             w_i = q['w_half', i][k]
             a_k = q['a', i][k]
+            a_k = bound(a_k, params.a_bounds) # TOFIX: remove eventually
             entr_w = tmp['entr_sc', i][k]
             detr_w = tmp['detr_sc', i][k]
             B_k = tmp['B', i][k]
@@ -96,8 +97,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             buoy = ρa_k * B_k
             press_buoy = - ρa_k * B_k * params.pressure_buoy_coeff
             p_coeff = params.pressure_drag_coeff/params.pressure_plume_spacing
-            a_k_bounded = bound(a_k, params.a_bounds) # TOFIX: remove eventually
-            press_drag = - ρa_k * (p_coeff * (w_i - w_env)**2.0/np.sqrt(a_k_bounded))
+            press_drag = - ρa_k * (p_coeff * (w_i - w_env)**2.0/np.sqrt(a_k))
             nh_press = press_buoy + press_drag
 
             q_new['w_half', i][k] = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
