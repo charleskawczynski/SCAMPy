@@ -348,8 +348,12 @@ def compute_tke_buoy(grid, q, tmp, tmp_O2, cv):
         tmp_O2[cv]['buoy'][k] = g / tmp['α_0'][k] * ae[k] * tmp['ρ_0'][k] * (term_1 + term_2)
     return
 
-def apply_gm_bcs(grid, q):
+def apply_bcs(grid, q):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    for i in i_sd:
+        q['θ_liq', i].apply_bc(grid, 0.0)
+        q['q_tot', i].apply_bc(grid, 0.0)
+    q['w_half', i_env].apply_bc(grid, 0.0)
     q['θ_liq', i_gm].apply_bc(grid, 0.0)
     q['q_tot', i_gm].apply_bc(grid, 0.0)
     q['tke', i_gm].apply_bc(grid, 0.0)
@@ -487,7 +491,7 @@ def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
     q_tendencies['θ_liq', i_gm][k_1] += Case.Sur.rho_θ_liq_flux * dzi * α_1/ae_1
     return
 
-def update_cv_env(grid, q, q_tendencies, tmp, tmp_O2, TS, cv, tri_diag, tke_diss_coeff):
+def update_sol_env(grid, q, q_tendencies, tmp, tmp_O2, TS, cv, tri_diag, tke_diss_coeff):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff)
     k_1 = grid.first_interior(Zmin())
@@ -535,6 +539,8 @@ def assign_values_to_new(grid, q, q_new, tmp):
             q['θ_liq', i][k] = q_new['θ_liq', i][k]
             q['a', i][k] = q_new['a', i][k]
         q['a', i_env][k] = 1.0 - np.sum([q_new['a', i][k] for i in i_uds])
+        q['θ_liq', i_gm][k] = q_new['θ_liq', i_gm][k]
+        q['q_tot', i_gm][k] = q_new['q_tot', i_gm][k]
     return
 
 def initialize_updrafts(grid, tmp, q, updraft_fraction):

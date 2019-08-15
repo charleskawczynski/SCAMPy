@@ -202,15 +202,11 @@ class EDMF_PrognosticTKE:
         assign_new_to_values(grid, q_new, q, tmp)
         self.compute_prognostic_updrafts(grid, q_new, q, q_tendencies, tmp, UpdVar, Case, TS)
 
-        update_cv_env(grid, q, q_tendencies, tmp, tmp_O2, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
-
+        update_sol_env(grid, q, q_tendencies, tmp, tmp_O2, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
         update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag)
 
-        for k in grid.over_elems_real(Center()):
-            q['θ_liq', i_gm][k] = q_new['θ_liq', i_gm][k]
-            q['q_tot', i_gm][k] = q_new['q_tot', i_gm][k]
-
-        apply_gm_bcs(grid, q)
+        assign_values_to_new(grid, q, q_new, tmp)
+        apply_bcs(grid, q)
 
         return
 
@@ -223,12 +219,5 @@ class EDMF_PrognosticTKE:
         eos_update_SA_mean(grid, q, tmp)
         buoyancy(grid, q, tmp)
         solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-
         solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-        assign_values_to_new(grid, q, q_new, tmp)
-        for i in i_sd:
-            q['θ_liq', i].apply_bc(grid, 0.0)
-            q['q_tot', i].apply_bc(grid, 0.0)
-        q['w_half', i_env].apply_bc(grid, 0.0)
-        diagnose_environment(grid, q)
         return
