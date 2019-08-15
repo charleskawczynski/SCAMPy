@@ -111,7 +111,7 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
     # Filter results
     for i in i_uds:
         for k in grid.over_elems_real(Center()):
-            if q_new['w_half', i][k] < 0.0:
+            if not inside_bounds(q_new['w_half', i][k], params.w_bounds):
                 q_new['w_half', i][k:] = 0.0
                 q_new['a', i][k:] = 0.0
                 break
