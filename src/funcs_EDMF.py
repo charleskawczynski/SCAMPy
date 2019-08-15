@@ -112,7 +112,6 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
                     break
             else:
                 q_new['w_half', i][k:] = 0.0
-                q_new['a', i][k:] = 0.0
                 break
 
     return
