@@ -29,6 +29,12 @@ def compute_src_limited(grid, tmp, name_src_limited, src_name, names_limiter_min
             for name_min, name_max in zip(names_limiter_min, names_limiter_max):
                 tmp[name_src_limited, i][k] = max(min(tmp[src_name, i][k], tmp[name_max, i][k]), tmp[name_min, i][k])
 
+def bound(x, x_bounds):
+    return np.fmin(np.fmax(x, x_bounds[0]), x_bounds[1])
+
+def inside_bounds(x, x_bounds):
+    return x > x_bounds[0] and x < x_bounds[1]
+
 def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
@@ -58,7 +64,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
             a_predict = a_k + TS.Δt_up * tendencies
 
-            q_new['a', i][k] = np.fmin(np.fmax(a_predict, params.a_bounds[0]), params.a_bounds[1])
+            q_new['a', i][k] = bound(a_predict, params.a_bounds)
 
         tmp['entr_sc', i][k_1] = 2.0 * dzi
         tmp['detr_sc', i][k_1] = 0.0
@@ -90,7 +96,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             buoy = ρa_k * B_k
             press_buoy = - ρa_k * B_k * params.pressure_buoy_coeff
             p_coeff = params.pressure_drag_coeff/params.pressure_plume_spacing
-            a_k_bounded = np.fmax(a_k, params.minimum_area)
+            a_k_bounded = bound(a_k, params.a_bounds) # TOFIX: remove eventually
             press_drag = - ρa_k * (p_coeff * (w_i - w_env)**2.0/np.sqrt(a_k_bounded))
             nh_press = press_buoy + press_drag
 
@@ -99,7 +105,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
     # Filter results
     for i in i_uds:
         for k in grid.over_elems_real(Center()):
-            if q_new['a', i][k] >= params.minimum_area:
+            if inside_bounds(q_new['a', i][k], params.a_bounds):
                 if q_new['w_half', i][k] <= 0.0:
                     q_new['w_half', i][k:] = 0.0
                     q_new['a', i][k:] = 0.0
@@ -124,7 +130,7 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
             θ_liq_env = q['θ_liq', i_env][k]
             q_tot_env = q['q_tot', i_env][k]
 
-            if q_new['a', i][k] >= params.minimum_area:
+            if inside_bounds(q_new['a', i][k], params.a_bounds):
                 a_k = q['a', i][k]
                 a_cut = q['a', i].Cut(k)
                 a_k_new = q_new['a', i][k]
