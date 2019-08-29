@@ -16,6 +16,23 @@ from Cases import  CasesBase
 from NetCDFIO import NetCDFIO_Stats
 from TimeStepping import TimeStepping
 
+def plot_solutions_new(grid, sv, var_names, Stats):
+    i_gm, i_env, i_uds, i_sd = sv.domain_idx()
+    n = 3
+    for var_name in var_names:
+        for i in sv.subdomains(var_name):
+            if 'T' in var_name:
+                plt.plot(sv[var_name, i][n:-n]     , grid.z[n:-n])
+            else:
+                plt.plot(sv[var_name, i]           , grid.z)
+            p_nice = nice_name(var_name+'_'+sv.idx_name(i))
+            file_name = p_nice+'.png'
+            plt.title(p_nice+' vs z')
+            plt.xlabel(p_nice)
+            plt.ylabel('z')
+            plt.savefig(Stats.figpath+file_name)
+            plt.close()
+
 def plot_solutions(sol, Stats):
     props = [x for x in dir(sol) if not (x.startswith('__') and x.endswith('__'))]
     props = [x for x in props if not x=='z']
@@ -84,6 +101,7 @@ class Simulation1d:
                      ('CF'                     , Center() , Neumann(), 1),
                      ('entr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
                      ('detr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
+                     ('gov_eq'                 , Center() , Neumann(), N_sd),
                      ('δ_src_a'                , Center() , Neumann(), N_sd),
                      ('δ_src_w'                , Center() , Neumann(), N_sd),
                      ('δ_src_q_tot'            , Center() , Neumann(), N_sd),
@@ -201,9 +219,9 @@ class Simulation1d:
 
         sol.e_W              = self.q['w_half', i_env]
         sol.e_q_tot          = self.q['q_tot', i_env]
-        sol.e_q_liq          = self.tmp['q_liq', i_env]
         sol.e_q_rai          = self.q['q_rai', i_env]
         sol.e_θ_liq          = self.q['θ_liq', i_env]
+        sol.e_q_liq          = self.tmp['q_liq', i_env]
         sol.e_T              = self.tmp['T', i_env]
         sol.e_B              = self.tmp['B', i_env]
         sol.e_CF             = self.tmp['CF']
@@ -228,7 +246,26 @@ class Simulation1d:
         sol.gm_q_liq = self.tmp['q_liq', i_gm]
         sol.gm_B     = self.tmp['B', i_gm]
 
-        plot_solutions(sol, self.Stats)
+        q_vars = ('w_half',
+                  'q_tot',
+                  # 'q_rai',
+                  'θ_liq',
+                  'tke',
+                  # 'cv_θ_liq',
+                  # 'cv_q_tot',
+                  # 'cv_θ_liq_q_tot',
+                  'a',
+                  'U',
+                  'V',)
+        tmp_vars = ('q_liq',
+                    'T',
+                    'B',
+                    'CF',
+                    'gov_eq',
+                    )
+        plot_solutions_new(self.grid, self.q, q_vars, self.Stats)
+        plot_solutions_new(self.grid, self.tmp, tmp_vars, self.Stats)
+        # plot_solutions(sol, self.Stats)
         return sol
 
 

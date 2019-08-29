@@ -86,14 +86,20 @@ class StateVec:
     def domain_idx(self):
         return self.i_gm, self.i_env, self.i_uds, self.i_sd
 
+    def subdomains(self, var_name):
+        if self.nsd[var_name]==1:
+            return (0,)
+        else:
+            return self.i_sd+[self.i_gm]
+
     def data_location(self, name):
         return self.fields[self.var_mapper[name][0]].loc
 
     def idx_name(self, i):
       i_gm, i_env, i_uds, i_sd = self.domain_idx()
-      if i==i_gm: return 'i_gm'
-      elif i==i_env: return 'i_env'
-      elif i in i_uds: return 'i_ud_'+str(i)
+      if i==i_gm: return 'gm'
+      elif i==i_env: return 'env'
+      elif i in i_uds: return 'ud_'+str(i)
       else:
         raise ValueError('Bad index in idx_name in StateVec.py')
 

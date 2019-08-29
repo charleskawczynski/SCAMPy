@@ -105,6 +105,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
             w_predict = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
             q_new['w_half', i][k] = bound(w_predict, params.w_bounds)
+            # q_new['w_half', i][k] = bound_with_buffer(w_predict, params.w_bounds)
     return
 
 def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
@@ -120,39 +121,46 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
             θ_liq_env = q['θ_liq', i_env][k]
             q_tot_env = q['q_tot', i_env][k]
 
+            a_k = q['a', i][k]
+            a_cut = q['a', i].Cut(k)
+            a_k_new = q_new['a', i][k]
+            θ_liq_cut = q['θ_liq', i].Cut(k)
+            q_tot_cut = q['q_tot', i].Cut(k)
+            ρ_k = tmp['ρ_0'][k]
+            ρ_cut = tmp['ρ_0'].Cut(k)
+            w_cut = q['w_half', i].Cut(k)
+            ε_sc = tmp['entr_sc', i][k]
+            δ_sc = tmp['detr_sc', i][k]
+            ρa_k = ρ_k*a_k
+
+            ρaw_cut = ρ_cut * a_cut * w_cut
+            ρawθ_liq_cut = ρaw_cut * θ_liq_cut
+            ρawq_tot_cut = ρaw_cut * q_tot_cut
+            ρa_new_k = ρ_k * a_k_new
+
+            tendencies_θ_liq = 0.0
+            tendencies_q_tot = 0.0
+
+            tendencies_θ_liq += -advect(ρawθ_liq_cut, w_cut, grid)
+            tendencies_q_tot += -advect(ρawq_tot_cut, w_cut, grid)
+
+            tendencies_θ_liq += ρaw_cut[1] * (ε_sc * θ_liq_env - δ_sc * θ_liq_cut[1])
+            tendencies_q_tot += ρaw_cut[1] * (ε_sc * q_tot_env - δ_sc * q_tot_cut[1])
+
+            θ_liq_predict = ρa_k/ρa_new_k * θ_liq_cut[1] + TS.Δt_up*tendencies_θ_liq/ρa_new_k
+            q_tot_predict = ρa_k/ρa_new_k * q_tot_cut[1] + TS.Δt_up*tendencies_q_tot/ρa_new_k
+
             if inside_bounds(q_new['w_half', i][k], params.w_bounds):
-                a_k = q['a', i][k]
-                a_cut = q['a', i].Cut(k)
-                a_k_new = q_new['a', i][k]
-                θ_liq_cut = q['θ_liq', i].Cut(k)
-                q_tot_cut = q['q_tot', i].Cut(k)
-                ρ_k = tmp['ρ_0'][k]
-                ρ_cut = tmp['ρ_0'].Cut(k)
-                w_cut = q['w_half', i].Cut(k)
-                ε_sc = tmp['entr_sc', i][k]
-                δ_sc = tmp['detr_sc', i][k]
-                ρa_k = ρ_k*a_k
-
-                ρaw_cut = ρ_cut * a_cut * w_cut
-                ρawθ_liq_cut = ρaw_cut * θ_liq_cut
-                ρawq_tot_cut = ρaw_cut * q_tot_cut
-                ρa_new_k = ρ_k * a_k_new
-
-                tendencies_θ_liq = 0.0
-                tendencies_q_tot = 0.0
-
-                tendencies_θ_liq += -advect(ρawθ_liq_cut, w_cut, grid)
-                tendencies_q_tot += -advect(ρawq_tot_cut, w_cut, grid)
-
-                tendencies_θ_liq += ρaw_cut[1] * (ε_sc * θ_liq_env - δ_sc * θ_liq_cut[1])
-                tendencies_q_tot += ρaw_cut[1] * (ε_sc * q_tot_env - δ_sc * q_tot_cut[1])
-
-                q_new['θ_liq', i][k] = ρa_k/ρa_new_k * θ_liq_cut[1] + TS.Δt_up*tendencies_θ_liq/ρa_new_k
-                q_new['q_tot', i][k] = ρa_k/ρa_new_k * q_tot_cut[1] + TS.Δt_up*tendencies_q_tot/ρa_new_k
+                tmp['gov_eq', i][k] = 1.0
+                q_new['θ_liq', i][k] = θ_liq_predict
+                q_new['q_tot', i][k] = q_tot_predict
             else:
+                tmp['gov_eq', i][k] = 0.0
                 # print('w_half = ', q_new['w_half', i][k])
                 q_new['w_half', i][k:] = 0.0
                 q_new['a', i][k:] = 0.0
+                # q_new['θ_liq', i][k] = θ_liq_predict
+                # q_new['q_tot', i][k] = q_tot_predict
                 q_new['θ_liq', i][k] = q['θ_liq', i_gm][k]
                 q_new['q_tot', i][k] = q['q_tot', i_gm][k]
     return
@@ -561,11 +569,11 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
         q['a', i_env][k] = 1.0 - np.sum([q['a', i][k] for i in i_uds])
     return
 
-def buoyancy(grid, q, tmp):
+def buoyancy(grid, q, tmp, params):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for i in i_uds:
         for k in grid.over_elems_real(Center()):
-            if q['a', i][k] > 1e-3:
+            if inside_bounds(q['a', i][k], params.a_bounds):
                 q_tot = q['q_tot', i][k]
                 q_vap = q_tot - tmp['q_liq', i][k]
                 T = tmp['T', i][k]
