@@ -172,6 +172,36 @@ class EDMF_PrognosticTKE:
 
     def pre_compute_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
+
+        k_1 = grid.first_interior(Zmin())
+        z_star = top_of_updraft(grid, q, self.params.w_bounds)
+        for i in i_uds:
+            for k in grid.over_elems_real(Center()):
+                tmp['heaviside1', i][k] = 1.0
+                if inside_bounds(q['w_half', i][k], self.params.w_bounds):
+                    tmp['heaviside1', i][k:] = 1.0
+
+                z = grid.z[k-1]
+                tmp['heaviside2', i][k] = 1.0 - np.heaviside(z - z_star[i], 0.0) if z>grid.z[k_1+1] else 1.0
+                # if abs(tmp['heaviside2', i][k]-tmp['heaviside1', i][k]) < 0.0001:
+                #     raise ValueError('Heaviside funcs are not equal')
+
+        for i in i_uds:
+            for k in grid.over_elems_real(Center())[1:]:
+                tmp['gov_eq_θ_liq_ib', i][k] = q['θ_liq', i][k]
+                tmp['gov_eq_q_tot_ib', i][k] = q['q_tot', i][k]
+                tmp['gov_eq_θ_liq_nb', i][k] = q['θ_liq', i_gm][k]
+                tmp['gov_eq_q_tot_nb', i][k] = q['q_tot', i_gm][k]
+                if not inside_bounds(q['w_half', i][k], self.params.w_bounds):
+                    q['w_half', i][k:] = bound(0.0, self.params.w_bounds)
+                    q['a', i][k:] = bound(0.0, self.params.a_bounds)
+
+                    # q['w_half', i][k] = bound(q['w_half', i][k]*tmp['heaviside1', i][k], self.params.w_bounds)
+                    # q['a', i][k] = bound(q['a', i][k]*tmp['heaviside1', i][k]          , self.params.a_bounds)
+
+                    q['θ_liq', i][k] = q['θ_liq', i_gm][k]
+                    q['q_tot', i][k] = q['q_tot', i_gm][k]
+
         self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
         self.aux_rain(grid, q, tmp, TS)
