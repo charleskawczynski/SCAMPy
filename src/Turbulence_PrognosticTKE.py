@@ -174,17 +174,13 @@ class EDMF_PrognosticTKE:
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
 
         k_1 = grid.first_interior(Zmin())
-        z_star = top_of_updraft(grid, q, self.params.w_bounds)
+        k_2 = grid.first_interior(Zmax())
+        z_star_a, z_star_w = top_of_updraft(grid, q, self.params)
+
         for i in i_uds:
             for k in grid.over_elems_real(Center()):
-                tmp['heaviside1', i][k] = 1.0
-                if inside_bounds(q['w_half', i][k], self.params.w_bounds):
-                    tmp['heaviside1', i][k:] = 1.0
-
-                z = grid.z[k-1]
-                tmp['heaviside2', i][k] = 1.0 - np.heaviside(z - z_star[i], 0.0) if z>grid.z[k_1+1] else 1.0
-                # if abs(tmp['heaviside2', i][k]-tmp['heaviside1', i][k]) < 0.0001:
-                #     raise ValueError('Heaviside funcs are not equal')
+                tmp['heaviside_a', i][k] = 1.0 - np.heaviside(grid.z[k] - z_star_a[i], 1.0)
+                tmp['heaviside_w', i][k] = 1.0 - np.heaviside(grid.z[k] - z_star_w[i], 1.0)
 
         for i in i_uds:
             for k in grid.over_elems_real(Center())[1:]:
@@ -192,15 +188,13 @@ class EDMF_PrognosticTKE:
                 tmp['gov_eq_q_tot_ib', i][k] = q['q_tot', i][k]
                 tmp['gov_eq_θ_liq_nb', i][k] = q['θ_liq', i_gm][k]
                 tmp['gov_eq_q_tot_nb', i][k] = q['q_tot', i_gm][k]
-                if not inside_bounds(q['w_half', i][k], self.params.w_bounds):
-                    q['w_half', i][k:] = bound(0.0, self.params.w_bounds)
-                    q['a', i][k:] = bound(0.0, self.params.a_bounds)
 
-                    # q['w_half', i][k] = bound(q['w_half', i][k]*tmp['heaviside1', i][k], self.params.w_bounds)
-                    # q['a', i][k] = bound(q['a', i][k]*tmp['heaviside1', i][k]          , self.params.a_bounds)
+                q['w_half', i][k] = bound(q['w_half', i][k]*tmp['heaviside_w', i][k], self.params.w_bounds)
+                q['a', i][k] = bound(q['a', i][k]*tmp['heaviside_w', i][k]          , self.params.a_bounds)
 
-                    q['θ_liq', i][k] = q['θ_liq', i_gm][k]
-                    q['q_tot', i][k] = q['q_tot', i_gm][k]
+                weight = tmp['heaviside_w', i][k]
+                q['θ_liq', i][k] = weight*q['θ_liq', i][k] + (1.0-weight)*q['θ_liq', i_gm][k]
+                q['q_tot', i][k] = weight*q['q_tot', i][k] + (1.0-weight)*q['q_tot', i_gm][k]
 
         self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)

@@ -38,12 +38,15 @@ def bound_with_buffer(x, x_bounds):
 def inside_bounds(x, x_bounds):
     return x > x_bounds[0] and x < x_bounds[1]
 
-def top_of_updraft(grid, q, w_bounds):
+def top_of_updraft(grid, q, params):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    z_star = np.zeros(len(i_uds))
+    z_star_a = np.zeros(len(i_uds))
+    z_star_w = np.zeros(len(i_uds))
+    k_2 = grid.first_interior(Zmax())
     for i in i_uds:
-        z_star[i] = np.max([grid.z[k] if inside_bounds(q['w_half', i][k], w_bounds) else grid.z_min for k in grid.over_elems_real(Center())])
-    return z_star
+        z_star_a[i] = np.min([grid.z[k] if not inside_bounds(q['a', i][k]     , params.a_bounds) else grid.z[k_2+1] for k in grid.over_elems_real(Center())])
+        z_star_w[i] = np.min([grid.z[k] if not inside_bounds(q['w_half', i][k], params.w_bounds) else grid.z[k_2+1] for k in grid.over_elems_real(Center())])
+    return z_star_a, z_star_w
 
 def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
@@ -88,7 +91,6 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             ρ_k = tmp['ρ_0'][k]
             w_i = q['w_half', i][k]
             a_k = q['a', i][k]
-            a_k = bound(a_k, params.a_bounds) # TOFIX: remove eventually
             entr_w = tmp['entr_sc', i][k]
             detr_w = tmp['detr_sc', i][k]
             B_k = tmp['B', i][k]
@@ -166,14 +168,18 @@ def buoyancy(grid, q, tmp, params):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for i in i_uds:
         for k in grid.over_elems_real(Center()):
-            if inside_bounds(q['a', i][k], params.a_bounds):
-                q_tot = q['q_tot', i][k]
-                q_vap = q_tot - tmp['q_liq', i][k]
-                T = tmp['T', i][k]
-                α_i = alpha_c(tmp['p_0'][k], T, q_tot, q_vap)
-                tmp['B', i][k] = buoyancy_c(tmp['α_0'][k], α_i)
-            else:
-                tmp['B', i][k] = tmp['B', i_env][k]
+            q_tot = q['q_tot', i][k]
+            q_vap = q_tot - tmp['q_liq', i][k]
+            T = tmp['T', i][k]
+            α_i = alpha_c(tmp['p_0'][k], T, q_tot, q_vap)
+            tmp['B', i][k] = buoyancy_c(tmp['α_0'][k], α_i)
+
+    # Filter buoyancy
+    for i in i_uds:
+        for k in grid.over_elems_real(Center()):
+            weight = tmp['heaviside_a', i][k]
+            tmp['B', i][k] = weight*tmp['B', i][k] + (1.0-weight)*tmp['B', i_env][k]
+
     # Subtract grid mean buoyancy
     for k in grid.over_elems_real(Center()):
         tmp['B', i_gm][k] = np.sum([q['a', i][k] * tmp['B', i][k] for i in i_sd])

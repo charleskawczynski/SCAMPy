@@ -21,6 +21,8 @@ def plot_solutions_new(grid, sv, var_names, Stats):
     n = 3
     vars_exclude = (
                     ('gov_eq', [i_gm]+[i_env]),
+                    ('heaviside_a', [i_gm]+[i_env]),
+                    ('heaviside_w', [i_gm]+[i_env]),
                    )
     for var_name in var_names:
         for i in sv.subdomains(var_name):
@@ -105,8 +107,8 @@ class Simulation1d:
                      ('CF'                     , Center() , Neumann(), 1),
                      ('entr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
                      ('detr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
-                     ('heaviside1'             , Center() , Neumann(), N_sd),
-                     ('heaviside2'             , Center() , Neumann(), N_sd),
+                     ('heaviside_a'            , Center() , Neumann(), N_sd),
+                     ('heaviside_w'            , Center() , Neumann(), N_sd),
                      ('gov_eq_θ_liq_ib'        , Center() , Neumann(), N_sd),
                      ('gov_eq_q_tot_ib'        , Center() , Neumann(), N_sd),
                      ('gov_eq_θ_liq_nb'        , Center() , Neumann(), N_sd),
@@ -269,8 +271,8 @@ class Simulation1d:
                   )
         tmp_vars = ('q_liq',
                     'T',
-                    'heaviside1',
-                    'heaviside2',
+                    'heaviside_a',
+                    'heaviside_w',
                     # 'gov_eq_θ_liq_nb',
                     # 'gov_eq_q_tot_nb',
                     # 'gov_eq_θ_liq_ib',
