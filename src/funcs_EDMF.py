@@ -150,19 +150,58 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
             θ_liq_predict = ρa_k/ρa_new_k * θ_liq_cut[1] + TS.Δt_up*tendencies_θ_liq/ρa_new_k
             q_tot_predict = ρa_k/ρa_new_k * q_tot_cut[1] + TS.Δt_up*tendencies_q_tot/ρa_new_k
 
+            # tmp['gov_eq_θ_liq_ib', i][k] = 0.0
+            # tmp['gov_eq_q_tot_ib', i][k] = 0.0
+            # tmp['gov_eq_θ_liq_nb', i][k] = 0.0
+            # tmp['gov_eq_q_tot_nb', i][k] = 0.0
+            # if k>65:
+                # print('k, θ_liq_predict, q_tot_predict = ', k, θ_liq_predict, q_tot_predict)
+                # print('ρa_new_k = ', ρa_new_k)
+                # print('q_new[a, i][k] = ', q_new['a', i][k])
+                # print('q[a, i][k] = ', q['a', i][k])
+                # print('θ_liq_cut[1] = ', θ_liq_cut[1])
+                # print('q_tot_cut[1] = ', q_tot_cut[1])
+                # print('tendencies_θ_liq, tendencies_q_tot = ', tendencies_θ_liq, tendencies_q_tot)
+            tmp['gov_eq_θ_liq_ib', i][k] = θ_liq_predict
+            tmp['gov_eq_q_tot_ib', i][k] = q_tot_predict
+            tmp['gov_eq_θ_liq_nb', i][k] = q['θ_liq', i_gm][k]
+            tmp['gov_eq_q_tot_nb', i][k] = q['q_tot', i_gm][k]
+            # q_new['θ_liq', i][k] = np.min([q['θ_liq', i_gm][k], θ_liq_predict])
+            # q_new['q_tot', i][k] = np.min([q['q_tot', i_gm][k], q_tot_predict])
             if inside_bounds(q_new['w_half', i][k], params.w_bounds):
-                tmp['gov_eq', i][k] = 1.0
+                # tmp['gov_eq_θ_liq_ib', i][k] = θ_liq_predict
+                # tmp['gov_eq_q_tot_ib', i][k] = q_tot_predict
                 q_new['θ_liq', i][k] = θ_liq_predict
                 q_new['q_tot', i][k] = q_tot_predict
             else:
-                tmp['gov_eq', i][k] = 0.0
                 # print('w_half = ', q_new['w_half', i][k])
                 q_new['w_half', i][k:] = 0.0
                 q_new['a', i][k:] = 0.0
                 # q_new['θ_liq', i][k] = θ_liq_predict
                 # q_new['q_tot', i][k] = q_tot_predict
+                # tmp['gov_eq_θ_liq_nb', i][k] = q['θ_liq', i_gm][k]
+                # tmp['gov_eq_q_tot_nb', i][k] = q['q_tot', i_gm][k]
                 q_new['θ_liq', i][k] = q['θ_liq', i_gm][k]
                 q_new['q_tot', i][k] = q['q_tot', i_gm][k]
+    return
+
+def buoyancy(grid, q, tmp, params):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    for i in i_uds:
+        for k in grid.over_elems_real(Center()):
+            if inside_bounds(q['a', i][k], params.a_bounds):
+                q_tot = q['q_tot', i][k]
+                q_vap = q_tot - tmp['q_liq', i][k]
+                T = tmp['T', i][k]
+                α_i = alpha_c(tmp['p_0'][k], T, q_tot, q_vap)
+                tmp['B', i][k] = buoyancy_c(tmp['α_0'][k], α_i)
+            else:
+                tmp['B', i][k] = tmp['B', i_env][k]
+    # Subtract grid mean buoyancy
+    for k in grid.over_elems_real(Center()):
+        tmp['B', i_gm][k] = np.sum([q['a', i][k] * tmp['B', i][k] for i in i_sd])
+        for i in i_sd:
+            tmp['B', i][k] -= tmp['B', i_gm][k]
     return
 
 def eos_update_SA_mean(grid, q, tmp):
@@ -567,25 +606,6 @@ def initialize_updrafts(grid, tmp, q, updraft_fraction):
     for i in i_uds: q['θ_liq', i].apply_bc(grid, 0.0)
     for k in grid.over_elems(Center()):
         q['a', i_env][k] = 1.0 - np.sum([q['a', i][k] for i in i_uds])
-    return
-
-def buoyancy(grid, q, tmp, params):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
-    for i in i_uds:
-        for k in grid.over_elems_real(Center()):
-            if inside_bounds(q['a', i][k], params.a_bounds):
-                q_tot = q['q_tot', i][k]
-                q_vap = q_tot - tmp['q_liq', i][k]
-                T = tmp['T', i][k]
-                α_i = alpha_c(tmp['p_0'][k], T, q_tot, q_vap)
-                tmp['B', i][k] = buoyancy_c(tmp['α_0'][k], α_i)
-            else:
-                tmp['B', i][k] = tmp['B', i_env][k]
-    # Subtract grid mean buoyancy
-    for k in grid.over_elems_real(Center()):
-        tmp['B', i_gm][k] = np.sum([q['a', i][k] * tmp['B', i][k] for i in i_sd])
-        for i in i_sd:
-            tmp['B', i][k] -= tmp['B', i_gm][k]
     return
 
 def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):

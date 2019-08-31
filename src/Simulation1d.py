@@ -19,19 +19,23 @@ from TimeStepping import TimeStepping
 def plot_solutions_new(grid, sv, var_names, Stats):
     i_gm, i_env, i_uds, i_sd = sv.domain_idx()
     n = 3
+    vars_exclude = (
+                    ('gov_eq', [i_gm]+[i_env]),
+                   )
     for var_name in var_names:
         for i in sv.subdomains(var_name):
-            if 'T' in var_name:
-                plt.plot(sv[var_name, i][n:-n]     , grid.z[n:-n])
-            else:
-                plt.plot(sv[var_name, i]           , grid.z)
-            p_nice = nice_name(var_name+'_'+sv.idx_name(i))
-            file_name = p_nice+'.png'
-            plt.title(p_nice+' vs z')
-            plt.xlabel(p_nice)
-            plt.ylabel('z')
-            plt.savefig(Stats.figpath+file_name)
-            plt.close()
+            if not any([v in var_name and i in j for v,j in vars_exclude]):
+                if 'T' in var_name:
+                    plt.plot(sv[var_name, i][n:-n]     , grid.z[n:-n])
+                else:
+                    plt.plot(sv[var_name, i]           , grid.z)
+                p_nice = nice_name(var_name+'_'+sv.idx_name(i))
+                file_name = p_nice+'.png'
+                plt.title(p_nice+' vs z')
+                plt.xlabel(p_nice)
+                plt.ylabel('z')
+                plt.savefig(Stats.figpath+file_name)
+                plt.close()
 
 def plot_solutions(sol, Stats):
     props = [x for x in dir(sol) if not (x.startswith('__') and x.endswith('__'))]
@@ -101,7 +105,10 @@ class Simulation1d:
                      ('CF'                     , Center() , Neumann(), 1),
                      ('entr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
                      ('detr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
-                     ('gov_eq'                 , Center() , Neumann(), N_sd),
+                     ('gov_eq_θ_liq_ib'        , Center() , Neumann(), N_sd),
+                     ('gov_eq_q_tot_ib'        , Center() , Neumann(), N_sd),
+                     ('gov_eq_θ_liq_nb'        , Center() , Neumann(), N_sd),
+                     ('gov_eq_q_tot_nb'        , Center() , Neumann(), N_sd),
                      ('δ_src_a'                , Center() , Neumann(), N_sd),
                      ('δ_src_w'                , Center() , Neumann(), N_sd),
                      ('δ_src_q_tot'            , Center() , Neumann(), N_sd),
@@ -255,16 +262,47 @@ class Simulation1d:
                   # 'cv_q_tot',
                   # 'cv_θ_liq_q_tot',
                   'a',
-                  'U',
-                  'V',)
+                  # 'U',
+                  # 'V',
+                  )
         tmp_vars = ('q_liq',
                     'T',
+                    # 'gov_eq_θ_liq_nb',
+                    # 'gov_eq_q_tot_nb',
+                    # 'gov_eq_θ_liq_ib',
+                    # 'gov_eq_q_tot_ib',
                     'B',
                     'CF',
-                    'gov_eq',
                     )
         plot_solutions_new(self.grid, self.q, q_vars, self.Stats)
         plot_solutions_new(self.grid, self.tmp, tmp_vars, self.Stats)
+
+        i = i_uds[0]
+        var_name = 'gov_eq_q_tot'
+        plt.plot(self.tmp['gov_eq_q_tot_ib', i], self.grid.z,
+                 self.tmp['gov_eq_q_tot_nb', i], self.grid.z)
+        plt.legend(['ib','nb'])
+        p_nice = nice_name(var_name+'_comparison')
+        file_name = p_nice+'.png'
+        plt.title(p_nice+' vs z')
+        plt.xlabel(p_nice)
+        plt.ylabel('z')
+        plt.savefig(self.Stats.figpath+file_name)
+        plt.close()
+
+        n = 3
+        var_name = 'gov_eq_θ_liq'
+        plt.plot(self.tmp['gov_eq_θ_liq_ib', i][n:-n], self.grid.z[n:-n],
+                 self.tmp['gov_eq_θ_liq_nb', i][n:-n], self.grid.z[n:-n])
+        plt.legend(['ib','nb'])
+        p_nice = nice_name(var_name+'_comparison')
+        file_name = p_nice+'.png'
+        plt.title(p_nice+' vs z')
+        plt.xlabel(p_nice)
+        plt.ylabel('z')
+        plt.savefig(self.Stats.figpath+file_name)
+        plt.close()
+
         # plot_solutions(sol, self.Stats)
         return sol
 
