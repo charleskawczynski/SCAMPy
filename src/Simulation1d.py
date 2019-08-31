@@ -105,6 +105,7 @@ class Simulation1d:
                      ('CF'                     , Center() , Neumann(), 1),
                      ('entr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
                      ('detr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
+                     ('heaviside'              , Center() , Neumann(), N_sd),
                      ('gov_eq_θ_liq_ib'        , Center() , Neumann(), N_sd),
                      ('gov_eq_q_tot_ib'        , Center() , Neumann(), N_sd),
                      ('gov_eq_θ_liq_nb'        , Center() , Neumann(), N_sd),
@@ -267,6 +268,7 @@ class Simulation1d:
                   )
         tmp_vars = ('q_liq',
                     'T',
+                    'heaviside',
                     # 'gov_eq_θ_liq_nb',
                     # 'gov_eq_q_tot_nb',
                     # 'gov_eq_θ_liq_ib',

@@ -41,6 +41,8 @@ class Grid:
         self.dz = (z_max-z_min)/n_elems_real
         self.dzi = 1.0/self.dz
         self.gw = n_ghost
+        self.z_min = z_min
+        self.z_max = z_max
         self.nz = n_elems_real
         self.nzg = self.nz + 2 * self.gw
         self.z_half = np.empty((self.nzg), dtype=np.double, order='c')

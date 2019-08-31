@@ -38,10 +38,22 @@ def bound_with_buffer(x, x_bounds):
 def inside_bounds(x, x_bounds):
     return x > x_bounds[0] and x < x_bounds[1]
 
+def top_of_updraft(grid, q, w_bounds):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    z_star = np.zeros(len(i_uds))
+    for i in i_uds:
+        z_star[i] = np.max([grid.z[k] if inside_bounds(q['w_half', i][k], w_bounds) else grid.z_min for k in grid.over_elems_real(Center())])
+    return z_star
+
 def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
     dzi = grid.dzi
+    z_star = top_of_updraft(grid, q, params.w_bounds)
+    for i in i_uds:
+        for k in grid.over_elems_real(Center()):
+            z = grid.z[k-1]
+            tmp['heaviside', i][k] = 1.0 - np.heaviside(z - z_star[i], 0.0) if z>grid.z[k_1+1] else 1.0
 
     # Solve for area fraction
     for i in i_uds:
@@ -64,6 +76,8 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             tendencies+=ε_term
             δ_term = a_k * w_k * (- tmp['detr_sc', i][k])
             tendencies+=δ_term
+
+            tendencies = tendencies*tmp['heaviside', i][k]
 
             a_predict = a_k + TS.Δt_up * tendencies
 
@@ -103,9 +117,12 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             press_drag = - ρa_k * (p_coeff * (w_i - w_env)**2.0/np.sqrt(a_k))
             nh_press = press_buoy + press_drag
 
-            w_predict = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*(adv + exch + buoy + nh_press)
+            tendencies = (adv + exch + buoy + nh_press)
+
+            tendencies = tendencies*tmp['heaviside', i][k]
+
+            w_predict = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*tendencies
             q_new['w_half', i][k] = bound(w_predict, params.w_bounds)
-            # q_new['w_half', i][k] = bound_with_buffer(w_predict, params.w_bounds)
     return
 
 def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
@@ -155,7 +172,7 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
             # tmp['gov_eq_θ_liq_nb', i][k] = 0.0
             # tmp['gov_eq_q_tot_nb', i][k] = 0.0
             # if k>65:
-                # print('k, θ_liq_predict, q_tot_predict = ', k, θ_liq_predict, q_tot_predict)
+            #     print('k, θ_liq_predict, q_tot_predict = ', k, θ_liq_predict, q_tot_predict)
                 # print('ρa_new_k = ', ρa_new_k)
                 # print('q_new[a, i][k] = ', q_new['a', i][k])
                 # print('q[a, i][k] = ', q['a', i][k])
@@ -175,8 +192,8 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
                 q_new['q_tot', i][k] = q_tot_predict
             else:
                 # print('w_half = ', q_new['w_half', i][k])
-                q_new['w_half', i][k:] = 0.0
-                q_new['a', i][k:] = 0.0
+                q_new['w_half', i][k:] = bound(0.0, params.w_bounds)
+                q_new['a', i][k:] = bound(0.0, params.a_bounds)
                 # q_new['θ_liq', i][k] = θ_liq_predict
                 # q_new['q_tot', i][k] = q_tot_predict
                 # tmp['gov_eq_θ_liq_nb', i][k] = q['θ_liq', i_gm][k]
