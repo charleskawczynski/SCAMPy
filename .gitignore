@@ -7,6 +7,8 @@
 *.c
 *.idea
 *.in
+*.csv
+*.dat
 RefactoringTasks.md
 *.nc
 *.idea/workspace.xml

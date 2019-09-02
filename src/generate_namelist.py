@@ -86,6 +86,7 @@ def Bomex():
     namelist['time_stepping'] = {}
     namelist['time_stepping']['dt'] = 20.0
     namelist['time_stepping']['t_max'] = 21600.0
+    # namelist['time_stepping']['t_max'] = 20.0
 
     namelist['turbulence'] = {}
     namelist['turbulence']['EDMF_PrognosticTKE'] = {}

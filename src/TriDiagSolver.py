@@ -14,7 +14,7 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
     k_2 = grid.first_interior(Zmax())
 
     a_env = q['a', i_env]
-    w_env = q['w_half', i_env]
+    w_env = q['w', i_env]
     ρ_0_half = tmp['ρ_0']
     for k in grid.over_elems_real(Center()):
         ρ_0_cut = ρ_0_half.Cut(k)
@@ -24,7 +24,7 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
 
         D_env = sum([ρ_0_cut[1] *
                      q['a', i][k] *
-                     q['w_half', i][k] *
+                     q['w', i][k] *
                      tmp['entr_sc', i][k] for i in i_uds])
 
         l_mix = np.fmax(tmp['l_mix'][k], 1.0)

@@ -4,6 +4,8 @@ import copy
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
 import matplotlib.pyplot as plt
 from Field import Field, Full, Half, Dirichlet, Neumann
+import numpy as np
+import pandas as pd
 
 import numpy as np
 
@@ -157,38 +159,42 @@ class StateVec:
         domain = grid.over_elems(Center())
         headers = [ str(name) if len(self.over_sub_domains(name))==1 else str(name)+'_'+str(i_sd)
           for name in self.var_names for i_sd in self.over_sub_domains(name)]
-        headers = [friendly_name(s) for s in headers]
         n_vars = len(headers)
+        headers = ['z']+headers
         n_elem = len(domain)
-        data = np.array([self[name, k, i_sd] for name in self.var_names for
+        data = np.array([self[name, i_sd][k] for name in self.var_names for
           i_sd in self.over_sub_domains(name) for k in domain])
         data = data.reshape(n_elem, n_vars)
         z = grid.z[domain]
+        z = np.expand_dims(z, axis=1)
+        data_all = np.hstack((z, data))
 
-        # TODO: Clean up using numpy export
-        data_all = []
-        data_all.append(z)
-        data_all.append(data)
-        file_name = str(directory+filename+'_vs_z.dat')
-        with open(file_name, 'w') as f:
-            f.write(', '.join(headers)+'\n')
-            for k in domain:
-                row = data_all[k]
-                f.write('\t'.join(row))
+        df = pd.DataFrame(data=data_all.astype(float))
+        # df.to_csv(directory+filename+'.csv', sep=', ', header=headers, float_format='%.2f', index=False)
+        df.to_csv(directory+filename+'.csv', sep=',', header=headers, float_format='%.2f', index=False)
+
+        # file_name = str(directory+filename+'_vs_z.dat')
+        # with open(file_name, 'w+', encoding='utf-8') as f:
+        #     f.write(', '.join(headers)+'\n')
+        #     for k in domain:
+        #         row = data_all[k]
+        #         f.write('\t'.join(row))
         return
 
 
-"""
 # Example:
+"""
 z_min        = 0.0
 z_max        = 1.0
 n_elems_real = 10
 n_ghost      = 1
 grid = Grid(z_min, z_max, n_elems_real, n_ghost)
-unknowns = (('rho_0', Center(), 1), ('w', Node(), 3), ('a', Center(), 3), ('alpha_0', Center(), 1))
+unknowns = (('rho_0'  , Center() , Neumann(), 1),
+            ('w'      , Node()   , Neumann(), 3),
+            ('a'      , Center() , Neumann(), 3),
+            ('alpha_0', Center() , Neumann(), 1))
 state_vec = StateVec(unknowns, grid)
 print(state_vec)
-
 state_vec['rho_0'][1] = 1.0
 state_vec['rho_0'][3] = 4.0
 print(state_vec)

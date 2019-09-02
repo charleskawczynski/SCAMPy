@@ -30,14 +30,14 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.z                = grid.z_half[k]
             input_st.ml               = tmp['l_mix'][k]
             input_st.b                = tmp['B', i][k]
-            input_st.w                = q['w_half', i][k]
+            input_st.w                = q['w', i][k]
             input_st.af               = q['a', i][k]
             input_st.tke              = q['tke', i_env][k]
             input_st.qt_env           = q['q_tot', i_env][k]
             input_st.q_liq_env        = tmp['q_liq', i_env][k]
             input_st.θ_liq_env        = q['θ_liq', i_env][k]
             input_st.b_env            = tmp['B', i_env][k]
-            input_st.w_env            = q['w_half', i_env].Mid(k)
+            input_st.w_env            = q['w', i_env].Mid(k)
             input_st.θ_liq_up         = q['θ_liq', i][k]
             input_st.qt_up            = q['q_tot', i][k]
             input_st.p0               = tmp['p_0'][k]
@@ -46,8 +46,8 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.tke_ed_coeff     = tke_ed_coeff
             input_st.L                = 20000.0 # need to define the scale of the GCM grid resolution
             input_st.n_up             = n_updrafts
-            w_cut = q['w_half', i].Cut(k)
-            w_env_cut = q['w_half', i_env].Cut(k)
+            w_cut = q['w', i].Cut(k)
+            w_env_cut = q['w', i_env].Cut(k)
             a_cut = q['a', i].Cut(k)
             a_env_cut = (1.0-q['a', i].Cut(k))
             aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
@@ -189,7 +189,7 @@ class EDMF_PrognosticTKE:
                 tmp['gov_eq_θ_liq_nb', i][k] = q['θ_liq', i_gm][k]
                 tmp['gov_eq_q_tot_nb', i][k] = q['q_tot', i_gm][k]
 
-                q['w_half', i][k] = bound(q['w_half', i][k]*tmp['heaviside_w', i][k], self.params.w_bounds)
+                q['w', i][k] = bound(q['w', i][k]*tmp['heaviside_w', i][k], self.params.w_bounds)
                 q['a', i][k] = bound(q['a', i][k]*tmp['heaviside_w', i][k]          , self.params.a_bounds)
 
                 weight = tmp['heaviside_w', i][k]
@@ -200,19 +200,19 @@ class EDMF_PrognosticTKE:
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
         self.aux_rain(grid, q, tmp, TS)
         diagnose_environment(grid, q)
-        compute_cv_gm(grid, q, 'w_half'    , 'w_half'    , 'tke'           , 0.5, Half.Identity)
+        compute_cv_gm(grid, q, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         update_GMV_MF(grid, q, TS, tmp)
         compute_eddy_diffusivities_tke(grid, q, tmp, Case, self.zi, self.wstar, self.prandtl_number, self.tke_ed_coeff, self.similarity_diffusivity)
 
         compute_tke_buoy(grid, q, tmp, tmp_O2, 'tke')
-        compute_covariance_entr(grid, q, tmp, tmp_O2, 'w_half'    , 'w_half'    , 'tke'           , 0.5, Half.Identity)
-        compute_covariance_shear(grid, q, tmp, tmp_O2, 'w_half'    , 'w_half'    , 'tke')
-        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w_half'    , 'w_half'    , 'tke'           , 0.5, Half.Identity)
+        compute_covariance_entr(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
+        compute_covariance_shear(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke')
+        compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         compute_tke_pressure(grid, q, tmp, tmp_O2, self.pressure_buoy_coeff, self.pressure_drag_coeff, self.pressure_plume_spacing, 'tke')
 
         reset_surface_covariance(grid, q, tmp, Case, self.wstar)
 
-        compute_cv_env(grid, q, tmp, tmp_O2, 'w_half'    , 'w_half'    , 'tke'           , 0.5, Half.Identity)
+        compute_cv_env(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
 
         compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, 'tke')
 
@@ -239,7 +239,7 @@ class EDMF_PrognosticTKE:
 
     def compute_prognostic_updrafts(self, grid, q_new, q, q_tendencies, tmp, UpdVar, Case, TS):
         i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        u_max = np.max([q['w_half', i][k] for i in i_uds for k in grid.over_elems(Center())])
+        u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Center())])
         TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
         TS.Δti_up = 1.0/TS.Δt_up
         compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
