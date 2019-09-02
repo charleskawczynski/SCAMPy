@@ -70,17 +70,14 @@ class Simulation1d:
 
         unkowns = (
          ('a'             , Center() , Neumann() , N_sd),
-         ('w'        , Center() , Dirichlet() , N_sd),
+         ('w'             , Center() , Dirichlet() , N_sd),
          ('q_tot'         , Center() , Neumann() , N_sd),
-         ('q_rai'         , Center() , Neumann() , N_sd),
          ('θ_liq'         , Center() , Neumann() , N_sd),
          ('tke'           , Center() , Neumann() , N_sd),
-         ('cv_q_tot'      , Center() , Neumann() , N_sd),
-         ('cv_θ_liq'      , Center() , Neumann() , N_sd),
-         ('cv_θ_liq_q_tot', Center() , Neumann() , N_sd),
-         ('U'             , Center() , Neumann() , N_sd),
-         ('V'             , Center() , Neumann() , N_sd),
+         ('u'             , Center() , Neumann() , N_sd),
+         ('v'             , Center() , Neumann() , N_sd),
         )
+
 
         temp_vars = (
                      ('mean_entr_sc'           , Center() , Neumann(), 1),
@@ -157,9 +154,6 @@ class Simulation1d:
 
         self.tmp_O2 = {}
         self.tmp_O2['tke']            = StateVec(q_2MO, self.grid)
-        self.tmp_O2['cv_q_tot']       = copy.deepcopy(self.tmp_O2['tke'])
-        self.tmp_O2['cv_θ_liq']       = copy.deepcopy(self.tmp_O2['tke'])
-        self.tmp_O2['cv_θ_liq_q_tot'] = copy.deepcopy(self.tmp_O2['tke'])
         self.tmp_O2['tke']            = copy.deepcopy(self.tmp_O2['tke'])
 
         self.n_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
@@ -189,26 +183,24 @@ class Simulation1d:
         initialize_updrafts(self.grid, self.tmp, self.q, self.Turb.updraft_fraction)
         self.initialize_io()
         self.export_data()
-        self.q.export_state(self.grid, "./", "q")
+        self.q.export_state(self.grid, "./", "Q_py")
+        self.tmp.export_state(self.grid, "./", "tmp_py")
         return
 
     def run(self):
         i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
-        self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
+        self.q_tendencies.assign(self.grid, ('u', 'v', 'q_tot', 'θ_liq'), 0.0)
         self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
         self.UpdVar, self.Case, self.TS, self.tri_diag)
         for k in self.grid.over_elems(Center()):
             self.q['tke', i_env][k]            = self.q['tke', i_gm][k]
-            self.q['cv_θ_liq', i_env][k]       = self.q['cv_θ_liq', i_gm][k]
-            self.q['cv_q_tot', i_env][k]       = self.q['cv_q_tot', i_gm][k]
-            self.q['cv_θ_liq_q_tot', i_env][k] = self.q['cv_θ_liq_q_tot', i_gm][k]
 
         while self.TS.t <= self.TS.t_max:
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
                 print('Percent complete: ', self.TS.t/self.TS.t_max*100)
-            self.q_tendencies.assign(self.grid, ('U', 'V', 'q_tot', 'q_rai', 'θ_liq'), 0.0)
+            self.q_tendencies.assign(self.grid, ('u', 'v', 'q_tot', 'θ_liq'), 0.0)
             self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
             self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
             self.Turb.update(self.grid, self.q_new, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
@@ -231,44 +223,35 @@ class Simulation1d:
 
         sol.e_W              = self.q['w', i_env]
         sol.e_q_tot          = self.q['q_tot', i_env]
-        sol.e_q_rai          = self.q['q_rai', i_env]
         sol.e_θ_liq          = self.q['θ_liq', i_env]
         sol.e_q_liq          = self.tmp['q_liq', i_env]
         sol.e_T              = self.tmp['T', i_env]
         sol.e_B              = self.tmp['B', i_env]
         sol.e_CF             = self.tmp['CF']
         sol.e_tke            = self.q['tke', i_env]
-        sol.e_cv_θ_liq       = self.q['cv_θ_liq', i_env]
-        sol.e_cv_q_tot       = self.q['cv_q_tot', i_env]
-        sol.e_cv_θ_liq_q_tot = self.q['cv_θ_liq_q_tot', i_env]
 
         sol.ud_W     = self.q['w', i_uds[0]]
         sol.ud_Area  = self.q['a', i_uds[0]]
         sol.ud_q_tot = self.q['q_tot', i_uds[0]]
-        sol.ud_q_rai = self.q['q_rai', i_uds[0]]
         sol.ud_q_liq = self.tmp['q_liq', i_uds[0]]
         sol.ud_T     = self.tmp['T', i_uds[0]]
         sol.ud_B     = self.tmp['B', i_uds[0]]
 
         sol.gm_q_tot = self.q['q_tot', i_gm]
-        sol.gm_U     = self.q['U', i_gm]
+        sol.gm_U     = self.q['u', i_gm]
         sol.gm_θ_liq = self.q['θ_liq', i_gm]
         sol.gm_T     = self.tmp['T', i_gm]
-        sol.gm_V     = self.q['V', i_gm]
+        sol.gm_V     = self.q['v', i_gm]
         sol.gm_q_liq = self.tmp['q_liq', i_gm]
         sol.gm_B     = self.tmp['B', i_gm]
 
         q_vars = ('w',
                   'q_tot',
-                  # 'q_rai',
                   'θ_liq',
                   'tke',
-                  # 'cv_θ_liq',
-                  # 'cv_q_tot',
-                  # 'cv_θ_liq_q_tot',
                   'a',
-                  # 'U',
-                  # 'V',
+                  # 'u',
+                  # 'v',
                   )
         tmp_vars = ('q_liq',
                     'T',

@@ -293,7 +293,7 @@ def compute_inversion(grid, q, option, tmp, Ri_bulk_crit, temp_C):
                 maxgrad = grad_TH
                 zi = grid.z[k]
     elif option == 'critical_Ri':
-        zi = compute_inversion_height(temp_C, q['U', i_gm], q['V', i_gm], grid, Ri_bulk_crit)
+        zi = compute_inversion_height(temp_C, q['u', i_gm], q['v', i_gm], grid, Ri_bulk_crit)
     else:
         print('INVERSION HEIGHT OPTION NOT RECOGNIZED')
     return zi
@@ -436,8 +436,8 @@ def compute_covariance_shear(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
     grad_v = 0.0
     for k in grid.over_elems_real(Center()):
         if is_tke:
-            grad_u = grad_neg(q['U', i_gm].Cut(k), grid)
-            grad_v = grad_neg(q['V', i_gm].Cut(k), grid)
+            grad_u = grad_neg(q['u', i_gm].Cut(k), grid)
+            grad_v = grad_neg(q['v', i_gm].Cut(k), grid)
             grad_ϕ = grad_neg(q[ϕ, i_env].Cut(k), grid)
             grad_ψ = grad_neg(q[ψ, i_env].Cut(k), grid)
         else:

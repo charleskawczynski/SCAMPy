@@ -98,9 +98,9 @@ class Soares(CasesBase):
             else:
                 q['q_tot', i_gm][k] = 5.0e-3 - 3.7e-4 * 1.35 - 9.4e-4 * (z[k]-1350.0)/1000.0
                 theta[k] = 300.0 + 2.0 * (z[k]-1350.0)/1000.0
-            q['U', i_gm][k] = 0.01
+            q['u', i_gm][k] = 0.01
 
-        q['U', i_gm].apply_bc(grid, 0.0)
+        q['u', i_gm].apply_bc(grid, 0.0)
         q['q_tot', i_gm].apply_bc(grid, 0.0)
 
         for k in grid.over_elems_real(Center()):
@@ -193,15 +193,15 @@ class Bomex(CasesBase):
 
             #Set u profile
             if z[k] <= 700.0:
-                q['U', i_gm][k] = -8.75
+                q['u', i_gm][k] = -8.75
             if z[k] > 700.0:
-                q['U', i_gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+                q['u', i_gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
         for k in grid.over_elems_real(Center()):
             tmp['T', i_gm][k] = thetal[k] * exner_c(tmp['p_0'][k])
             q['θ_liq', i_gm][k] = thetal[k]
 
-        q['U', i_gm].apply_bc(grid, 0.0)
+        q['u', i_gm].apply_bc(grid, 0.0)
         q['q_tot', i_gm].apply_bc(grid, 0.0)
         q['θ_liq', i_gm].apply_bc(grid, 0.0)
         tmp['T', i_gm].apply_bc(grid, 0.0)
@@ -310,16 +310,16 @@ class life_cycle_Tan2018(CasesBase):
 
             #Set u profile
             if z[k] <= 700.0:
-                q['U', i_gm][k] = -8.75
+                q['u', i_gm][k] = -8.75
             if z[k] > 700.0:
-                q['U', i_gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+                q['u', i_gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
 
         for k in grid.over_elems_real(Center()):
             q['θ_liq', i_gm][k] = thetal[k]
             tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
 
-        q['U', i_gm].apply_bc(grid, 0.0)
+        q['u', i_gm].apply_bc(grid, 0.0)
         q['q_tot', i_gm].apply_bc(grid, 0.0)
         q['θ_liq', i_gm].apply_bc(grid, 0.0)
         tmp['T', i_gm].apply_bc(grid, 0.0)
@@ -413,8 +413,8 @@ class Rico(CasesBase):
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
-            q['U', i_gm][k] =  -9.9 + 2.0e-3 * z[k]
-            q['V', i_gm][k] = -3.8
+            q['u', i_gm][k] =  -9.9 + 2.0e-3 * z[k]
+            q['v', i_gm][k] = -3.8
             #Set Thetal profile
             if z[k] <= 740.0:
                 thetal[k] = 297.9
@@ -433,7 +433,7 @@ class Rico(CasesBase):
             q['θ_liq', i_gm][k] = thetal[k]
             tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
 
-        q['U', i_gm].apply_bc(grid, 0.0)
+        q['u', i_gm].apply_bc(grid, 0.0)
         q['q_tot', i_gm].apply_bc(grid, 0.0)
         q['θ_liq', i_gm].apply_bc(grid, 0.0)
         tmp['T', i_gm].apply_bc(grid, 0.0)
@@ -571,8 +571,8 @@ class TRMM_LBA(CasesBase):
         # interpolate to the model grid-points
 
         p_1 = np.interp(grid.z_half,z_in,p_in)
-        q['U', i_gm][:] = np.interp(grid.z_half,z_in,u_in)
-        q['V', i_gm][:] = np.interp(grid.z_half,z_in,v_in)
+        q['u', i_gm][:] = np.interp(grid.z_half,z_in,u_in)
+        q['v', i_gm][:] = np.interp(grid.z_half,z_in,v_in)
 
         # get the entropy from RH, p, T
         k_1 = grid.first_interior(Zmin())
@@ -587,7 +587,7 @@ class TRMM_LBA(CasesBase):
         tmp['T', i_gm][:] = T
         epsi = 287.1/461.5
 
-        q['U', i_gm].apply_bc(grid, 0.0)
+        q['u', i_gm].apply_bc(grid, 0.0)
         tmp['T', i_gm].apply_bc(grid, 0.0)
 
 
@@ -840,13 +840,13 @@ class ARM_SGP(CasesBase):
 
 
         for k in grid.over_elems_real(Center()):
-            q['U', i_gm][k] = 10.0
+            q['u', i_gm][k] = 10.0
             q['q_tot', i_gm][k] = q_tot[k]
             tmp['T', i_gm][k] = Theta[k]*exner_c(tmp['p_0'][k])
             q['θ_liq', i_gm][k] = thetali_c(tmp['p_0'][k],tmp['T', i_gm][k],
                                             q['q_tot', i_gm][k], 0.0, 0.0, latent_heat(tmp['T', i_gm][k]))
 
-        q['U', i_gm].apply_bc(grid, 0.0)
+        q['u', i_gm].apply_bc(grid, 0.0)
         q['q_tot', i_gm].apply_bc(grid, 0.0)
         q['θ_liq', i_gm].apply_bc(grid, 0.0)
         tmp['T', i_gm].apply_bc(grid, 0.0)
@@ -974,12 +974,12 @@ class GATE_III(CasesBase):
         for k in grid.over_elems_real(Center()):
             q['q_tot', i_gm][k] = q_tot[k]
             tmp['T', i_gm][k] = T[k]
-            q['U', i_gm][k] = U[k]
+            q['u', i_gm][k] = U[k]
 
             q['θ_liq', i_gm][k] = thetali_c(tmp['p_0'][k],tmp['T', i_gm][k],
                                            q['q_tot', i_gm][k], 0.0, 0.0, latent_heat(tmp['T', i_gm][k]))
 
-        q['U', i_gm].apply_bc(grid, 0.0)
+        q['u', i_gm].apply_bc(grid, 0.0)
         q['q_tot', i_gm].apply_bc(grid, 0.0)
         tmp['T', i_gm].apply_bc(grid, 0.0)
         q['θ_liq', i_gm].apply_bc(grid, 0.0)
@@ -1157,12 +1157,12 @@ class DYCOMS_RF01(CasesBase):
             tmp['B', i_gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
 
             # velocity profile (geostrophic)
-            q['U', i_gm][k] = 7.0
-            q['V', i_gm][k] = -5.5
+            q['u', i_gm][k] = 7.0
+            q['v', i_gm][k] = -5.5
 
         # fill out boundary conditions
-        q['U', i_gm].apply_bc(grid, 0.0)
-        q['V', i_gm].apply_bc(grid, 0.0)
+        q['u', i_gm].apply_bc(grid, 0.0)
+        q['v', i_gm].apply_bc(grid, 0.0)
         q['q_tot', i_gm].apply_bc(grid, 0.0)
         tmp['q_liq', i_gm].apply_bc(grid, 0.0)
         q['θ_liq', i_gm].apply_bc(grid, 0.0)
@@ -1265,8 +1265,8 @@ class GABLS(CasesBase):
 
         for k in grid.over_elems_real(Center()):
             #Set wind velocity profile
-            q['U', i_gm][k] =  8.0
-            q['V', i_gm][k] =  0.0
+            q['u', i_gm][k] =  8.0
+            q['v', i_gm][k] =  0.0
 
             #Set Thetal profile
             if grid.z_half[k] <= 100.0:
@@ -1281,8 +1281,8 @@ class GABLS(CasesBase):
             q['θ_liq', i_gm][k] = thetal[k]
             tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0'][k]) # No water content
 
-        q['U', i_gm].apply_bc(grid, 0.0)
-        q['V', i_gm].apply_bc(grid, 0.0)
+        q['u', i_gm].apply_bc(grid, 0.0)
+        q['v', i_gm].apply_bc(grid, 0.0)
         q['q_tot', i_gm].apply_bc(grid, 0.0)
         q['θ_liq', i_gm].apply_bc(grid, 0.0)
         tmp['T', i_gm].apply_bc(grid, 0.0)
@@ -1352,8 +1352,8 @@ class SP(CasesBase):
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
-            q['U', i_gm][k] =  1.0
-            q['V', i_gm][k] =  0.0
+            q['u', i_gm][k] =  1.0
+            q['v', i_gm][k] =  0.0
             #Set Thetal profile
             if z[k] <= 974.0:
                 thetal[k] = 300.0
@@ -1369,8 +1369,8 @@ class SP(CasesBase):
             q['θ_liq', i_gm][k] = thetal[k]
             tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
 
-        q['U', i_gm].apply_bc(grid, 0.0)
-        q['V', i_gm].apply_bc(grid, 0.0)
+        q['u', i_gm].apply_bc(grid, 0.0)
+        q['v', i_gm].apply_bc(grid, 0.0)
         q['q_tot', i_gm].apply_bc(grid, 0.0)
         q['θ_liq', i_gm].apply_bc(grid, 0.0)
         tmp['T', i_gm].apply_bc(grid, 0.0)

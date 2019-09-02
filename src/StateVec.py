@@ -55,6 +55,28 @@ class StateVec:
         self.fields = [Field.field(grid, self.locs[v], self.bcs[v]) for v in self.var_mapper for i in range(self.nsd[v])]
         return
 
+    def idx_name(self, i):
+        if i==self.i_gm:
+            return "gm"
+        elif i==self.i_env:
+            return "en"
+        elif i in self.i_uds:
+            if len(self.i_uds)==1:
+                return "ud"
+            else:
+                return 'ud_'+str(i)
+        else:
+            raise ValueError('Bad index in idx_name in StateVec.py')
+
+    def var_suffix(self, i):
+        return '_'+self.idx_name(i)
+
+    def var_string(self, name, i):
+        return name+'_'+self.idx_name(i)
+
+    def get_gm(self, i):
+        return self.i_gm
+
     def __getitem__(self, tup):
         if isinstance(tup, tuple):
             # name, i = tup
@@ -96,14 +118,6 @@ class StateVec:
 
     def data_location(self, name):
         return self.fields[self.var_mapper[name][0]].loc
-
-    def idx_name(self, i):
-      i_gm, i_env, i_uds, i_sd = self.domain_idx()
-      if i==i_gm: return 'gm'
-      elif i==i_env: return 'env'
-      elif i in i_uds: return 'ud_'+str(i)
-      else:
-        raise ValueError('Bad index in idx_name in StateVec.py')
 
     def slice_updrafts(self):
         return slice(self.i_uds[0], self.i_uds[:-1])
@@ -157,21 +171,19 @@ class StateVec:
 
     def export_state(self, grid, directory, filename, ExportType = UseDat()):
         domain = grid.over_elems(Center())
-        headers = [ str(name) if len(self.over_sub_domains(name))==1 else str(name)+'_'+str(i_sd)
-          for name in self.var_names for i_sd in self.over_sub_domains(name)]
+        headers = [ self.var_string(name, i) for name in self.var_names for i in self.over_sub_domains(name)]
         n_vars = len(headers)
         headers = ['z']+headers
         n_elem = len(domain)
-        data = np.array([self[name, i_sd][k] for name in self.var_names for
-          i_sd in self.over_sub_domains(name) for k in domain])
+        data = np.array([self[name, i][k] for name in self.var_names for
+          i in self.over_sub_domains(name) for k in domain])
         data = data.reshape(n_elem, n_vars)
-        z = grid.z[domain]
+        z = grid.z_half[domain]
         z = np.expand_dims(z, axis=1)
         data_all = np.hstack((z, data))
 
         df = pd.DataFrame(data=data_all.astype(float))
-        # df.to_csv(directory+filename+'.csv', sep=', ', header=headers, float_format='%.2f', index=False)
-        df.to_csv(directory+filename+'.csv', sep=',', header=headers, float_format='%.2f', index=False)
+        df.to_csv(directory+filename+'.csv', sep=' ', header=headers, float_format='%.6f', index=False)
 
         # file_name = str(directory+filename+'_vs_z.dat')
         # with open(file_name, 'w+', encoding='utf-8') as f:

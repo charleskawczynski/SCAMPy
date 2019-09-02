@@ -25,7 +25,7 @@ class SurfaceBase:
         for k in grid.over_elems(Center()):
             q_vap = q['q_tot', i_gm][k] - tmp['q_liq', i_gm][k]
             theta_rho[k] = theta_rho_c(tmp['p_0'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
-        zi = compute_inversion_height(theta_rho, q['U', i_gm], q['V', i_gm], grid, self.Ri_bulk_crit)
+        zi = compute_inversion_height(theta_rho, q['u', i_gm], q['v', i_gm], grid, self.Ri_bulk_crit)
         wstar = compute_convective_velocity(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
         return
@@ -33,7 +33,7 @@ class SurfaceBase:
 def compute_windspeed(grid, q, windspeed_min):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
-    return np.maximum(np.sqrt(q['U', i_gm][k_1]**2.0 + q['V', i_gm][k_1]**2.0), windspeed_min)
+    return np.maximum(np.sqrt(q['u', i_gm][k_1]**2.0 + q['v', i_gm][k_1]**2.0), windspeed_min)
 
 def compute_MO_len(ustar, bflux):
     if np.fabs(bflux) < 1e-10:
@@ -57,8 +57,8 @@ class SurfaceFixedFlux(SurfaceBase):
         T_1 = tmp['T', i_gm][k_1]
         θ_liq_1 = q['θ_liq', i_gm][k_1]
         q_tot_1 = q['q_tot', i_gm][k_1]
-        V_1 = q['V', i_gm][k_1]
-        U_1 = q['U', i_gm][k_1]
+        V_1 = q['v', i_gm][k_1]
+        U_1 = q['u', i_gm][k_1]
 
         rho_tflux =  self.shf /(cpm_c(self.qsurface))
         self.windspeed = compute_windspeed(grid, q, 0.0)
@@ -109,8 +109,8 @@ class SurfaceFixedCoeffs(SurfaceBase):
         T_1 = tmp['T', i_gm][k_1]
         θ_liq_1 = q['θ_liq', i_gm][k_1]
         q_tot_1 = q['q_tot', i_gm][k_1]
-        V_1 = q['V', i_gm][k_1]
-        U_1 = q['U', i_gm][k_1]
+        V_1 = q['v', i_gm][k_1]
+        U_1 = q['u', i_gm][k_1]
 
         cp_ = cpm_c(q_tot_1)
         lv = latent_heat(T_1)
@@ -145,8 +145,8 @@ class SurfaceMoninObukhov(SurfaceBase):
         T_1 = tmp['T', i_gm][k_1]
         θ_liq_1 = q['θ_liq', i_gm][k_1]
         q_tot_1 = q['q_tot', i_gm][k_1]
-        V_1 = q['V', i_gm][k_1]
-        U_1 = q['U', i_gm][k_1]
+        V_1 = q['v', i_gm][k_1]
+        U_1 = q['u', i_gm][k_1]
 
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
         theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
@@ -193,8 +193,8 @@ class SurfaceSullivanPatton(SurfaceBase):
         T_1 = tmp['T', i_gm][k_1]
         θ_liq_1 = q['θ_liq', i_gm][k_1]
         q_tot_1 = q['q_tot', i_gm][k_1]
-        V_1 = q['V', i_gm][k_1]
-        U_1 = q['U', i_gm][k_1]
+        V_1 = q['v', i_gm][k_1]
+        U_1 = q['u', i_gm][k_1]
 
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
 
