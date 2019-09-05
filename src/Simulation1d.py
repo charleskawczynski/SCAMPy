@@ -80,18 +80,25 @@ class Simulation1d:
 
 
         temp_vars = (
+                     ('ρ_0'                    , Center() , Neumann(), 1),
+                     ('p_0'                    , Center() , Neumann(), 1),
+                     ('heaviside_a'            , Center() , Neumann(), N_sd),
+                     ('heaviside_w'            , Center() , Neumann(), N_sd),
+                     ('q_liq'                  , Center() , Neumann(), N_sd),
+                     ('T'                      , Center() , Neumann(), N_sd),
+                     ('B'                      , Center() , Neumann(), N_sd),
+                     ('entr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
+                     ('detr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
+                     ('l_mix'                  , Center() , Neumann(), 1),
+                     ('K_m'                    , Center() , Neumann(), 1),
+                     ('K_h'                    , Center() , Neumann(), 1),
+                     ('α_0'                    , Center() , Neumann(), 1),
                      ('mean_entr_sc'           , Center() , Neumann(), 1),
                      ('mean_detr_sc'           , Center() , Neumann(), 1),
                      ('massflux_half'          , Center() , Neumann(), 1),
                      ('mf_q_tot_half'          , Center() , Neumann(), 1),
                      ('mf_θ_liq_half'          , Center() , Neumann(), 1),
                      ('temp_C'                 , Center() , Neumann(), 1),
-                     ('ρ_0'                    , Center() , Neumann(), 1),
-                     ('α_0'                    , Center() , Neumann(), 1),
-                     ('p_0'                    , Center() , Neumann(), 1),
-                     ('K_m'                    , Center() , Neumann(), 1),
-                     ('K_h'                    , Center() , Neumann(), 1),
-                     ('l_mix'                  , Center() , Neumann(), 1),
                      ('q_tot_dry'              , Center() , Neumann(), 1),
                      ('θ_dry'                  , Center() , Neumann(), 1),
                      ('t_cloudy'               , Center() , Neumann(), 1),
@@ -102,10 +109,6 @@ class Simulation1d:
                      ('cv_q_tot_rain_dt'       , Center() , Neumann(), 1),
                      ('cv_θ_liq_q_tot_rain_dt' , Center() , Neumann(), 1),
                      ('CF'                     , Center() , Neumann(), 1),
-                     ('entr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
-                     ('detr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
-                     ('heaviside_a'            , Center() , Neumann(), N_sd),
-                     ('heaviside_w'            , Center() , Neumann(), N_sd),
                      ('gov_eq_θ_liq_ib'        , Center() , Neumann(), N_sd),
                      ('gov_eq_q_tot_ib'        , Center() , Neumann(), N_sd),
                      ('gov_eq_θ_liq_nb'        , Center() , Neumann(), N_sd),
@@ -120,11 +123,8 @@ class Simulation1d:
                      ('δ_src_θ_liq_model'      , Center() , Neumann(), N_sd),
                      ('cloud_water_excess'     , Center() , Neumann(), N_sd),
                      ('θ_liq_src_rain'         , Center() , Neumann(), N_sd),
-                     ('q_liq'                  , Center() , Neumann(), N_sd),
                      ('prec_src_θ_liq'         , Center() , Neumann(), N_sd),
                      ('prec_src_q_tot'         , Center() , Neumann(), N_sd),
-                     ('T'                      , Center() , Neumann(), N_sd),
-                     ('B'                      , Center() , Neumann(), N_sd),
                      ('mf_θ_liq'               , Center() , Neumann(), N_sd),
                      ('mf_q_tot'               , Center() , Neumann(), N_sd),
                      ('mf_tend_θ_liq'          , Center() , Neumann(), N_sd),
@@ -145,6 +145,7 @@ class Simulation1d:
                      ('rain_src'   , Center(), Neumann(), 1),
                      )
 
+        # n_ghost = 1
         self.grid         = Grid(z_min, z_max, n_elems_real, n_ghost)
         self.q            = StateVec(unkowns, self.grid)
         self.q_new        = copy.deepcopy(self.q)
@@ -177,14 +178,17 @@ class Simulation1d:
 
     def initialize(self, namelist):
         self.Case.initialize_reference(self.grid, self.Ref, self.Stats, self.tmp)
+
+        # self.q.export_state(self.grid, "./", "Q_py")
+        # self.tmp.export_state(self.grid, "./", "tmp_py")
+        # raise NameError("Exported data!")
+
         self.Case.initialize_profiles(self.grid, self.Ref, self.tmp, self.q)
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.tmp)
         initialize_updrafts(self.grid, self.tmp, self.q, self.Turb.updraft_fraction)
         self.initialize_io()
         self.export_data()
-        self.q.export_state(self.grid, "./", "Q_py")
-        self.tmp.export_state(self.grid, "./", "tmp_py")
         return
 
     def run(self):
