@@ -178,7 +178,7 @@ class StateVec:
         n_vars = len(headers)
         headers = ['z']+headers
         n_elem = len(domain)
-        data = np.array([self[name, i][k] for name in vn for i in self.over_sub_domains(name) for k in domain])
+        data = np.array([self[name, i][k] for k in domain for name in vn for i in self.over_sub_domains(name)])
         data = data.reshape(n_elem, n_vars)
         z = grid.z_half[domain]
         z = np.expand_dims(z, axis=1)

@@ -179,13 +179,14 @@ class Simulation1d:
     def initialize(self, namelist):
         self.Case.initialize_reference(self.grid, self.Ref, self.Stats, self.tmp)
 
-        # self.q.export_state(self.grid, "./", "Q_py")
-        # self.tmp.export_state(self.grid, "./", "tmp_py")
-        # raise NameError("Exported data!")
-
         self.Case.initialize_profiles(self.grid, self.Ref, self.tmp, self.q)
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.tmp)
+
+        self.q.export_state(self.grid, "./", "Q_py")
+        self.tmp.export_state(self.grid, "./", "tmp_py")
+        raise NameError("Exported data!")
+
         initialize_updrafts(self.grid, self.tmp, self.q, self.Turb.updraft_fraction)
         self.initialize_io()
         self.export_data()
