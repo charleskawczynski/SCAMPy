@@ -189,9 +189,6 @@ class Simulation1d:
         diagnose_environment(self.grid, self.q)
         apply_bcs(self.grid, self.q)
 
-        self.q.export_state(self.grid, "./", "Q_py")
-        self.tmp.export_state(self.grid, "./", "tmp_py")
-        # raise NameError("Exported data!")
         self.initialize_io()
         self.export_data()
         return
@@ -201,6 +198,11 @@ class Simulation1d:
         self.q_tendencies.assign(self.grid, ('u', 'v', 'q_tot', 'θ_liq'), 0.0)
         self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
+
+        self.q.export_state(self.grid, "./", "Q_py")
+        self.tmp.export_state(self.grid, "./", "tmp_py")
+        # raise NameError("Exported data!")
+
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
         self.UpdVar, self.Case, self.TS, self.tri_diag)
         for k in self.grid.over_elems(Center()):
