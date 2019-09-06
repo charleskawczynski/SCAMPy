@@ -172,28 +172,42 @@ class StateVec:
     def export_state(self, grid, directory, filename, ExportType = UseDat()):
         domain = grid.over_elems(Center())
         vn = self.var_names
-        vn = vn[0:7] if len(vn) else vn[0:12]
+        vn = vn[0:5] if len(vn)==7 else vn[0:12]
 
-        headers = [ self.var_string(name, i) for name in vn for i in self.over_sub_domains(name)]
+        headers = [self.var_string(name, i) for name in vn for i in self.over_sub_domains(name)]
         n_vars = len(headers)
-        headers = ['z']+headers
+        include_z = False
+        if include_z:
+            headers = ['z']+headers
         n_elem = len(domain)
         data = np.array([self[name, i][k] for k in domain for name in vn for i in self.over_sub_domains(name)])
         data = data.reshape(n_elem, n_vars)
         z = grid.z_half[domain]
         z = np.expand_dims(z, axis=1)
-        data_all = np.hstack((z, data))
+        data_all = data
+        if include_z:
+            data_all = np.hstack((z, data_all))
 
+        file = directory+filename+'.csv'
         df = pd.DataFrame(data=data_all.astype(float))
-        # df.to_csv(directory+filename+'.csv', sep=' ', header=headers, float_format='%.6f', index=False)
-        df.to_csv(directory+filename+'.csv', sep=' ', header=headers, float_format='%6.8f', index=False)
+        df.to_csv(file, sep=' ', header=headers, float_format='%6.8f', index=False)
 
-        # file_name = str(directory+filename+'_vs_z.dat')
-        # with open(file_name, 'w+', encoding='utf-8') as f:
-        #     f.write(', '.join(headers)+'\n')
-        #     for k in domain:
-        #         row = data_all[k]
-        #         f.write('\t'.join(row))
+        file = directory+filename+'_aligned.csv'
+        space_buffer = 2
+        spacing = 10
+        fmt = '%'+str(spacing+space_buffer)+'.8f'
+        headers = [str(' '*(spacing-len(x)+space_buffer)+x).replace('"','') for x in headers]
+        df = pd.DataFrame(data=data_all.astype(float))
+        df.to_csv(file, sep=' ', header=headers, float_format=fmt, index=False)
+
+        with open(file, 'r') as f:
+            data = f.read().replace('"', '')
+        with open(file, 'w+') as f:
+            f.write(data)
+
+        file = directory+'z_only.csv'
+        df = pd.DataFrame(data=z.astype(float))
+        df.to_csv(file, sep=' ', header=['z'], float_format='%6.8f', index=False)
         return
 
 
