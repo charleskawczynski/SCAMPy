@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 import copy
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 import matplotlib.pyplot as plt
 from Field import Field, Full, Half, Dirichlet, Neumann
 import numpy as np

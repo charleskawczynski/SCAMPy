@@ -1,5 +1,5 @@
 import os
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 import numpy as np
 
 def nice_name(s):
@@ -89,9 +89,6 @@ class Full(Field):
     def Cut(self, key):
         return np.array([self.values[k] for k in range(key-1, key+2)])
 
-    def DualCut(self, key):
-        return np.array([0.5*(self.values[k]+self.values[k+1]) for k in range(key-2, key+1)])
-
     def surface(self, grid):
         return self.values[grid.boundary(Zmin())]
 
@@ -136,9 +133,6 @@ class Half(Field):
 
     def Cut(self, key):
         return np.array([self.values[k] for k in range(key-1, key+2)])
-
-    def DualCut(self, key):
-        return np.array([0.5*(self.values[k]+self.values[k+1]) for k in range(key-1, key+2)])
 
     def surface(self, grid):
         k_i = grid.first_interior(Zmin())

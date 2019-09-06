@@ -1,7 +1,7 @@
 import numpy as np
 from parameters import *
 
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann
 from funcs_EDMF import *
 from ReferenceState import ReferenceState

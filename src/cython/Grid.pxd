@@ -12,10 +12,6 @@ cdef class Dual:
     cdef:
         Py_ssize_t k
 
-cdef class DualCut:
-    cdef:
-        Py_ssize_t k
-
 cdef class Mid:
     cdef:
         Py_ssize_t k

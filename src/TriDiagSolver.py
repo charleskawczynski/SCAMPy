@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann
 from StateVec import StateVec
 from funcs_tridiagsolver import solve_tridiag, solve_tridiag_stored, init_β_γ, solve_tridiag_old
@@ -20,7 +20,7 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
         ρ_0_cut = ρ_0_half.Cut(k)
         ae_cut = a_env.Cut(k)
         w_cut = w_env.Cut(k)
-        ρa_K_cut = a_env.DualCut(k) * tmp['K_h'].DualCut(k) * ρ_0_half.DualCut(k)
+        ρa_K_dual = a_env.Dual(k) * tmp['K_h'].Dual(k) * ρ_0_half.Dual(k)
 
         D_env = sum([ρ_0_cut[1] *
                      q['a', i][k] *
@@ -30,13 +30,13 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
         l_mix = np.fmax(tmp['l_mix'][k], 1.0)
         tke_env = np.fmax(q['tke', i_env][k], 0.0)
 
-        tri_diag.a[k] = (- ρa_K_cut[0] * dzi2 )
+        tri_diag.a[k] = (- ρa_K_dual[0] * dzi2 )
         tri_diag.b[k] = (ρ_0_cut[1] * ae_cut[1] * dti
                  - ρ_0_cut[1] * ae_cut[1] * w_cut[1] * dzi
-                 + ρa_K_cut[1] * dzi2 + ρa_K_cut[0] * dzi2
+                 + ρa_K_dual[1] * dzi2 + ρa_K_dual[0] * dzi2
                  + D_env
                  + ρ_0_cut[1] * ae_cut[1] * tke_diss_coeff * np.sqrt(tke_env)/l_mix)
-        tri_diag.c[k] = (ρ_0_cut[2] * ae_cut[2] * w_cut[2] * dzi - ρa_K_cut[1] * dzi2)
+        tri_diag.c[k] = (ρ_0_cut[2] * ae_cut[2] * w_cut[2] * dzi - ρa_K_dual[1] * dzi2)
 
     tri_diag.a[k_1] = 0.0
     tri_diag.b[k_1] = 1.0

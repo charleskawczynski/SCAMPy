@@ -1,6 +1,6 @@
 import numpy as np
 from parameters import *
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 

@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from parameters import *
 from funcs_thermo import *
 

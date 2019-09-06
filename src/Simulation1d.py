@@ -5,7 +5,7 @@ from funcs_EDMF import *
 from EDMF_Updrafts import *
 from Turbulence_PrognosticTKE import EDMF_PrognosticTKE, compute_grid_means
 from Cases import CasesFactory
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from StateVec import StateVec
 from ReferenceState import ReferenceState

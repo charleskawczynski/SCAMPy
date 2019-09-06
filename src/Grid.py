@@ -10,11 +10,6 @@ class Dual:
         self.k = k
         return
 
-class DualCut:
-    def __init__(self, k):
-        self.k = k
-        return
-
 class Mid:
     def __init__(self, k):
         self.k = k

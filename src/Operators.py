@@ -1,5 +1,5 @@
 import numpy as np
-from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid, DualCut
+from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 
 def advect(f, w, grid):
     assert len(f)==3

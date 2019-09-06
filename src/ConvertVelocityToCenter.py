@@ -43,7 +43,6 @@ for f in all_files:
       s = replace_swap(s, s_old, s_new)
 
       s_old = q+"['w', "+i+"].Cut(k)"
-      s_new = q+"['w', "+i+"].DualCut(k)"
       s = replace_swap(s, s_old, s_new)
 
       s_old = q+"['w', "+i+"][slice_real_n]"
