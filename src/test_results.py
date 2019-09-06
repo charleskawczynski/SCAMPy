@@ -6,16 +6,6 @@ import numpy as np
 import subprocess
 import json
 
-# Visual confirmation:
-
-# python
-# import main
-# import matplotlib.pyplot as plt
-# sol = main.run('Bomex')
-# plt.plot(sol.ud_Area, sol.z) # Figure 4a in Tan et al.
-# plt.plot(sol.ud_W, sol.z) # Figure 4b in Tan et al.
-# plt.plot(sol.gm_QL, sol.z) # Figure 3a in Tan et al.
-
 def expected_solutions(cases):
     sol_expected = dict()
 
@@ -73,6 +63,9 @@ def run_case(case, sol_expected, tol_rel_local, score_tol):
         print('------------------------ '+vn)
         s_expected = getattr(sol_expected, vn)
         s_computed = getattr(sol, vn)
+        grid = getattr(sol, 'grid')
+        if grid.n_ghost == 1:
+            s_expected = s_expected[1:-1]
         assert len(s_expected)==len(s_computed)
         y_amax = np.amax(s_expected)
         abs_err = np.array([abs(x-y) for x,y in zip(s_computed, s_expected)])

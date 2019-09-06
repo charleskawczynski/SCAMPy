@@ -145,7 +145,7 @@ class Simulation1d:
                      ('rain_src'   , Center(), Neumann(), 1),
                      )
 
-        # n_ghost = 1
+        n_ghost = 1
         self.grid         = Grid(z_min, z_max, n_elems_real, n_ghost)
         self.q            = StateVec(unkowns, self.grid)
         self.q_new        = copy.deepcopy(self.q)
@@ -220,6 +220,7 @@ class Simulation1d:
 
     def package_sol(self):
         sol = type('', (), {})()
+        sol.grid = self.grid
         sol.z = self.grid.z
         sol.z_half = self.grid.z_half
 

@@ -36,6 +36,7 @@ class Grid:
         self.dz = (z_max-z_min)/n_elems_real
         self.dzi = 1.0/self.dz
         self.gw = n_ghost
+        self.n_ghost = n_ghost
         self.z_min = z_min
         self.z_max = z_max
         self.nz = n_elems_real
@@ -86,9 +87,9 @@ class Grid:
 
     def slice_all(self, loc):
         if isinstance(loc, Center):
-            return slice(0, self.nzg-1, 1)
+            return slice(0, self.first_interior(Zmax())+2, 1)
         elif isinstance(loc, Node):
-            return slice(0, self.nzg-1, 1)
+            return slice(0, self.first_interior(Zmax())+2, 1)
         else:
             raise TypeError("Bad location in slice_all in Grid.py")
 

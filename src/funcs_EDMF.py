@@ -511,13 +511,11 @@ def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
     α_1 = tmp['α_0'][k_1]
     ae_1 = q['a', i_env][k_1]
     slice_all_c = grid.slice_all(Center())
-    # print('grid.slice_all(Center()) = ',grid.slice_all(Center()))
-    # print('grid.over_elems(Center()) = ',len(grid.over_elems(Center())))
 
     q_tendencies['q_tot', i_gm][slice_all_c] += [tmp['mf_tend_q_tot'][k] for k in grid.over_elems(Center())]
-    q_tendencies['q_tot', i_gm][k_1] += Case.Sur.rho_q_tot_flux * dzi * α_1/ae_1
-
     q_tendencies['θ_liq', i_gm][slice_all_c] += [tmp['mf_tend_θ_liq'][k] for k in grid.over_elems(Center())]
+
+    q_tendencies['q_tot', i_gm][k_1] += Case.Sur.rho_q_tot_flux * dzi * α_1/ae_1
     q_tendencies['θ_liq', i_gm][k_1] += Case.Sur.rho_θ_liq_flux * dzi * α_1/ae_1
     return
 
