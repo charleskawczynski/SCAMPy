@@ -497,6 +497,7 @@ def compute_cv_env(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
 def diagnose_environment(grid, q):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for k in grid.over_elems(Center()):
+        q['a', i_env][k] = 1.0 - np.sum([q['a', i][k] for i in i_uds])
         a_env = q['a', i_env][k]
         q['q_tot', i_env][k] = (q['q_tot', i_gm][k] - np.sum([q['a', i][k]*q['q_tot', i][k] for i in i_uds]))/a_env
         q['θ_liq', i_env][k] = (q['θ_liq', i_gm][k] - np.sum([q['a', i][k]*q['θ_liq', i][k] for i in i_uds]))/a_env
@@ -571,24 +572,23 @@ def assign_values_to_new(grid, q, q_new, tmp):
         q['q_tot', i_gm][k] = q_new['q_tot', i_gm][k]
     return
 
-def initialize_updrafts(grid, tmp, q, updraft_fraction):
+def initialize_updrafts(grid, tmp, q, params, updraft_fraction):
     i_gm, i_env, i_uds, i_sd = q.domain_idx()
     k_1 = grid.first_interior(Zmin())
     n_updrafts = len(i_uds)
     for i in i_uds:
         for k in grid.over_elems(Center()):
             q['w', i][k] = 0.0
-            q['a', i][k] = 0.0
-            q['q_tot', i][k] = q['q_tot', i_gm][k]
-            tmp['q_liq', i][k] = tmp['q_liq', i_gm][k]
-            q['θ_liq', i][k] = q['θ_liq', i_gm][k]
-            tmp['T', i][k] = tmp['T', i_gm][k]
-            tmp['B', i][k] = 0.0
-        q['a', i][k_1] = updraft_fraction/n_updrafts
-    for i in i_uds: q['q_tot', i].apply_bc(grid, 0.0)
-    for i in i_uds: q['θ_liq', i].apply_bc(grid, 0.0)
+            q['a', i][k] = bound(0.0, params.a_bounds)
+        q['a', i][k_1] = bound(updraft_fraction/n_updrafts, params.a_bounds)
+    return
+
+def distribute(grid, q, var_names):
+    i_gm, i_env, i_uds, i_sd = q.domain_idx()
     for k in grid.over_elems(Center()):
-        q['a', i_env][k] = 1.0 - np.sum([q['a', i][k] for i in i_uds])
+        for i in i_uds:
+            for v in var_names:
+                q[v, i][k] = q[v, i_gm][k]
     return
 
 def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):

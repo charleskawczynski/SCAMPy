@@ -170,6 +170,7 @@ class Bomex(CasesBase):
         z = grid.z_half
 
         for k in grid.over_elems_real(Center()):
+            q['a', i_gm][k] = 1.0
             #Set Thetal profile
             if z[k] <= 520.:
                 thetal[k] = 298.7

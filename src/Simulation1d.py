@@ -183,11 +183,15 @@ class Simulation1d:
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.tmp)
 
-        initialize_updrafts(self.grid, self.tmp, self.q, self.Turb.updraft_fraction)
+        initialize_updrafts(self.grid, self.tmp, self.q, self.Turb.params, self.Turb.updraft_fraction)
+        distribute(self.grid, self.q, ('q_tot','θ_liq'))
+        distribute(self.grid, self.tmp, ('q_liq','T'))
+        diagnose_environment(self.grid, self.q)
+        apply_bcs(self.grid, self.q)
 
         self.q.export_state(self.grid, "./", "Q_py")
         self.tmp.export_state(self.grid, "./", "tmp_py")
-        raise NameError("Exported data!")
+        # raise NameError("Exported data!")
         self.initialize_io()
         self.export_data()
         return
