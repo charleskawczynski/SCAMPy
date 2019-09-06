@@ -169,8 +169,10 @@ class Bomex(CasesBase):
         q_ice = 0.0 # IC of Bomex is cloud-free
         z = grid.z_half
 
-        for k in grid.over_elems_real(Center()):
+        for k in grid.over_elems(Center()):
             q['a', i_gm][k] = 1.0
+
+        for k in grid.over_elems_real(Center()):
             #Set Thetal profile
             if z[k] <= 520.:
                 thetal[k] = 298.7
