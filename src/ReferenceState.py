@@ -2,20 +2,26 @@ from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from NetCDFIO import NetCDFIO_Stats
 import numpy as np
+from PlanetParameters import *
+from MoistThermodynamics import *
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from funcs_thermo import t_to_entropy_c, eos, eos_entropy, alpha_c
 from parameters import *
 
 def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, sg, Pg, Tg, qtg):
-    sg = t_to_entropy_c(Pg, Tg, qtg, 0.0, 0.0)
-    # Form a right hand side for integrating the hydrostatic equation to
-    # determine the reference pressure
-    def rhs(p, z):
-        T, q_l = eos_entropy(np.exp(p),  qtg, sg)
-        q_i = 0.0
-        R_m = Rd * (1.0 - qtg + eps_vi * (qtg - q_l - q_i))
-        return -g / (R_m * T)
+
+    q_pt_g = PhasePartitionRaw(qtg)
+    θ_liq_ice_g = liquid_ice_pottemp_raw(Tg, Pg, q_pt_g)
+    logp = np.log(Pg)
+
+    def tendencies(p, z):
+        expp = np.exp(p)
+        ρ = air_density_raw(Tg, expp, q_pt_g)
+        ts = LiquidIcePotTempSHumEquil(θ_liq_ice_g, qtg, ρ, expp)
+        R_m = gas_constant_air(ts)
+        T = air_temperature(ts)
+        return - grav / (T * R_m)
 
     # Construct arrays for integration points
     z_full = [grid.z[k] for k in grid.over_elems_real(Node())]
@@ -30,7 +36,7 @@ def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, sg, Pg, Tg, qtg):
     temperature = Field.field(grid, loc)
 
     p0 = np.log(Pg)
-    p_0[grid.slice_real(loc)] = odeint(rhs, p0, z, hmax=1.0)[:, 0]
+    p_0[grid.slice_real(loc)] = odeint(tendencies, p0, z, hmax=1.0)[:, 0]
     p_0.apply_Neumann(grid, 0.0)
     p_0[:] = np.exp(p_0[:])
 

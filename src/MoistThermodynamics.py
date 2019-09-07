@@ -2,13 +2,13 @@ from RootSolvers import *
 import numpy as np
 from PlanetParameters import *
 
-class PhasePartition:
+class PhasePartitionRaw:
     def __init__(self, tot, liq=0.0, ice=0.0):
         self.tot = tot
         self.liq = liq
         self.ice = ice
         return
-q_pt0=PhasePartition(0.0,0.0,0.0)
+q_pt0=PhasePartitionRaw(0.0,0.0,0.0)
 
 class ThermodynamicState:
     def __init__(self, e_int, q_tot, ρ, T):
@@ -39,13 +39,12 @@ def GetPhaseEquil(e_int, q_tot, ρ):
 
 def LiquidIcePotTempSHumEquil(θ_liq_ice, q_tot, ρ, p):
     T = saturation_adjustment_q_tot_θ_liq_ice(θ_liq_ice, q_tot, ρ, p)
-    print('T = ',T)
     q = PhasePartition_equil(T, ρ, q_tot)
     e_int = internal_energy_raw(T, q)
     return PhaseEquil(e_int, q_tot, ρ, T)
 
 def LiquidIcePotTempSHumEquil_no_ρ(θ_liq_ice, q_tot, p):
-    q_pt_dry = PhasePartition(q_tot)
+    q_pt_dry = PhasePartitionRaw(q_tot)
     T_dry = θ_liq_ice * exner_raw(p, q_pt_dry)
     ρ_dry = air_density_raw(T_dry, p, q_pt_dry)
     T = saturation_adjustment_q_tot_θ_liq_ice(θ_liq_ice, q_tot, ρ_dry, p)
@@ -61,7 +60,7 @@ def LiquidIcePotTempSHumEquil_no_ρ_pt(θ_liq_ice, q_pt, p):
     return PhaseEquil(e_int, q_pt.tot, ρ, T)
 
 def TemperatureSHumEquil(T, q_tot, p):
-    ρ = air_density_raw(T, p, PhasePartition(q_tot))
+    ρ = air_density_raw(T, p, PhasePartitionRaw(q_tot))
     q = PhasePartition_equil(T, ρ, q_tot)
     e_int = internal_energy_raw(T, q)
     return PhaseEquil(e_int, q_tot, ρ, T)
@@ -69,6 +68,10 @@ def TemperatureSHumEquil(T, q_tot, p):
 ##### Functions
 def gas_constant_air_raw(q):
     return R_d * ( 1.0 +  (molmass_ratio - 1.0)*q.tot - molmass_ratio*(q.liq + q.ice) )
+
+
+def PhasePartition(ts):
+    return PhasePartition_equil(air_temperature(ts), air_density(ts), ts.q_tot)
 
 def gas_constant_air(ts):
     return gas_constant_air_raw(PhasePartition(ts))
@@ -228,22 +231,19 @@ def liquid_fraction_equil(ts):
 
 def PhasePartition_equil(T, ρ, q_tot):
     _liquid_frac = liquid_fraction_equil_raw(T)   # fraction of condensate that is liquid
-    q_c   = saturation_excess_raw(T, ρ, PhasePartition(q_tot))   # condensate specific humidity
+    q_c   = saturation_excess_raw(T, ρ, PhasePartitionRaw(q_tot))   # condensate specific humidity
     q_liq = _liquid_frac * q_c  # liquid specific humidity
     q_ice = (1.0 - _liquid_frac) * q_c # ice specific humidity
-    return PhasePartition(q_tot, q_liq, q_ice)
-
-def GetPhasePartition(ts):
-    return PhasePartition_equil(air_temperature(ts), air_density(ts), ts.q_tot)
+    return PhasePartitionRaw(q_tot, q_liq, q_ice)
 
 def saturation_adjustment(e_int, ρ, q_tot):
-    T_1 = np.max([T_min, air_temperature(e_int, PhasePartition(q_tot))]) # Assume all vapor
+    T_1 = np.max([T_min, air_temperature(e_int, PhasePartitionRaw(q_tot))]) # Assume all vapor
     q_v_sat = q_vap_saturation_raw(T_1, ρ)
     if q_tot <= q_v_sat: # If not saturated return T_1
         return T_1
     else: # If saturated, iterate
         # FIXME here: need to revisit bounds for saturation adjustment to guarantee bracketing of zero.
-        T_2 = air_temperature(e_int, PhasePartition(q_tot, 0.0, q_tot)) # Assume all ice
+        T_2 = air_temperature(e_int, PhasePartitionRaw(q_tot, 0.0, q_tot)) # Assume all ice
         def eos(T):
             return internal_energy_sat_raw(T, ρ, q_tot) - e_int
         T, converged = find_zero(eos, T_1, T_2, SecantMethod(), 1e-3, 10)
@@ -257,7 +257,7 @@ def saturation_adjustment_q_tot_θ_liq_ice(θ_liq_ice, q_tot, ρ, p):
     if q_tot <= q_v_sat: # If not saturated
         return T_1
     else:  # If saturated, iterate
-        T_2 = air_temperature_from_liquid_ice_pottemp(θ_liq_ice, p, PhasePartition(q_tot, 0.0, q_tot)) # Assume all ice
+        T_2 = air_temperature_from_liquid_ice_pottemp(θ_liq_ice, p, PhasePartitionRaw(q_tot, 0.0, q_tot)) # Assume all ice
         def eos(T):
             return θ_liq_ice - liquid_ice_pottemp_sat_raw(T, p, PhasePartition_equil(T, ρ, q_tot))
         T, converged = find_zero(eos, T_1, T_2, SecantMethod(), 1e-3, 10)
@@ -291,7 +291,7 @@ def virtual_pottemp(ts):
 def liquid_ice_pottemp_sat_raw(T, p, q=q_pt0):
     ρ = air_density_raw(T, p, q)
     q_v_sat = q_vap_saturation_raw(T, ρ, q)
-    return liquid_ice_pottemp_raw(T, p, PhasePartition(q_v_sat))
+    return liquid_ice_pottemp_raw(T, p, PhasePartitionRaw(q_v_sat))
 
 def liquid_ice_pottemp_sat(ts):
     return liquid_ice_pottemp_sat_raw(air_temperature(ts), air_pressure(ts), PhasePartition(ts))
