@@ -42,10 +42,9 @@ def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, sg, Pg, Tg, qtg):
 
     # Compute reference state thermodynamic profiles
     for k in grid.over_elems_real(loc):
-        temperature[k], q_liq[k] = eos_entropy(p_0[k], qtg, sg)
-        q_vap[k] = qtg - (q_liq[k] + q_ice[k])
-        α_0[k] = alpha_c(p_0[k], temperature[k], qtg, q_vap[k])
-        ρ_0[k] = 1.0/α_0[k]
+        ts = TemperatureSHumEquil(Tg, qtg, p_0[k])
+        ρ_0[k] = air_density(ts)
+        α_0[k] = 1.0/ρ_0[k]
 
     # Sanity check: make sure Reference State entropy is uniform
     for k in grid.over_elems(loc):
