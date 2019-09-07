@@ -52,31 +52,6 @@ class ForcingStandard(ForcingBase):
         return
     def update(self, grid, q, q_tendencies, tmp):
         i_gm, i_env, i_uds, i_sd = q_tendencies.domain_idx()
-
-        for k in grid.over_elems_real(Center()):
-            # Apply large-scale horizontal advection tendencies
-            q_tot = q['q_tot', i_gm][k]
-            q_vap = q_tot - tmp['q_liq', i_gm][k]
-            tmp['dTdt'][k] = self.dTdt[k]
-            tmp['dqtdt'][k] = self.dqtdt[k]
-            # ts = LiquidIcePotTempSHumEquil(tmp['θ_liq', i_gm][k], q_tot, tmp['ρ_0'][k], tmp['p_0'][k])
-            # convert_forcing_thetal(tmp['p_0'][k], self.dTdt[k])
-            q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0'][k],
-                                                                    q_tot,
-                                                                    q_vap,
-                                                                    tmp['T', i_gm][k],
-                                                                    self.dqtdt[k],
-                                                                    self.dTdt[k])
-            q_tendencies['q_tot', i_gm][k] += self.dqtdt[k]
-        if self.apply_subsidence:
-            for k in grid.over_elems_real(Center()):
-                # Apply large-scale subsidence tendencies
-                q_tendencies['θ_liq', i_gm][k] -= grad(q['θ_liq', i_gm].Dual(k), grid) * self.subsidence[k]
-                q_tendencies['q_tot', i_gm][k] -= grad(q['q_tot', i_gm].Dual(k), grid) * self.subsidence[k]
-
-        if self.apply_coriolis:
-            self.coriolis_force(grid, q, q_tendencies)
-
         return
     def initialize_io(self, Stats):
         return
