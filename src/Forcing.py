@@ -5,7 +5,7 @@ from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 
 from funcs_EDMF import *
-from funcs_forcing import  convert_forcing_entropy, convert_forcing_thetal
+from funcs_forcing import  convert_forcing_thetal
 
 class ForcingBase:
     def __init__(self):
@@ -57,6 +57,10 @@ class ForcingStandard(ForcingBase):
             # Apply large-scale horizontal advection tendencies
             q_tot = q['q_tot', i_gm][k]
             q_vap = q_tot - tmp['q_liq', i_gm][k]
+            tmp['dTdt'][k] = self.dTdt[k]
+            tmp['dqtdt'][k] = self.dqtdt[k]
+            # ts = LiquidIcePotTempSHumEquil(tmp['θ_liq', i_gm][k], q_tot, tmp['ρ_0'][k], tmp['p_0'][k])
+            # convert_forcing_thetal(tmp['p_0'][k], self.dTdt[k])
             q_tendencies['θ_liq', i_gm][k] += convert_forcing_thetal(tmp['p_0'][k],
                                                                     q_tot,
                                                                     q_vap,

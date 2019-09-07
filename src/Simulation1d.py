@@ -109,6 +109,8 @@ class Simulation1d:
                      ('cv_q_tot_rain_dt'       , Center() , Neumann(), 1),
                      ('cv_θ_liq_q_tot_rain_dt' , Center() , Neumann(), 1),
                      ('CF'                     , Center() , Neumann(), 1),
+                     ('dTdt'                   , Center() , Neumann(), 1),
+                     ('dqtdt'                  , Center() , Neumann(), 1),
                      ('gov_eq_θ_liq_ib'        , Center() , Neumann(), N_sd),
                      ('gov_eq_q_tot_ib'        , Center() , Neumann(), N_sd),
                      ('gov_eq_θ_liq_nb'        , Center() , Neumann(), N_sd),

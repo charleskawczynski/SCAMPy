@@ -6,10 +6,8 @@ from PlanetParameters import *
 from MoistThermodynamics import *
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
-from funcs_thermo import t_to_entropy_c, eos, eos_entropy, alpha_c
-from parameters import *
 
-def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, sg, Pg, Tg, qtg):
+def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, Pg, Tg, qtg):
 
     q_pt_g = PhasePartitionRaw(qtg)
     θ_liq_ice_g = liquid_ice_pottemp_raw(Tg, Pg, q_pt_g)
@@ -45,13 +43,6 @@ def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, sg, Pg, Tg, qtg):
         ts = TemperatureSHumEquil(Tg, qtg, p_0[k])
         ρ_0[k] = air_density(ts)
         α_0[k] = 1.0/ρ_0[k]
-
-    # Sanity check: make sure Reference State entropy is uniform
-    for k in grid.over_elems(loc):
-        s = t_to_entropy_c(p_0[k], temperature[k], qtg, q_liq[k], q_ice[k])
-        if np.abs(s - sg)/sg > 0.01:
-            print('Error in reference profiles entropy not constant !')
-            print('Likely error in saturation adjustment')
 
     α_0.extrap(grid)
     p_0.extrap(grid)
@@ -94,6 +85,5 @@ class ReferenceState:
         return
 
     def initialize(self, grid, Stats, tmp):
-        self.sg = t_to_entropy_c(self.Pg, self.Tg, self.qtg, 0.0, 0.0)
-        initialize_ref_state(grid, Stats, tmp['p_0'], tmp['ρ_0'], tmp['α_0'], Center(), self.sg, self.Pg, self.Tg, self.qtg)
+        initialize_ref_state(grid, Stats, tmp['p_0'], tmp['ρ_0'], tmp['α_0'], Center(), self.Pg, self.Tg, self.qtg)
         return
