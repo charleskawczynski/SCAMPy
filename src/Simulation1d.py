@@ -21,8 +21,8 @@ def plot_solutions_new(grid, sv, var_names, Stats):
     n = 3
     vars_exclude = (
                     ('gov_eq', [i_gm]+[i_env]),
-                    ('heaviside_a', [i_gm]+[i_env]),
-                    ('heaviside_w', [i_gm]+[i_env]),
+                    ('HVSD_a', [i_gm]+[i_env]),
+                    ('HVSD_w', [i_gm]+[i_env]),
                    )
     for var_name in var_names:
         for i in sv.subdomains(var_name):
@@ -82,8 +82,8 @@ class Simulation1d:
         temp_vars = (
                      ('ρ_0'                    , Center() , Neumann(), 1),
                      ('p_0'                    , Center() , Neumann(), 1),
-                     ('heaviside_a'            , Center() , Neumann(), N_sd),
-                     ('heaviside_w'            , Center() , Neumann(), N_sd),
+                     ('HVSD_a'            , Center() , Neumann(), N_sd),
+                     ('HVSD_w'            , Center() , Neumann(), N_sd),
                      ('q_liq'                  , Center() , Neumann(), N_sd),
                      ('T'                      , Center() , Neumann(), N_sd),
                      ('B'                      , Center() , Neumann(), N_sd),
@@ -199,14 +199,15 @@ class Simulation1d:
         self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
 
+        self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
+        self.UpdVar, self.Case, self.TS, self.tri_diag)
+
+        for k in self.grid.over_elems(Center()):
+            self.q['tke', i_env][k]            = self.q['tke', i_gm][k]
+
         self.q.export_state(self.grid, "./", "Q_py")
         self.tmp.export_state(self.grid, "./", "tmp_py")
         # raise NameError("Exported data!")
-
-        self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
-        self.UpdVar, self.Case, self.TS, self.tri_diag)
-        for k in self.grid.over_elems(Center()):
-            self.q['tke', i_env][k]            = self.q['tke', i_gm][k]
 
         while self.TS.t <= self.TS.t_max:
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
@@ -267,8 +268,8 @@ class Simulation1d:
                   )
         tmp_vars = ('q_liq',
                     'T',
-                    'heaviside_a',
-                    'heaviside_w',
+                    'HVSD_a',
+                    'HVSD_w',
                     # 'gov_eq_θ_liq_nb',
                     # 'gov_eq_q_tot_nb',
                     # 'gov_eq_θ_liq_ib',

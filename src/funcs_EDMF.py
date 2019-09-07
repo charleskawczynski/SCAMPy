@@ -177,7 +177,7 @@ def buoyancy(grid, q, tmp, params):
     # Filter buoyancy
     for i in i_uds:
         for k in grid.over_elems_real(Center()):
-            weight = tmp['heaviside_a', i][k]
+            weight = tmp['HVSD_a', i][k]
             tmp['B', i][k] = weight*tmp['B', i][k] + (1.0-weight)*tmp['B', i_env][k]
 
     # Subtract grid mean buoyancy

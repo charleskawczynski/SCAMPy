@@ -200,9 +200,9 @@ class StateVec:
         df = pd.DataFrame(data=data_all.astype(float))
         df.to_csv(file, sep=' ', header=headers, float_format=fmt, index=False)
 
-        with open(file, 'r') as f:
+        with open(file, 'r', encoding='utf-8') as f:
             data = f.read().replace('"', '')
-        with open(file, 'w+') as f:
+        with open(file, 'w+', encoding='utf-8') as f:
             f.write(data)
 
         file = directory+'z_only.csv'
