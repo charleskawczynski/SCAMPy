@@ -1157,7 +1157,7 @@ class DYCOMS_RF01(CasesBase):
             # buoyancy profile
             q_vap = q['q_tot', i_gm][k] - q_ice - tmp['q_liq', i_gm][k]
             alpha = alpha_c(tmp['p_0'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
-            tmp['B', i_gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
+            tmp['buoy', i_gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
 
             # velocity profile (geostrophic)
             q['u', i_gm][k] = 7.0
@@ -1170,7 +1170,7 @@ class DYCOMS_RF01(CasesBase):
         tmp['q_liq', i_gm].apply_bc(grid, 0.0)
         q['θ_liq', i_gm].apply_bc(grid, 0.0)
         tmp['T', i_gm].apply_bc(grid, 0.0)
-        tmp['B', i_gm].apply_bc(grid, 0.0)
+        tmp['buoy', i_gm].apply_bc(grid, 0.0)
 
         return
 

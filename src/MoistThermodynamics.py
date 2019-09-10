@@ -8,6 +8,12 @@ class PhasePartitionRaw:
         self.liq = liq
         self.ice = ice
         return
+    def __str__(self):
+        s = ''
+        s+='tot = '+str(self.tot)+', '
+        s+='liq = '+str(self.liq)+', '
+        s+='ice = '+str(self.ice)
+        return s
 q_pt0=PhasePartitionRaw(0.0,0.0,0.0)
 
 class ThermodynamicState:
@@ -20,11 +26,19 @@ class ThermodynamicState:
 
     def __str__(self):
         s = ''
-        s+='e_int = '+str(self.e_int)+'\n'
-        s+='q_tot = '+str(self.q_tot)+'\n'
-        s+='ρ     = '+str(self.ρ)+'\n'
-        s+='T     = '+str(self.T)+'\n'
+        s+='e_int = '+str(self.e_int)+', '
+        s+='q_tot = '+str(self.q_tot)+', '
+        s+='ρ = '+str(self.ρ)+', '
+        s+='T = '+str(self.T)
         return s
+
+    # def __str__(self):
+    #     s = ''
+    #     s+='e_int = '+str(self.e_int)+'\n'
+    #     s+='q_tot = '+str(self.q_tot)+'\n'
+    #     s+='ρ     = '+str(self.ρ)+'\n'
+    #     s+='T     = '+str(self.T)+'\n'
+    #     return s
 
 class PhaseEquil(ThermodynamicState):
     def __init__(self, e_int, q_tot, ρ, T):
@@ -253,6 +267,7 @@ def saturation_adjustment(e_int, ρ, q_tot):
 
 def saturation_adjustment_q_tot_θ_liq_ice(θ_liq_ice, q_tot, ρ, p):
     T_1 = air_temperature_from_liquid_ice_pottemp(θ_liq_ice, p) # Assume all vapor
+    # print('θ_liq_ice, q_tot, ρ, p = ', θ_liq_ice, q_tot, ρ, p)
     q_v_sat = q_vap_saturation_raw(T_1, ρ)
     if q_tot <= q_v_sat: # If not saturated
         return T_1

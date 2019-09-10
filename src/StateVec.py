@@ -68,11 +68,17 @@ class StateVec:
         else:
             raise ValueError('Bad index in idx_name in StateVec.py')
 
-    def var_suffix(self, i):
-        return '_'+self.idx_name(i)
+    def var_suffix(self, name, i):
+        if self.nsd[name] == 1:
+            return '_gm'
+        else:
+            return '_'+self.idx_name(i)
 
     def var_string(self, name, i):
-        return name+'_'+self.idx_name(i)
+        if self.nsd[name] == 1:
+            return name+'_gm'
+        else:
+            return name+'_'+self.idx_name(i)
 
     def get_gm(self, i):
         return self.i_gm

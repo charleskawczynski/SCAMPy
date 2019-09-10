@@ -86,7 +86,7 @@ class Simulation1d:
                      ('HVSD_w'            , Center() , Neumann(), N_sd),
                      ('q_liq'                  , Center() , Neumann(), N_sd),
                      ('T'                      , Center() , Neumann(), N_sd),
-                     ('B'                      , Center() , Neumann(), N_sd),
+                     ('buoy'                      , Center() , Neumann(), N_sd),
                      ('entr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
                      ('detr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
                      ('l_mix'                  , Center() , Neumann(), 1),
@@ -241,7 +241,7 @@ class Simulation1d:
         sol.e_θ_liq          = self.q['θ_liq', i_env]
         sol.e_q_liq          = self.tmp['q_liq', i_env]
         sol.e_T              = self.tmp['T', i_env]
-        sol.e_B              = self.tmp['B', i_env]
+        sol.e_B              = self.tmp['buoy', i_env]
         sol.e_CF             = self.tmp['CF']
         sol.e_tke            = self.q['tke', i_env]
 
@@ -250,7 +250,7 @@ class Simulation1d:
         sol.ud_q_tot = self.q['q_tot', i_uds[0]]
         sol.ud_q_liq = self.tmp['q_liq', i_uds[0]]
         sol.ud_T     = self.tmp['T', i_uds[0]]
-        sol.ud_B     = self.tmp['B', i_uds[0]]
+        sol.ud_B     = self.tmp['buoy', i_uds[0]]
 
         sol.gm_q_tot = self.q['q_tot', i_gm]
         sol.gm_U     = self.q['u', i_gm]
@@ -258,7 +258,7 @@ class Simulation1d:
         sol.gm_T     = self.tmp['T', i_gm]
         sol.gm_V     = self.q['v', i_gm]
         sol.gm_q_liq = self.tmp['q_liq', i_gm]
-        sol.gm_B     = self.tmp['B', i_gm]
+        sol.gm_B     = self.tmp['buoy', i_gm]
 
         q_vars = ('w',
                   'q_tot',
@@ -276,7 +276,7 @@ class Simulation1d:
                     # 'gov_eq_q_tot_nb',
                     # 'gov_eq_θ_liq_ib',
                     # 'gov_eq_q_tot_ib',
-                    'B',
+                    'buoy',
                     'CF',
                     )
         plot_solutions_new(self.grid, self.q, q_vars, self.Stats)

@@ -93,7 +93,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             a_k = q['a', i][k]
             entr_w = tmp['entr_sc', i][k]
             detr_w = tmp['detr_sc', i][k]
-            B_k = tmp['B', i][k]
+            B_k = tmp['buoy', i][k]
 
             a_cut = q['a', i].Cut(k)
             ρ_cut = tmp['ρ_0'].Cut(k)
@@ -172,19 +172,19 @@ def buoyancy(grid, q, tmp, params):
             q_vap = q_tot - tmp['q_liq', i][k]
             T = tmp['T', i][k]
             α_i = alpha_c(tmp['p_0'][k], T, q_tot, q_vap)
-            tmp['B', i][k] = buoyancy_c(tmp['α_0'][k], α_i)
+            tmp['buoy', i][k] = buoyancy_c(tmp['α_0'][k], α_i)
 
     # Filter buoyancy
     for i in i_uds:
         for k in grid.over_elems_real(Center()):
             weight = tmp['HVSD_a', i][k]
-            tmp['B', i][k] = weight*tmp['B', i][k] + (1.0-weight)*tmp['B', i_env][k]
+            tmp['buoy', i][k] = weight*tmp['buoy', i][k] + (1.0-weight)*tmp['buoy', i_env][k]
 
     # Subtract grid mean buoyancy
     for k in grid.over_elems_real(Center()):
-        tmp['B', i_gm][k] = np.sum([q['a', i][k] * tmp['B', i][k] for i in i_sd])
+        tmp['buoy', i_gm][k] = np.sum([q['a', i][k] * tmp['buoy', i][k] for i in i_sd])
         for i in i_sd:
-            tmp['B', i][k] -= tmp['B', i_gm][k]
+            tmp['buoy', i][k] -= tmp['buoy', i_gm][k]
     return
 
 def eos_update_SA_mean(grid, q, tmp):
@@ -198,7 +198,7 @@ def eos_update_SA_mean(grid, q, tmp):
         tmp['q_liq', i_env][k]  = q_liq
         q_vap = q_tot - q_liq
         alpha = alpha_c(p_0, T, q_tot, q_vap)
-        tmp['B', i_env][k]   = buoyancy_c(tmp['α_0'][k], alpha)
+        tmp['buoy', i_env][k]   = buoyancy_c(tmp['α_0'][k], alpha)
         θ = theta_c(p_0, T)
         if q_liq > 0.0:
             tmp['CF'][k] = 1.
@@ -223,7 +223,7 @@ def satadjust(grid, q, tmp):
         tmp['T', i_gm][k] = T
         q_vap = q_tot - q_liq
         alpha = alpha_c(p_0, T, q_tot, q_vap)
-        tmp['B', i_gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
+        tmp['buoy', i_gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
     return
 
 def predict(grid, tmp, q, q_tendencies, name, name_predict, Δt):
@@ -400,7 +400,7 @@ def compute_grid_means(grid, q, tmp):
     for k in grid.over_elems_real(Center()):
         tmp['q_liq', i_gm][k] = np.sum([ q['a', i][k] * tmp['q_liq', i][k] for i in i_sd])
         tmp['T', i_gm][k]     = np.sum([ q['a', i][k] * tmp['T', i][k] for i in i_sd])
-        tmp['B', i_gm][k]     = np.sum([ q['a', i][k] * tmp['B', i][k] for i in i_sd])
+        tmp['buoy', i_gm][k]     = np.sum([ q['a', i][k] * tmp['buoy', i][k] for i in i_sd])
     return
 
 def compute_cv_gm(grid, q, ϕ, ψ, cv, tke_factor, interp_func):
@@ -473,7 +473,7 @@ def compute_tke_pressure(grid, q, tmp, tmp_O2, pressure_buoy_coeff, pressure_dra
             we_half = q['w', i_env][k]
             a_i = q['a', i][k]
             ρ_0_k = tmp['ρ_0'][k]
-            press_buoy = (-1.0 * ρ_0_k * a_i * tmp['B', i][k] * pressure_buoy_coeff)
+            press_buoy = (-1.0 * ρ_0_k * a_i * tmp['buoy', i][k] * pressure_buoy_coeff)
             press_drag_coeff = -1.0 * ρ_0_k * np.sqrt(a_i) * pressure_drag_coeff/pressure_plume_spacing
             press_drag = press_drag_coeff * (wu_half - we_half)*np.fabs(wu_half - we_half)
             tmp_O2[cv]['press'][k] += (we_half - wu_half) * (press_buoy + press_drag)

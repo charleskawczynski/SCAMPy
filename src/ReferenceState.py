@@ -14,9 +14,11 @@ def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, Pg, Tg, qtg):
     logp = np.log(Pg)
 
     def tendencies(p, z):
-        expp = np.exp(p)
+        expp_arr = np.exp(p)
+        expp = expp_arr[0]
         ρ = air_density_raw(Tg, expp, q_pt_g)
         ts = LiquidIcePotTempSHumEquil(θ_liq_ice_g, qtg, ρ, expp)
+        # print(ts)
         R_m = gas_constant_air(ts)
         T = air_temperature(ts)
         return - grav / (T * R_m)
@@ -26,15 +28,8 @@ def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, Pg, Tg, qtg):
     z_half = [grid.z_half[k] for k in grid.over_elems_real(Center())]
     z = z_full if isinstance(loc, Node) else z_half
 
-    # We are integrating the log pressure so need to take the log of the
-    # surface pressure
-    q_liq = Field.field(grid, loc)
-    q_ice = Field.field(grid, loc)
-    q_vap = Field.field(grid, loc)
-    temperature = Field.field(grid, loc)
-
-    p0 = np.log(Pg)
-    p_0[grid.slice_real(loc)] = odeint(tendencies, p0, z, hmax=1.0)[:, 0]
+    # p_0[grid.slice_real(loc)] = odeint(tendencies, logp, z, rtol=1e-12, atol=1e-12, printmessg=True)[:, 0]
+    p_0[grid.slice_real(loc)] = odeint(tendencies, logp, z, rtol=1e-12, atol=1e-12)[:, 0]
     p_0.apply_Neumann(grid, 0.0)
     p_0[:] = np.exp(p_0[:])
 
