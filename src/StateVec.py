@@ -4,10 +4,8 @@ import copy
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 import matplotlib.pyplot as plt
 from Field import Field, Full, Half, Dirichlet, Neumann
-import numpy as np
 import pandas as pd
-
-import numpy as np
+from VarMapper import *
 
 # markershapes = ['r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^']
 markershapes = ['b-', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^']
@@ -22,23 +20,18 @@ def friendly_name(s):
     s = s.replace('θ', 'theta')
     return s
 
-def get_var_mapper(var_tuple):
-    var_names = [var_name for (var_name, loc, bc, nsd) in var_tuple]
-
-    var_names_test = sorted(var_names)
-    var_names_unique = sorted(list(set(var_names_test)))
-    assert len(var_names_test)==len(var_names_unique)
-    assert all([x==y for x,y in zip(var_names_test, var_names_unique)])
-
-    end_index = list(np.cumsum([nsd for (var_name, loc, bc, nsd) in var_tuple]))
-    start_index = [0]+[x for x in end_index][0:-1]
-    vals = [list(range(a,b)) for a,b in zip(start_index, end_index)]
-    var_mapper = {k : v for k,v in zip(var_names, vals)}
-    return var_names, var_mapper
-
 class StateVec:
     def __init__(self, var_tuple, grid):
-        self.n_subdomains = max([nsd for var_name, loc, bc, nsd in var_tuple])
+
+        # self.n_subdomains = sum(dd)
+        # n_vars = sum([dss.sum(dd) for (var_name, dss, loc, bc, nsd) in var_tuple])
+        # var_mapper, self.dss_per_var, var_names = get_var_mapper(var_tuple, dd)
+        # idx = DomainIdx(dd)
+        # self.sd_unmapped = get_sd_unmapped(var_tuple, idx, dd)
+
+        # self.idx_ss_per_var = {name : DomainIdx(dd, self.dss_per_var[name]) for name in var_names}
+        # self.a_map = {name : get_sv_a_map(idx, self.idx_ss_per_var[name]) for name in var_names}
+
 
         self.i_gm = self.n_subdomains-1
         self.i_env = self.n_subdomains-2
@@ -178,7 +171,10 @@ class StateVec:
     def export_state(self, grid, directory, filename, ExportType = UseDat()):
         domain = grid.over_elems(Center())
         vn = self.var_names
-        vn = vn[0:5] if len(vn)==7 else vn[0:12]
+        if len(vn)==7:
+            vn = vn[0:5]
+        elif len(vn)>7:
+            vn = vn[0:12]
 
         headers = [self.var_string(name, i) for name in vn for i in self.over_sub_domains(name)]
         n_vars = len(headers)
@@ -200,9 +196,9 @@ class StateVec:
 
         file = directory+filename+'_aligned.csv'
         space_buffer = 2
-        spacing = 10
-        fmt = '%'+str(spacing+space_buffer)+'.8f'
-        headers = [str(' '*(spacing-len(x)+space_buffer)+x).replace('"','') for x in headers]
+        max_len = 15
+        fmt = '%'+str(max_len)+'.8f'
+        headers = [str(' '*(max_len-len(x))+x).replace('"','') for x in headers]
         df = pd.DataFrame(data=data_all.astype(float))
         df.to_csv(file, sep=' ', header=headers, float_format=fmt, index=False)
 
