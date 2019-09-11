@@ -1,8 +1,9 @@
+from DomainIdx import *
 import numpy as np
 
 def get_var_mapper(var_tuple, dd):
-    var_names = [var_name for (var_name, dss, loc, bc) in var_tuple]
-    n_sd_per_var = [dss.sum(dd) for (var_name, dss, loc, bc) in var_tuple]
+    var_names = [var_name for var_name, dss, loc, bc in var_tuple]
+    n_sd_per_var = [dss.sum(dd) for var_name, dss, loc, bc in var_tuple]
     end_index  = np.cumsum(n_sd_per_var)
 
     var_names_test = sorted(var_names)
@@ -32,7 +33,7 @@ def get_sv_a_map(idx, idx_ss):
 def get_sd_unmapped(var_tuple, idx, dd):
     sd_unmapped = {}
     i_all = idx.alldomains()
-    for v,dss in var_tuple:
+    for v, dss, loc, bc in var_tuple:
         idx_ss = DomainIdx(dd, dss)
         if not v in sd_unmapped:
             sd_unmapped[v] = []
@@ -43,5 +44,5 @@ def get_sd_unmapped(var_tuple, idx, dd):
                 sd_unmapped[v] += [idx.environment()]
             if i in idx_ss.updraft() and not i in sd_unmapped[v]:
                 for k in idx.updraft():
-                    sd_unmapped[v] = [k]
+                    sd_unmapped[v] += [k]
     return sd_unmapped

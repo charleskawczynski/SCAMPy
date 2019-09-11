@@ -15,29 +15,27 @@ from Surface import  SurfaceBase
 from Cases import  CasesBase
 from NetCDFIO import NetCDFIO_Stats
 from TimeStepping import TimeStepping
+from DomainDecomp import *
+from DomainSubSet import *
 
 def plot_solutions_new(grid, sv, var_names, Stats):
-    i_gm, i_env, i_uds, i_sd = sv.domain_idx()
+    gm, en, ud, sd, al = sv.idx.allcombinations()
     n = 3
-    vars_exclude = (
-                    ('gov_eq', [i_gm]+[i_env]),
-                    ('HVSD_a', [i_gm]+[i_env]),
-                    ('HVSD_w', [i_gm]+[i_env]),
-                   )
-    for var_name in var_names:
-        for i in sv.subdomains(var_name):
-            if not any([v in var_name and i in j for v,j in vars_exclude]):
-                if 'T' in var_name:
-                    plt.plot(sv[var_name, i][n:-n]     , grid.z[n:-n])
-                else:
-                    plt.plot(sv[var_name, i]           , grid.z)
-                p_nice = nice_name(var_name+'_'+sv.idx_name(i))
-                file_name = p_nice+'.png'
-                plt.title(p_nice+' vs z')
-                plt.xlabel(p_nice)
-                plt.ylabel('z')
-                plt.savefig(Stats.figpath+file_name)
-                plt.close()
+    for name in var_names:
+        i_each = sv.over_sub_domains(name)
+        print('name = ', name, 'i_each = ',i_each)
+        for i in i_each:
+            if 'T' in name:
+                plt.plot(sv[name, i][n:-n]     , grid.z[n:-n])
+            else:
+                plt.plot(sv[name, i]           , grid.z)
+            p_nice = nice_name(sv.var_string(name, i))
+            file_name = p_nice+'.png'
+            plt.title(p_nice+' vs z')
+            plt.xlabel(p_nice)
+            plt.ylabel('z')
+            plt.savefig(Stats.figpath+file_name)
+            plt.close()
 
 def plot_solutions(sol, Stats):
     props = [x for x in dir(sol) if not (x.startswith('__') and x.endswith('__'))]
@@ -66,97 +64,99 @@ class Simulation1d:
         n_ghost      = namelist['grid']['gw']
         N_subdomains = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']+2
 
-        N_sd = N_subdomains
+        N_sd = N_subdomains-2
 
+        dd = DomainDecomp(gm=1,en=1,ud=N_sd)
+        dss_all = DomainSubSet(gm=True,en=True,ud=True)
         unkowns = (
-         ('a'             , Center() , Neumann() , N_sd),
-         ('w'             , Center() , Dirichlet() , N_sd),
-         ('q_tot'         , Center() , Neumann() , N_sd),
-         ('θ_liq'         , Center() , Neumann() , N_sd),
-         ('tke'           , Center() , Neumann() , N_sd),
-         ('u'             , Center() , Neumann() , N_sd),
-         ('v'             , Center() , Neumann() , N_sd),
+         ('a'             , dss_all, Center() , Neumann() ),
+         ('w'             , dss_all, Center() , Dirichlet() ),
+         ('q_tot'         , dss_all, Center() , Neumann() ),
+         ('θ_liq'         , dss_all, Center() , Neumann() ),
+         ('tke'           , dss_all, Center() , Neumann() ),
+         ('u'             , dss_all, Center() , Neumann() ),
+         ('v'             , dss_all, Center() , Neumann() ),
         )
 
 
         temp_vars = (
-                     ('ρ_0'                    , Center() , Neumann(), 1),
-                     ('p_0'                    , Center() , Neumann(), 1),
-                     ('HVSD_a'            , Center() , Neumann(), N_sd),
-                     ('HVSD_w'            , Center() , Neumann(), N_sd),
-                     ('q_liq'                  , Center() , Neumann(), N_sd),
-                     ('T'                      , Center() , Neumann(), N_sd),
-                     ('buoy'                      , Center() , Neumann(), N_sd),
-                     ('entr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
-                     ('detr_sc'                , Center() , Neumann(), N_sd), # Entrainment/Detrainment rates
-                     ('l_mix'                  , Center() , Neumann(), 1),
-                     ('K_m'                    , Center() , Neumann(), 1),
-                     ('K_h'                    , Center() , Neumann(), 1),
-                     ('α_0'                    , Center() , Neumann(), 1),
-                     ('mean_entr_sc'           , Center() , Neumann(), 1),
-                     ('mean_detr_sc'           , Center() , Neumann(), 1),
-                     ('massflux_half'          , Center() , Neumann(), 1),
-                     ('mf_q_tot_half'          , Center() , Neumann(), 1),
-                     ('mf_θ_liq_half'          , Center() , Neumann(), 1),
-                     ('temp_C'                 , Center() , Neumann(), 1),
-                     ('q_tot_dry'              , Center() , Neumann(), 1),
-                     ('θ_dry'                  , Center() , Neumann(), 1),
-                     ('t_cloudy'               , Center() , Neumann(), 1),
-                     ('q_vap_cloudy'           , Center() , Neumann(), 1),
-                     ('q_tot_cloudy'           , Center() , Neumann(), 1),
-                     ('θ_cloudy'               , Center() , Neumann(), 1),
-                     ('cv_θ_liq_rain_dt'       , Center() , Neumann(), 1),
-                     ('cv_q_tot_rain_dt'       , Center() , Neumann(), 1),
-                     ('cv_θ_liq_q_tot_rain_dt' , Center() , Neumann(), 1),
-                     ('CF'                     , Center() , Neumann(), 1),
-                     ('dTdt'                   , Center() , Neumann(), 1),
-                     ('dqtdt'                  , Center() , Neumann(), 1),
-                     ('gov_eq_θ_liq_ib'        , Center() , Neumann(), N_sd),
-                     ('gov_eq_q_tot_ib'        , Center() , Neumann(), N_sd),
-                     ('gov_eq_θ_liq_nb'        , Center() , Neumann(), N_sd),
-                     ('gov_eq_q_tot_nb'        , Center() , Neumann(), N_sd),
-                     ('δ_src_a'                , Center() , Neumann(), N_sd),
-                     ('δ_src_w'                , Center() , Neumann(), N_sd),
-                     ('δ_src_q_tot'            , Center() , Neumann(), N_sd),
-                     ('δ_src_θ_liq'            , Center() , Neumann(), N_sd),
-                     ('δ_src_a_model'          , Center() , Neumann(), N_sd),
-                     ('δ_src_w_model'          , Center() , Neumann(), N_sd),
-                     ('δ_src_q_tot_model'      , Center() , Neumann(), N_sd),
-                     ('δ_src_θ_liq_model'      , Center() , Neumann(), N_sd),
-                     ('cloud_water_excess'     , Center() , Neumann(), N_sd),
-                     ('θ_liq_src_rain'         , Center() , Neumann(), N_sd),
-                     ('prec_src_θ_liq'         , Center() , Neumann(), N_sd),
-                     ('prec_src_q_tot'         , Center() , Neumann(), N_sd),
-                     ('mf_θ_liq'               , Center() , Neumann(), N_sd),
-                     ('mf_q_tot'               , Center() , Neumann(), N_sd),
-                     ('mf_tend_θ_liq'          , Center() , Neumann(), N_sd),
-                     ('mf_tend_q_tot'          , Center() , Neumann(), N_sd),
-                     ('mf_tmp'                 , Center() , Neumann(), N_sd),
-                     ('tmp_n'                  , Node() , Neumann(), N_sd),
+                     ('ρ_0'                    , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('p_0'                    , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('HVSD_a'                 , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('HVSD_w'                 , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('q_liq'                  , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('T'                      , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('buoy'                   , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('entr_sc'                , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()), # Entrainment/Detrainment rates
+                     ('detr_sc'                , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()), # Entrainment/Detrainment rates
+                     ('l_mix'                  , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('K_m'                    , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('K_h'                    , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('α_0'                    , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('mean_entr_sc'           , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('mean_detr_sc'           , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('massflux_half'          , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('mf_q_tot_half'          , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('mf_θ_liq_half'          , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('temp_C'                 , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('q_tot_dry'              , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('θ_dry'                  , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('t_cloudy'               , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('q_vap_cloudy'           , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('q_tot_cloudy'           , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('θ_cloudy'               , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('cv_θ_liq_rain_dt'       , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('cv_q_tot_rain_dt'       , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('cv_θ_liq_q_tot_rain_dt' , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('CF'                     , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('dTdt'                   , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('dqtdt'                  , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('gov_eq_θ_liq_ib'        , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('gov_eq_q_tot_ib'        , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('gov_eq_θ_liq_nb'        , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('gov_eq_q_tot_nb'        , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('δ_src_a'                , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('δ_src_w'                , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('δ_src_q_tot'            , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('δ_src_θ_liq'            , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('δ_src_a_model'          , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('δ_src_w_model'          , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('δ_src_q_tot_model'      , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('δ_src_θ_liq_model'      , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('cloud_water_excess'     , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('θ_liq_src_rain'         , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('prec_src_θ_liq'         , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('prec_src_q_tot'         , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('mf_θ_liq'               , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('mf_q_tot'               , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('mf_tend_θ_liq'          , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('mf_tend_q_tot'          , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('mf_tmp'                 , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('tmp_n'                  , DomainSubSet(gm=True,en=True,ud=True),  Node() , Neumann()),
                      )
 
         q_2MO = (
-                     ('values'     , Center(), Neumann(), 1),
-                     ('dissipation', Center(), Neumann(), 1),
-                     ('entr_gain'  , Center(), Neumann(), 1),
-                     ('detr_loss'  , Center(), Neumann(), 1),
-                     ('buoy'       , Center(), Neumann(), 1),
-                     ('press'      , Center(), Neumann(), 1),
-                     ('shear'      , Center(), Neumann(), 1),
-                     ('interdomain', Center(), Neumann(), 1),
-                     ('rain_src'   , Center(), Neumann(), 1),
+                     ('values'     , DomainSubSet(gm=True), Center(), Neumann()),
+                     ('dissipation', DomainSubSet(gm=True), Center(), Neumann()),
+                     ('entr_gain'  , DomainSubSet(gm=True), Center(), Neumann()),
+                     ('detr_loss'  , DomainSubSet(gm=True), Center(), Neumann()),
+                     ('buoy'       , DomainSubSet(gm=True), Center(), Neumann()),
+                     ('press'      , DomainSubSet(gm=True), Center(), Neumann()),
+                     ('shear'      , DomainSubSet(gm=True), Center(), Neumann()),
+                     ('interdomain', DomainSubSet(gm=True), Center(), Neumann()),
+                     ('rain_src'   , DomainSubSet(gm=True), Center(), Neumann()),
                      )
 
         n_ghost = 1
         self.grid         = Grid(z_min, z_max, n_elems_real, n_ghost)
-        self.q            = StateVec(unkowns, self.grid)
+        self.q            = StateVec(unkowns, self.grid, dd)
         self.q_new        = copy.deepcopy(self.q)
         self.q_old        = copy.deepcopy(self.q)
         self.q_tendencies = copy.deepcopy(self.q)
-        self.tmp          = StateVec(temp_vars, self.grid)
+        self.tmp          = StateVec(temp_vars, self.grid, dd)
 
         self.tmp_O2 = {}
-        self.tmp_O2['tke']            = StateVec(q_2MO, self.grid)
+        self.tmp_O2['tke']            = StateVec(q_2MO, self.grid, dd)
         self.tmp_O2['tke']            = copy.deepcopy(self.tmp_O2['tke'])
 
         self.n_updrafts = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
@@ -164,7 +164,7 @@ class Simulation1d:
         self.Ref        = ReferenceState(self.grid)
         self.Case       = CasesFactory(namelist, paramlist)
         self.Turb       = EDMF_PrognosticTKE(namelist, paramlist, self.grid)
-        self.UpdVar     = [UpdraftVariables(i, self.Turb.surface_area, self.n_updrafts) for i in range(self.n_updrafts)]
+        self.UpdVar     = [UpdraftVariables(0, self.Turb.surface_area, self.n_updrafts) for i in self.q.idx.alldomains()]
         self.TS         = TimeStepping(namelist)
         self.Stats      = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
         self.tri_diag   = type('', (), {})()
@@ -196,7 +196,7 @@ class Simulation1d:
         return
 
     def run(self):
-        i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
+        gm, en, ud, sd, al = self.q.idx.allcombinations()
         self.q_tendencies.assign(self.grid, ('u', 'v', 'q_tot', 'θ_liq'), 0.0)
         self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
@@ -205,11 +205,10 @@ class Simulation1d:
         self.UpdVar, self.Case, self.TS, self.tri_diag)
 
         for k in self.grid.over_elems(Center()):
-            self.q['tke', i_env][k]            = self.q['tke', i_gm][k]
+            self.q['tke', en][k]            = self.q['tke', gm][k]
 
         self.q.export_state(self.grid, "./", "Q_py")
         self.tmp.export_state(self.grid, "./", "tmp_py")
-        # raise NameError("Exported data!")
 
         while self.TS.t <= self.TS.t_max:
             if np.mod(self.TS.t, self.Stats.frequency) == 0:
@@ -234,31 +233,31 @@ class Simulation1d:
         sol.z = self.grid.z
         sol.z_half = self.grid.z_half
 
-        i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
+        gm, en, ud, sd, al = self.q.idx.allcombinations()
 
-        sol.e_W              = self.q['w', i_env]
-        sol.e_q_tot          = self.q['q_tot', i_env]
-        sol.e_θ_liq          = self.q['θ_liq', i_env]
-        sol.e_q_liq          = self.tmp['q_liq', i_env]
-        sol.e_T              = self.tmp['T', i_env]
-        sol.e_B              = self.tmp['buoy', i_env]
+        sol.e_W              = self.q['w', en]
+        sol.e_q_tot          = self.q['q_tot', en]
+        sol.e_θ_liq          = self.q['θ_liq', en]
+        sol.e_q_liq          = self.tmp['q_liq', en]
+        sol.e_T              = self.tmp['T', en]
+        sol.e_B              = self.tmp['buoy', en]
         sol.e_CF             = self.tmp['CF']
-        sol.e_tke            = self.q['tke', i_env]
+        sol.e_tke            = self.q['tke', en]
 
-        sol.ud_W     = self.q['w', i_uds[0]]
-        sol.ud_Area  = self.q['a', i_uds[0]]
-        sol.ud_q_tot = self.q['q_tot', i_uds[0]]
-        sol.ud_q_liq = self.tmp['q_liq', i_uds[0]]
-        sol.ud_T     = self.tmp['T', i_uds[0]]
-        sol.ud_B     = self.tmp['buoy', i_uds[0]]
+        sol.ud_W     = self.q['w', ud[0]]
+        sol.ud_Area  = self.q['a', ud[0]]
+        sol.ud_q_tot = self.q['q_tot', ud[0]]
+        sol.ud_q_liq = self.tmp['q_liq', ud[0]]
+        sol.ud_T     = self.tmp['T', ud[0]]
+        sol.ud_B     = self.tmp['buoy', ud[0]]
 
-        sol.gm_q_tot = self.q['q_tot', i_gm]
-        sol.gm_U     = self.q['u', i_gm]
-        sol.gm_θ_liq = self.q['θ_liq', i_gm]
-        sol.gm_T     = self.tmp['T', i_gm]
-        sol.gm_V     = self.q['v', i_gm]
-        sol.gm_q_liq = self.tmp['q_liq', i_gm]
-        sol.gm_B     = self.tmp['buoy', i_gm]
+        sol.gm_q_tot = self.q['q_tot', gm]
+        sol.gm_U     = self.q['u', gm]
+        sol.gm_θ_liq = self.q['θ_liq', gm]
+        sol.gm_T     = self.tmp['T', gm]
+        sol.gm_V     = self.q['v', gm]
+        sol.gm_q_liq = self.tmp['q_liq', gm]
+        sol.gm_B     = self.tmp['buoy', gm]
 
         q_vars = ('w',
                   'q_tot',
@@ -282,7 +281,7 @@ class Simulation1d:
         plot_solutions_new(self.grid, self.q, q_vars, self.Stats)
         plot_solutions_new(self.grid, self.tmp, tmp_vars, self.Stats)
 
-        i = i_uds[0]
+        i = ud[0]
         var_name = 'gov_eq_q_tot'
         plt.plot(self.tmp['gov_eq_q_tot_ib', i], self.grid.z,
                  self.tmp['gov_eq_q_tot_nb', i], self.grid.z)
@@ -315,17 +314,17 @@ class Simulation1d:
     def initialize_io(self):
         for v in self.q.var_names:
           for i in self.q.over_sub_domains(v):
-            self.Stats.add_profile(v+'_'+self.q.idx_name(i))
+            self.Stats.add_profile(self.q.var_string(v,i))
 
         for v in self.tmp.var_names:
           for i in self.tmp.over_sub_domains(v):
-            self.Stats.add_profile(v+'_'+self.tmp.idx_name(i))
+            self.Stats.add_profile(self.tmp.var_string(v,i))
 
         for k in self.tmp_O2:
           q_local = self.tmp_O2[k]
           for v in q_local.var_names:
             for i in q_local.over_sub_domains(v):
-              self.Stats.add_profile(k+'_'+v+'_'+q_local.idx_name(i))
+              self.Stats.add_profile(k+'_'+q_local.var_string(v,i))
 
         self.Stats.add_ts('lwp')
         self.Case.initialize_io(self.Stats)
@@ -333,7 +332,7 @@ class Simulation1d:
         return
 
     def export_data(self):
-        i_gm, i_env, i_uds, i_sd = self.q.domain_idx()
+        gm, en, ud, sd, al = self.q.idx.allcombinations()
         self.Stats.open_files()
         self.Stats.write_simulation_time(self.TS.t)
         self.Case.export_data(self.Stats)
@@ -342,22 +341,22 @@ class Simulation1d:
 
         lwp = 0.0
         for k in self.grid.over_elems_real(Center()):
-            lwp += self.tmp['ρ_0'][k]*self.tmp['q_liq', i_gm][k]*self.grid.dz
+            lwp += self.tmp['ρ_0'][k]*self.tmp['q_liq', gm][k]*self.grid.dz
         self.Stats.write_ts('lwp', lwp)
 
         for v in self.q.var_names:
           for i in self.q.over_sub_domains(v):
-            self.Stats.write_profile_new(v+'_'+self.q.idx_name(i), self.grid, self.q[v, i])
+            self.Stats.write_profile_new(self.q.var_string(v,i), self.grid, self.q[v, i])
 
         for v in self.tmp.var_names:
           for i in self.tmp.over_sub_domains(v):
-            self.Stats.write_profile_new(v+'_'+self.tmp.idx_name(i), self.grid, self.tmp[v, i])
+            self.Stats.write_profile_new(self.tmp.var_string(v,i), self.grid, self.tmp[v, i])
 
         for k in self.tmp_O2:
           q_local = self.tmp_O2[k]
           for v in q_local.var_names:
             for i in q_local.over_sub_domains(v):
-              self.Stats.write_profile_new(k+'_'+v+'_'+q_local.idx_name(i), self.grid, q_local[v])
+              self.Stats.write_profile_new(k+'_'+q_local.var_string(v,i), self.grid, q_local[v])
 
         self.Stats.close_files()
         return

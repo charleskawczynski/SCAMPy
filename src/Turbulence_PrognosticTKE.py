@@ -16,14 +16,14 @@ from funcs_turbulence import *
 
 def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, wstar, tke_ed_coeff, entrainment_factor, detrainment_factor):
     quadrature_order = 3
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    gm, en, ud, sd, al = q.idx.allcombinations()
     compute_cloud_base_top_cover(grid, q, tmp, UpdVar)
-    n_updrafts = len(i_uds)
+    n_updrafts = len(ud)
     input_st = type('', (), {})()
     input_st.wstar = wstar
     input_st.b_mean = 0
     input_st.dz = grid.dz
-    for i in i_uds:
+    for i in ud:
         input_st.zi = UpdVar[i].cloud_base
         for k in grid.over_elems_real(Center()):
             input_st.quadrature_order = quadrature_order
@@ -32,22 +32,22 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.b                = tmp['buoy', i][k]
             input_st.w                = q['w', i][k]
             input_st.af               = q['a', i][k]
-            input_st.tke              = q['tke', i_env][k]
-            input_st.qt_env           = q['q_tot', i_env][k]
-            input_st.q_liq_env        = tmp['q_liq', i_env][k]
-            input_st.θ_liq_env        = q['θ_liq', i_env][k]
-            input_st.b_env            = tmp['buoy', i_env][k]
-            input_st.w_env            = q['w', i_env].Mid(k)
+            input_st.tke              = q['tke', en][k]
+            input_st.qt_env           = q['q_tot', en][k]
+            input_st.q_liq_env        = tmp['q_liq', en][k]
+            input_st.θ_liq_env        = q['θ_liq', en][k]
+            input_st.b_env            = tmp['buoy', en][k]
+            input_st.w_env            = q['w', en].Mid(k)
             input_st.θ_liq_up         = q['θ_liq', i][k]
             input_st.qt_up            = q['q_tot', i][k]
             input_st.p0               = tmp['p_0'][k]
             input_st.alpha0           = tmp['α_0'][k]
-            input_st.tke              = q['tke', i_env][k]
+            input_st.tke              = q['tke', en][k]
             input_st.tke_ed_coeff     = tke_ed_coeff
             input_st.L                = 20000.0 # need to define the scale of the GCM grid resolution
             input_st.n_up             = n_updrafts
             w_cut = q['w', i].Cut(k)
-            w_env_cut = q['w', i_env].Cut(k)
+            w_env_cut = q['w', en].Cut(k)
             a_cut = q['a', i].Cut(k)
             a_env_cut = (1.0-q['a', i].Cut(k))
             aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
@@ -120,7 +120,7 @@ class EDMF_PrognosticTKE:
         return
 
     def initialize_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         zs = self.zi
         self.wstar = compute_convective_velocity(Case.Sur.bflux, zs)
@@ -133,23 +133,23 @@ class EDMF_PrognosticTKE:
             for k in grid.over_elems(Center()):
                 z = grid.z_half[k]
                 temp = ws * 1.3 * np.cbrt(us3/ws3 + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
-                q['tke', i_gm][k] = temp
+                q['tke', gm][k] = temp
             reset_surface_covariance(grid, q, tmp, Case, ws)
             compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, self.zi, self.wstar)
         self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
         return
 
     def set_updraft_surface_bc(self, grid, q, tmp, UpdVar, Case):
-        i_gm, i_env, i_uds, i_sd = tmp.domain_idx()
+        gm, en, ud, sd, al = tmp.idx.allcombinations()
         k_1 = grid.first_interior(Zmin())
         zLL = grid.z_half[k_1]
-        θ_liq_1 = q['θ_liq', i_gm][k_1]
-        q_tot_1 = q['q_tot', i_gm][k_1]
+        θ_liq_1 = q['θ_liq', gm][k_1]
+        q_tot_1 = q['q_tot', gm][k_1]
         alpha0LL  = tmp['α_0'][k_1]
         S = Case.Sur
         cv_q_tot = surface_variance(S.rho_q_tot_flux*alpha0LL, S.rho_q_tot_flux*alpha0LL, S.ustar, zLL, S.obukhov_length)
         cv_θ_liq = surface_variance(S.rho_θ_liq_flux*alpha0LL, S.rho_θ_liq_flux*alpha0LL, S.ustar, zLL, S.obukhov_length)
-        for i in i_uds:
+        for i in ud:
             UpdVar[i].area_surface_bc = self.surface_area/self.n_updrafts
             UpdVar[i].w_surface_bc = 0.0
             UpdVar[i].θ_liq_surface_bc = (θ_liq_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_θ_liq))
@@ -157,8 +157,8 @@ class EDMF_PrognosticTKE:
         return
 
     def aux_rain(self, grid, q, tmp, TS):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        for i in i_uds:
+        gm, en, ud, sd, al = q.idx.allcombinations()
+        for i in ud:
             for k in grid.over_elems_real(Center()):
                 θ_liq = q['θ_liq', i][k]
                 q_tot = q['q_tot', i][k]
@@ -171,30 +171,30 @@ class EDMF_PrognosticTKE:
                 tmp['θ_liq_src_rain', i][k] = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, cwe)
 
     def pre_compute_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
 
         k_1 = grid.first_interior(Zmin())
         k_2 = grid.first_interior(Zmax())
         z_star_a, z_star_w = top_of_updraft(grid, q, self.params)
 
-        for i in i_uds:
+        for i in ud:
             for k in grid.over_elems_real(Center()):
                 tmp['HVSD_a', i][k] = 1.0 - np.heaviside(grid.z[k] - z_star_a[i], 1.0)
                 tmp['HVSD_w', i][k] = 1.0 - np.heaviside(grid.z[k] - z_star_w[i], 1.0)
 
-        for i in i_uds:
+        for i in ud:
             for k in grid.over_elems_real(Center())[1:]:
                 tmp['gov_eq_θ_liq_ib', i][k] = q['θ_liq', i][k]
                 tmp['gov_eq_q_tot_ib', i][k] = q['q_tot', i][k]
-                tmp['gov_eq_θ_liq_nb', i][k] = q['θ_liq', i_gm][k]
-                tmp['gov_eq_q_tot_nb', i][k] = q['q_tot', i_gm][k]
+                tmp['gov_eq_θ_liq_nb', i][k] = q['θ_liq', gm][k]
+                tmp['gov_eq_q_tot_nb', i][k] = q['q_tot', gm][k]
 
                 q['w', i][k] = bound(q['w', i][k]*tmp['HVSD_w', i][k], self.params.w_bounds)
                 q['a', i][k] = bound(q['a', i][k]*tmp['HVSD_w', i][k]          , self.params.a_bounds)
 
                 weight = tmp['HVSD_w', i][k]
-                q['θ_liq', i][k] = weight*q['θ_liq', i][k] + (1.0-weight)*q['θ_liq', i_gm][k]
-                q['q_tot', i][k] = weight*q['q_tot', i][k] + (1.0-weight)*q['q_tot', i_gm][k]
+                q['θ_liq', i][k] = weight*q['θ_liq', i][k] + (1.0-weight)*q['θ_liq', gm][k]
+                q['q_tot', i][k] = weight*q['q_tot', i][k] + (1.0-weight)*q['q_tot', gm][k]
 
         self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
@@ -223,7 +223,7 @@ class EDMF_PrognosticTKE:
 
     def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
 
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
 
         assign_new_to_values(grid, q_new, q, tmp)
@@ -238,8 +238,8 @@ class EDMF_PrognosticTKE:
         return
 
     def compute_prognostic_updrafts(self, grid, q_new, q, q_tendencies, tmp, UpdVar, Case, TS):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
-        u_max = np.max([q['w', i][k] for i in i_uds for k in grid.over_elems(Center())])
+        gm, en, ud, sd, al = q.idx.allcombinations()
+        u_max = np.max([q['w', i][k] for i in ud for k in grid.over_elems(Center())])
         TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
         TS.Δti_up = 1.0/TS.Δt_up
         compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)

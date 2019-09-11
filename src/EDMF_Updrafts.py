@@ -10,9 +10,9 @@ from funcs_utility import *
 import pylab as plt
 
 def compute_cloud_base_top_cover(grid, q, tmp, UpdVar):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    gm, en, ud, sd, al = q.idx.allcombinations()
     k_2 = grid.first_interior(Zmax())
-    for i in i_uds:
+    for i in ud:
         UpdVar[i].cloud_base = grid.z_half[k_2]
         UpdVar[i].cloud_top = 0.0
         UpdVar[i].cloud_cover = 0.0
@@ -26,11 +26,11 @@ def compute_cloud_base_top_cover(grid, q, tmp, UpdVar):
     return
 
 def export_data_updrafts(grid, UpdVar, q, tmp, Stats):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    gm, en, ud, sd, al = q.idx.allcombinations()
     compute_cloud_base_top_cover(grid, q, tmp, UpdVar)
-    Stats.write_ts('updraft_cloud_cover', np.sum([UpdVar[i].cloud_cover for i in i_uds]))
-    Stats.write_ts('updraft_cloud_base' , np.amin([UpdVar[i].cloud_base for i in i_uds]))
-    Stats.write_ts('updraft_cloud_top'  , np.amax([UpdVar[i].cloud_top for i in i_uds]))
+    Stats.write_ts('updraft_cloud_cover', np.sum([UpdVar[i].cloud_cover for i in ud]))
+    Stats.write_ts('updraft_cloud_base' , np.amin([UpdVar[i].cloud_base for i in ud]))
+    Stats.write_ts('updraft_cloud_top'  , np.amax([UpdVar[i].cloud_top for i in ud]))
     return
 
 def initialize_io_updrafts(UpdVar, Stats):

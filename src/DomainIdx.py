@@ -5,7 +5,14 @@ from DomainDecomp import *
 from DomainSubSet import *
 
 def get_i_state_vec(vm, a_map, name, i_sd=0):
-    return vm[name][a_map[i_sd-1]]
+    # print('---------- get_i_state_vec')
+    i_a = i_sd-1
+    # print('name = ', name)
+    # print('i_a = ', i_a)
+    # print('a_map = ', a_map)
+    # print('a_map[i_a] = ', a_map[i_a])
+    # print('vm[name] = ', vm[name])
+    return vm[name][a_map[i_a]]
 
 def get_idx(gm,en,ud):
     i_gm,i_en,i_ud = 0,0,(0,)
@@ -67,12 +74,13 @@ class DomainIdx:
     def allcombinations(self):
         return self.gridmean(),self.environment(),self.updraft(),self.subdomains(),self.alldomains()
 
-    def var_suffix(self, idx_ss, name, i_sd=0):
+    def var_suffix(self, idx, name, i_sd=0):
         if i_sd == idx.gridmean():
-            return string(name)*"_gm"
+            return "_gm"
         elif i_sd == idx.environment():
-            return string(name)*"_en"
+            return "_en"
         elif i_sd in idx.updraft():
-            return string(name)*"_ud_"*string(i_sd)
+            return "_ud_"+str(i_sd)
         else:
             raise ValueError("Bad index in var_suffix")
+

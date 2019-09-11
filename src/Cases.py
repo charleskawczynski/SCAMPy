@@ -84,7 +84,7 @@ class Soares(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, Ref, tmp, q):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         theta = Half(grid)
         q_liq = 0.0
         q_ice = 0.0
@@ -92,23 +92,23 @@ class Soares(CasesBase):
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
             if z[k] <= 1350.0:
-                q['q_tot', i_gm][k] = 5.0e-3 - 3.7e-4* z[k]/1000.0
+                q['q_tot', gm][k] = 5.0e-3 - 3.7e-4* z[k]/1000.0
                 theta[k] = 300.0
 
             else:
-                q['q_tot', i_gm][k] = 5.0e-3 - 3.7e-4 * 1.35 - 9.4e-4 * (z[k]-1350.0)/1000.0
+                q['q_tot', gm][k] = 5.0e-3 - 3.7e-4 * 1.35 - 9.4e-4 * (z[k]-1350.0)/1000.0
                 theta[k] = 300.0 + 2.0 * (z[k]-1350.0)/1000.0
-            q['u', i_gm][k] = 0.01
+            q['u', gm][k] = 0.01
 
-        q['u', i_gm].apply_bc(grid, 0.0)
-        q['q_tot', i_gm].apply_bc(grid, 0.0)
+        q['u', gm].apply_bc(grid, 0.0)
+        q['q_tot', gm].apply_bc(grid, 0.0)
 
         for k in grid.over_elems_real(Center()):
-            q['θ_liq', i_gm][k] = theta[k]
-            tmp['T', i_gm][k] =  theta[k] * exner_c(tmp['p_0'][k])
+            q['θ_liq', gm][k] = theta[k]
+            tmp['T', gm][k] =  theta[k] * exner_c(tmp['p_0'][k])
 
-        q['θ_liq', i_gm].apply_bc(grid, 0.0)
-        tmp['T', i_gm].apply_bc(grid, 0.0)
+        q['θ_liq', gm].apply_bc(grid, 0.0)
+        tmp['T', gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp)
 
         return
@@ -163,14 +163,14 @@ class Bomex(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, Ref, tmp, q):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         thetal = Half(grid)
         q_liq = 0.0
         q_ice = 0.0 # IC of Bomex is cloud-free
         z = grid.z_half
 
         for k in grid.over_elems(Center()):
-            q['a', i_gm][k] = 1.0
+            q['a', gm][k] = 1.0
 
         for k in grid.over_elems_real(Center()):
             #Set Thetal profile
@@ -185,29 +185,29 @@ class Bomex(CasesBase):
 
             #Set q_tot profile
             if z[k] <= 520:
-                q['q_tot', i_gm][k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
+                q['q_tot', gm][k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
             if z[k] > 520.0 and z[k] <= 1480.0:
-                q['q_tot', i_gm][k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
+                q['q_tot', gm][k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
             if z[k] > 1480.0 and z[k] <= 2000.0:
-                q['q_tot', i_gm][k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
+                q['q_tot', gm][k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
             if z[k] > 2000.0:
-                q['q_tot', i_gm][k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
+                q['q_tot', gm][k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
 
 
             #Set u profile
             if z[k] <= 700.0:
-                q['u', i_gm][k] = -8.75
+                q['u', gm][k] = -8.75
             if z[k] > 700.0:
-                q['u', i_gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+                q['u', gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
         for k in grid.over_elems_real(Center()):
-            tmp['T', i_gm][k] = thetal[k] * exner_c(tmp['p_0'][k])
-            q['θ_liq', i_gm][k] = thetal[k]
+            tmp['T', gm][k] = thetal[k] * exner_c(tmp['p_0'][k])
+            q['θ_liq', gm][k] = thetal[k]
 
-        q['u', i_gm].apply_bc(grid, 0.0)
-        q['q_tot', i_gm].apply_bc(grid, 0.0)
-        q['θ_liq', i_gm].apply_bc(grid, 0.0)
-        tmp['T', i_gm].apply_bc(grid, 0.0)
+        q['u', gm].apply_bc(grid, 0.0)
+        q['q_tot', gm].apply_bc(grid, 0.0)
+        q['θ_liq', gm].apply_bc(grid, 0.0)
+        tmp['T', gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp)
 
         return
@@ -284,7 +284,7 @@ class life_cycle_Tan2018(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, Ref, tmp, q):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         thetal = Half(grid)
         q_liq = 0.0
         q_ice = 0.0 # IC of Bomex is cloud-free
@@ -302,30 +302,30 @@ class life_cycle_Tan2018(CasesBase):
 
             #Set q_tot profile
             if z[k] <= 520:
-                q['q_tot', i_gm][k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
+                q['q_tot', gm][k] = (17.0 + (z[k]) * (16.3-17.0)/520.0)/1000.0
             if z[k] > 520.0 and z[k] <= 1480.0:
-                q['q_tot', i_gm][k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
+                q['q_tot', gm][k] = (16.3 + (z[k] - 520.0)*(10.7 - 16.3)/(1480.0 - 520.0))/1000.0
             if z[k] > 1480.0 and z[k] <= 2000.0:
-                q['q_tot', i_gm][k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
+                q['q_tot', gm][k] = (10.7 + (z[k] - 1480.0) * (4.2 - 10.7)/(2000.0 - 1480.0))/1000.0
             if z[k] > 2000.0:
-                q['q_tot', i_gm][k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
+                q['q_tot', gm][k] = (4.2 + (z[k] - 2000.0) * (3.0 - 4.2)/(3000.0  - 2000.0))/1000.0
 
 
             #Set u profile
             if z[k] <= 700.0:
-                q['u', i_gm][k] = -8.75
+                q['u', gm][k] = -8.75
             if z[k] > 700.0:
-                q['u', i_gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
+                q['u', gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
 
         for k in grid.over_elems_real(Center()):
-            q['θ_liq', i_gm][k] = thetal[k]
-            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
+            q['θ_liq', gm][k] = thetal[k]
+            tmp['T', gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
 
-        q['u', i_gm].apply_bc(grid, 0.0)
-        q['q_tot', i_gm].apply_bc(grid, 0.0)
-        q['θ_liq', i_gm].apply_bc(grid, 0.0)
-        tmp['T', i_gm].apply_bc(grid, 0.0)
+        q['u', gm].apply_bc(grid, 0.0)
+        q['q_tot', gm].apply_bc(grid, 0.0)
+        q['θ_liq', gm].apply_bc(grid, 0.0)
+        tmp['T', gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp)
 
         return
@@ -409,15 +409,15 @@ class Rico(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, Ref, tmp, q):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         thetal = Half(grid)
         q_liq = 0.0
         q_ice = 0.0 # IC of Rico is cloud-free
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
-            q['u', i_gm][k] =  -9.9 + 2.0e-3 * z[k]
-            q['v', i_gm][k] = -3.8
+            q['u', gm][k] =  -9.9 + 2.0e-3 * z[k]
+            q['v', gm][k] = -3.8
             #Set Thetal profile
             if z[k] <= 740.0:
                 thetal[k] = 297.9
@@ -426,20 +426,20 @@ class Rico(CasesBase):
 
             #Set q_tot profile
             if z[k] <= 740.0:
-                q['q_tot', i_gm][k] =  (16.0 + (13.8 - 16.0)/740.0 * z[k])/1000.0
+                q['q_tot', gm][k] =  (16.0 + (13.8 - 16.0)/740.0 * z[k])/1000.0
             elif z[k] > 740.0 and z[k] <= 3260.0:
-                q['q_tot', i_gm][k] = (13.8 + (2.4 - 13.8)/(3260.0-740.0) * (z[k] - 740.0))/1000.0
+                q['q_tot', gm][k] = (13.8 + (2.4 - 13.8)/(3260.0-740.0) * (z[k] - 740.0))/1000.0
             else:
-                q['q_tot', i_gm][k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(z[k] - 3260.0))/1000.0
+                q['q_tot', gm][k] = (2.4 + (1.8-2.4)/(4000.0-3260.0)*(z[k] - 3260.0))/1000.0
 
         for k in grid.over_elems_real(Center()):
-            q['θ_liq', i_gm][k] = thetal[k]
-            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
+            q['θ_liq', gm][k] = thetal[k]
+            tmp['T', gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
 
-        q['u', i_gm].apply_bc(grid, 0.0)
-        q['q_tot', i_gm].apply_bc(grid, 0.0)
-        q['θ_liq', i_gm].apply_bc(grid, 0.0)
-        tmp['T', i_gm].apply_bc(grid, 0.0)
+        q['u', gm].apply_bc(grid, 0.0)
+        q['q_tot', gm].apply_bc(grid, 0.0)
+        q['θ_liq', gm].apply_bc(grid, 0.0)
+        tmp['T', gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp)
 
 
@@ -520,7 +520,7 @@ class TRMM_LBA(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, Ref, tmp, q):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         p_1 = Half(grid)
 
         # TRMM_LBA inputs from Grabowski et al. 2006
@@ -574,8 +574,8 @@ class TRMM_LBA(CasesBase):
         # interpolate to the model grid-points
 
         p_1 = np.interp(grid.z_half,z_in,p_in)
-        q['u', i_gm][:] = np.interp(grid.z_half,z_in,u_in)
-        q['v', i_gm][:] = np.interp(grid.z_half,z_in,v_in)
+        q['u', gm][:] = np.interp(grid.z_half,z_in,u_in)
+        q['v', gm][:] = np.interp(grid.z_half,z_in,v_in)
 
         # get the entropy from RH, p, T
         k_1 = grid.first_interior(Zmin())
@@ -587,30 +587,30 @@ class TRMM_LBA(CasesBase):
         T = Half(grid)
         theta_rho = Half(grid)
         T[k_1:k_2] = np.interp(grid.z_half[k_1:k_2],z_in,T_in)
-        tmp['T', i_gm][:] = T
+        tmp['T', gm][:] = T
         epsi = 287.1/461.5
 
-        q['u', i_gm].apply_bc(grid, 0.0)
-        tmp['T', i_gm].apply_bc(grid, 0.0)
+        q['u', gm].apply_bc(grid, 0.0)
+        tmp['T', gm].apply_bc(grid, 0.0)
 
 
         for k in grid.over_elems_real(Center()):
-            p_vap_star = pv_star(tmp['T', i_gm][k])
+            p_vap_star = pv_star(tmp['T', gm][k])
             # eq. 37 in pressel et al and the def of RH
             q_vap_star = p_vap_star*epsi/(p_1[k]- p_vap_star + epsi*p_vap_star*RH[k]/100.0)
-            q_vap = q['q_tot', i_gm][k] - tmp['q_liq', i_gm][k]
-            q['q_tot', i_gm][k] = q_vap_star*RH[k]/100.0
-            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0'][k],
-                                            tmp['T', i_gm][k],
-                                            q['q_tot', i_gm][k],
+            q_vap = q['q_tot', gm][k] - tmp['q_liq', gm][k]
+            q['q_tot', gm][k] = q_vap_star*RH[k]/100.0
+            q['θ_liq', gm][k] = thetali_c(tmp['p_0'][k],
+                                            tmp['T', gm][k],
+                                            q['q_tot', gm][k],
                                             0.0,
                                             0.0,
-                                            latent_heat(tmp['T', i_gm][k]))
+                                            latent_heat(tmp['T', gm][k]))
 
-            theta_rho[k] = theta_rho_c(tmp['p_0'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
+            theta_rho[k] = theta_rho_c(tmp['p_0'][k], tmp['T', gm][k], q['q_tot', gm][k], q_vap)
 
-        q['q_tot', i_gm].apply_bc(grid, 0.0)
-        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        q['q_tot', gm].apply_bc(grid, 0.0)
+        q['θ_liq', gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp)
         return
 
@@ -827,7 +827,7 @@ class ARM_SGP(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, Ref, tmp, q):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         p_1 = Half(grid)
 
         # ARM_SGP inputs
@@ -843,16 +843,16 @@ class ARM_SGP(CasesBase):
 
 
         for k in grid.over_elems_real(Center()):
-            q['u', i_gm][k] = 10.0
-            q['q_tot', i_gm][k] = q_tot[k]
-            tmp['T', i_gm][k] = Theta[k]*exner_c(tmp['p_0'][k])
-            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0'][k],tmp['T', i_gm][k],
-                                            q['q_tot', i_gm][k], 0.0, 0.0, latent_heat(tmp['T', i_gm][k]))
+            q['u', gm][k] = 10.0
+            q['q_tot', gm][k] = q_tot[k]
+            tmp['T', gm][k] = Theta[k]*exner_c(tmp['p_0'][k])
+            q['θ_liq', gm][k] = thetali_c(tmp['p_0'][k],tmp['T', gm][k],
+                                            q['q_tot', gm][k], 0.0, 0.0, latent_heat(tmp['T', gm][k]))
 
-        q['u', i_gm].apply_bc(grid, 0.0)
-        q['q_tot', i_gm].apply_bc(grid, 0.0)
-        q['θ_liq', i_gm].apply_bc(grid, 0.0)
-        tmp['T', i_gm].apply_bc(grid, 0.0)
+        q['u', gm].apply_bc(grid, 0.0)
+        q['q_tot', gm].apply_bc(grid, 0.0)
+        q['θ_liq', gm].apply_bc(grid, 0.0)
+        tmp['T', gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp)
 
         return
@@ -946,7 +946,7 @@ class GATE_III(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, Ref, tmp, q):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         q_tot = Half(grid)
         T = Half(grid)
         U = Half(grid)
@@ -975,17 +975,17 @@ class GATE_III(CasesBase):
 
 
         for k in grid.over_elems_real(Center()):
-            q['q_tot', i_gm][k] = q_tot[k]
-            tmp['T', i_gm][k] = T[k]
-            q['u', i_gm][k] = U[k]
+            q['q_tot', gm][k] = q_tot[k]
+            tmp['T', gm][k] = T[k]
+            q['u', gm][k] = U[k]
 
-            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0'][k],tmp['T', i_gm][k],
-                                           q['q_tot', i_gm][k], 0.0, 0.0, latent_heat(tmp['T', i_gm][k]))
+            q['θ_liq', gm][k] = thetali_c(tmp['p_0'][k],tmp['T', gm][k],
+                                           q['q_tot', gm][k], 0.0, 0.0, latent_heat(tmp['T', gm][k]))
 
-        q['u', i_gm].apply_bc(grid, 0.0)
-        q['q_tot', i_gm].apply_bc(grid, 0.0)
-        tmp['T', i_gm].apply_bc(grid, 0.0)
-        q['θ_liq', i_gm].apply_bc(grid, 0.0)
+        q['u', gm].apply_bc(grid, 0.0)
+        q['q_tot', gm].apply_bc(grid, 0.0)
+        tmp['T', gm].apply_bc(grid, 0.0)
+        q['θ_liq', gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp)
         return
 
@@ -1125,7 +1125,7 @@ class DYCOMS_RF01(CasesBase):
             return t_2, ql_2
 
     def initialize_profiles(self, grid, Ref, tmp, q):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         thetal = Half(grid)
         q_liq     = Half(grid)
         q_ice     = 0.0                                             # no ice
@@ -1140,37 +1140,37 @@ class DYCOMS_RF01(CasesBase):
 
             # q_tot profile as defined in DYCOMS
             if z[k] <= 840.0:
-               q['q_tot', i_gm][k] = 9. / 1000.0
+               q['q_tot', gm][k] = 9. / 1000.0
             if z[k] > 840.0:
-               q['q_tot', i_gm][k] = 1.5 / 1000.0
+               q['q_tot', gm][k] = 1.5 / 1000.0
 
             # q_liq and T profile
             # (calculated by saturation adjustment using thetal and q_tot values provided in DYCOMS
             # and using Rd, cp and L constants as defined in DYCOMS)
-            tmp['T', i_gm][k], tmp['q_liq', i_gm][k] = self.dycoms_sat_adjst(tmp['p_0'][k], thetal[k], q['q_tot', i_gm][k])
+            tmp['T', gm][k], tmp['q_liq', gm][k] = self.dycoms_sat_adjst(tmp['p_0'][k], thetal[k], q['q_tot', gm][k])
 
             # thermodynamic variable profile (either entropy or thetal)
             # (calculated based on T and q_liq profiles.
             # Here we use Rd, cp and L constants as defined in scampy)
-            q['θ_liq', i_gm][k] = thetali_c(tmp['p_0'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], tmp['q_liq', i_gm][k], q_ice)
+            q['θ_liq', gm][k] = thetali_c(tmp['p_0'][k], tmp['T', gm][k], q['q_tot', gm][k], tmp['q_liq', gm][k], q_ice)
 
             # buoyancy profile
-            q_vap = q['q_tot', i_gm][k] - q_ice - tmp['q_liq', i_gm][k]
-            alpha = alpha_c(tmp['p_0'][k], tmp['T', i_gm][k], q['q_tot', i_gm][k], q_vap)
-            tmp['buoy', i_gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
+            q_vap = q['q_tot', gm][k] - q_ice - tmp['q_liq', gm][k]
+            alpha = alpha_c(tmp['p_0'][k], tmp['T', gm][k], q['q_tot', gm][k], q_vap)
+            tmp['buoy', gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
 
             # velocity profile (geostrophic)
-            q['u', i_gm][k] = 7.0
-            q['v', i_gm][k] = -5.5
+            q['u', gm][k] = 7.0
+            q['v', gm][k] = -5.5
 
         # fill out boundary conditions
-        q['u', i_gm].apply_bc(grid, 0.0)
-        q['v', i_gm].apply_bc(grid, 0.0)
-        q['q_tot', i_gm].apply_bc(grid, 0.0)
-        tmp['q_liq', i_gm].apply_bc(grid, 0.0)
-        q['θ_liq', i_gm].apply_bc(grid, 0.0)
-        tmp['T', i_gm].apply_bc(grid, 0.0)
-        tmp['buoy', i_gm].apply_bc(grid, 0.0)
+        q['u', gm].apply_bc(grid, 0.0)
+        q['v', gm].apply_bc(grid, 0.0)
+        q['q_tot', gm].apply_bc(grid, 0.0)
+        tmp['q_liq', gm].apply_bc(grid, 0.0)
+        q['θ_liq', gm].apply_bc(grid, 0.0)
+        tmp['T', gm].apply_bc(grid, 0.0)
+        tmp['buoy', gm].apply_bc(grid, 0.0)
 
         return
 
@@ -1261,15 +1261,15 @@ class GABLS(CasesBase):
         Ref.initialize(grid, Stats, tmp)
         return
     def initialize_profiles(self, grid, Ref, tmp, q):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         thetal = Half(grid)
         q_liq = 0.0
         q_ice = 0.0 # IC of GABLS cloud-free
 
         for k in grid.over_elems_real(Center()):
             #Set wind velocity profile
-            q['u', i_gm][k] =  8.0
-            q['v', i_gm][k] =  0.0
+            q['u', gm][k] =  8.0
+            q['v', gm][k] =  0.0
 
             #Set Thetal profile
             if grid.z_half[k] <= 100.0:
@@ -1278,17 +1278,17 @@ class GABLS(CasesBase):
                 thetal[k] = 265.0 + (grid.z_half[k] - 100.0) * 0.01
 
             #Set q_tot profile
-            q['q_tot', i_gm][k] = 0.0
+            q['q_tot', gm][k] = 0.0
 
         for k in grid.over_elems_real(Center()):
-            q['θ_liq', i_gm][k] = thetal[k]
-            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0'][k]) # No water content
+            q['θ_liq', gm][k] = thetal[k]
+            tmp['T', gm][k] =  thetal[k] * exner_c(tmp['p_0'][k]) # No water content
 
-        q['u', i_gm].apply_bc(grid, 0.0)
-        q['v', i_gm].apply_bc(grid, 0.0)
-        q['q_tot', i_gm].apply_bc(grid, 0.0)
-        q['θ_liq', i_gm].apply_bc(grid, 0.0)
-        tmp['T', i_gm].apply_bc(grid, 0.0)
+        q['u', gm].apply_bc(grid, 0.0)
+        q['v', gm].apply_bc(grid, 0.0)
+        q['q_tot', gm].apply_bc(grid, 0.0)
+        q['θ_liq', gm].apply_bc(grid, 0.0)
+        tmp['T', gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp)
         return
 
@@ -1348,15 +1348,15 @@ class SP(CasesBase):
         return
 
     def initialize_profiles(self, grid, Ref, tmp, q):
-        i_gm, i_env, i_uds, i_sd = q.domain_idx()
+        gm, en, ud, sd, al = q.idx.allcombinations()
         thetal = Half(grid)
         q_liq = 0.0
         q_ice = 0.0 # IC of SP cloud-free
 
         z = grid.z_half
         for k in grid.over_elems_real(Center()):
-            q['u', i_gm][k] =  1.0
-            q['v', i_gm][k] =  0.0
+            q['u', gm][k] =  1.0
+            q['v', gm][k] =  0.0
             #Set Thetal profile
             if z[k] <= 974.0:
                 thetal[k] = 300.0
@@ -1366,17 +1366,17 @@ class SP(CasesBase):
                 thetal[k] = 308.0 + (z[k] - 1074.0) * 0.003
 
             #Set q_tot profile
-            q['q_tot', i_gm][k] = 0.0
+            q['q_tot', gm][k] = 0.0
 
         for k in grid.over_elems_real(Center()):
-            q['θ_liq', i_gm][k] = thetal[k]
-            tmp['T', i_gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
+            q['θ_liq', gm][k] = thetal[k]
+            tmp['T', gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
 
-        q['u', i_gm].apply_bc(grid, 0.0)
-        q['v', i_gm].apply_bc(grid, 0.0)
-        q['q_tot', i_gm].apply_bc(grid, 0.0)
-        q['θ_liq', i_gm].apply_bc(grid, 0.0)
-        tmp['T', i_gm].apply_bc(grid, 0.0)
+        q['u', gm].apply_bc(grid, 0.0)
+        q['v', gm].apply_bc(grid, 0.0)
+        q['q_tot', gm].apply_bc(grid, 0.0)
+        q['θ_liq', gm].apply_bc(grid, 0.0)
+        tmp['T', gm].apply_bc(grid, 0.0)
         satadjust(grid, q, tmp)
         return
 

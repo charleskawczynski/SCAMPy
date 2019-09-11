@@ -6,15 +6,15 @@ from StateVec import StateVec
 from funcs_tridiagsolver import solve_tridiag, solve_tridiag_stored, init_β_γ, solve_tridiag_old
 
 def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
-    i_gm, i_env, i_uds, i_sd = q.domain_idx()
+    gm, en, ud, sd, al = q.idx.allcombinations()
     dzi = grid.dzi
     dzi2 = grid.dzi**2.0
     dti = TS.Δti
     k_1 = grid.first_interior(Zmin())
     k_2 = grid.first_interior(Zmax())
 
-    a_env = q['a', i_env]
-    w_env = q['w', i_env]
+    a_env = q['a', en]
+    w_env = q['w', en]
     ρ_0_half = tmp['ρ_0']
     for k in grid.over_elems_real(Center()):
         ρ_0_cut = ρ_0_half.Cut(k)
@@ -25,10 +25,10 @@ def construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff):
         D_env = sum([ρ_0_cut[1] *
                      q['a', i][k] *
                      q['w', i][k] *
-                     tmp['entr_sc', i][k] for i in i_uds])
+                     tmp['entr_sc', i][k] for i in ud])
 
         l_mix = np.fmax(tmp['l_mix'][k], 1.0)
-        tke_env = np.fmax(q['tke', i_env][k], 0.0)
+        tke_env = np.fmax(q['tke', en][k], 0.0)
 
         tri_diag.a[k] = (- ρa_K_dual[0] * dzi2 )
         tri_diag.b[k] = (ρ_0_cut[1] * ae_cut[1] * dti

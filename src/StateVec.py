@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from Field import Field, Full, Half, Dirichlet, Neumann
 import pandas as pd
 from VarMapper import *
+from DomainIdx import *
 
 # markershapes = ['r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^']
 markershapes = ['b-', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^', 'r-o', 'b-o', 'k-^', 'g-^']
@@ -21,69 +22,43 @@ def friendly_name(s):
     return s
 
 class StateVec:
-    def __init__(self, var_tuple, grid):
+    def __init__(self, var_tuple, grid, dd):
 
-        # self.n_subdomains = sum(dd)
-        # n_vars = sum([dss.sum(dd) for (var_name, dss, loc, bc, nsd) in var_tuple])
-        # var_mapper, self.dss_per_var, var_names = get_var_mapper(var_tuple, dd)
-        # idx = DomainIdx(dd)
-        # self.sd_unmapped = get_sd_unmapped(var_tuple, idx, dd)
+        self.n_subdomains = dd.sum()
+        self.var_mapper, self.dss_per_var, self.var_names = get_var_mapper(var_tuple, dd)
+        idx = DomainIdx(dd)
+        self.idx = idx
+        self.sd_unmapped = get_sd_unmapped(var_tuple, idx, dd)
 
-        # self.idx_ss_per_var = {name : DomainIdx(dd, self.dss_per_var[name]) for name in var_names}
-        # self.a_map = {name : get_sv_a_map(idx, self.idx_ss_per_var[name]) for name in var_names}
+        self.idx_ss_per_var = {name : DomainIdx(dd, self.dss_per_var[name]) for name in self.var_names}
+        self.a_map = {name : get_sv_a_map(idx, self.idx_ss_per_var[name]) for name in self.var_names}
 
-
-        self.i_gm = self.n_subdomains-1
-        self.i_env = self.n_subdomains-2
-        self.i_uds = [i for i in range(self.n_subdomains) if not any([i==j for j in [self.i_env, self.i_gm]])]
-        self.i_sd = self.i_uds+[self.i_env]
-
-        self.n_vars = sum([nsd for var_name, loc, bc, nsd in var_tuple])
-        self.var_names, self.var_mapper = get_var_mapper(var_tuple)
         self.var_names = [sys.intern(x) for x in self.var_names]
-        n = len(list(grid.over_elems(Center())))
-        self.locs = {var_name : loc for var_name, loc, bc, nsd in var_tuple}
-        self.nsd = {var_name : nsd for var_name, loc, bc, nsd in var_tuple}
-        self.bcs = {var_name : bc for var_name, loc, bc, nsd in var_tuple}
+        self.locs = {name : loc for name, dss, loc, bc in var_tuple}
+        self.nsd = {name : dss.sum(dd) for name, dss, loc, bc in var_tuple}
+        self.bcs = {name : bc for name, dss, loc, bc in var_tuple}
         self.fields = [Field.field(grid, self.locs[v], self.bcs[v]) for v in self.var_mapper for i in range(self.nsd[v])]
         return
 
-    def idx_name(self, i):
-        if i==self.i_gm:
-            return "gm"
-        elif i==self.i_env:
-            return "en"
-        elif i in self.i_uds:
-            if len(self.i_uds)==1:
-                return "ud"
-            else:
-                return 'ud_'+str(i)
-        else:
-            raise ValueError('Bad index in idx_name in StateVec.py')
+    def var_suffix(self, name, i = None):
+        if i==None:
+            i = self.idx.gridmean()
+        return self.idx.var_suffix(self.idx, name, i)
 
-    def var_suffix(self, name, i):
-        if self.nsd[name] == 1:
-            return '_gm'
-        else:
-            return '_'+self.idx_name(i)
-
-    def var_string(self, name, i):
-        if self.nsd[name] == 1:
-            return name+'_gm'
-        else:
-            return name+'_'+self.idx_name(i)
-
-    def get_gm(self, i):
-        return self.i_gm
+    def var_string(self, name, i = None):
+        if i==None:
+            i = self.idx.gridmean()
+        return name+self.var_suffix(name, i)
 
     def __getitem__(self, tup):
         if isinstance(tup, tuple):
-            # name, i = tup
-            return self.fields[self.var_mapper[tup[0]][tup[1]]]
+            name, i = tup
+            i_sv = get_i_state_vec(self.var_mapper, self.a_map[name], name, i)
         else:
-            # name = tup
-            # i = 0
-            return self.fields[self.var_mapper[tup][0]]
+            name = tup
+            i = self.idx.gridmean()
+            i_sv = get_i_state_vec(self.var_mapper, self.a_map[name], name, i)
+        return self.fields[i_sv]
 
     def __str__(self):
         s = ''
@@ -105,45 +80,24 @@ class StateVec:
                 for i in self.over_sub_domains(name):
                     self[name, i][k] = value
 
-
-    def domain_idx(self):
-        return self.i_gm, self.i_env, self.i_uds, self.i_sd
-
-    def subdomains(self, var_name):
-        if self.nsd[var_name]==1:
-            return (0,)
-        else:
-            return self.i_sd+[self.i_gm]
-
     def data_location(self, name):
         return self.fields[self.var_mapper[name][0]].loc
 
-    def slice_updrafts(self):
-        return slice(self.i_uds[0], self.i_uds[:-1])
+    def over_sub_domains(self, name):
+        return [x for x in self.sd_unmapped[name] if not x==0] # sd_unmapped is between 1 and length of all domains
 
-    def slice_sub_domains(self): # restricts index order
-        return slice(self.i_sd[0], self.i_sd[:-1])
-
-    def over_sub_domains(self, i=None):
+    def surface(self, grid, var_name, i=None):
         if i==None:
-            return list(range(self.n_subdomains))
-        elif isinstance(i, int):
-            return [j for j in range(self.n_subdomains) if not j==i]
-        elif isinstance(i, str):
-            return list(range(len(self.var_mapper[i])))
-        elif isinstance(i, tuple):
-            return [j for j in range(self.n_subdomains) if not j in i]
-        else:
-            raise TypeError("Bad index in over_sub_domains in StateVec.py")
-
-    def surface(self, grid, var_name, i_sd=0):
+            i = self.idx.gridmean()
         k = grid.first_interior(Zmin())
-        return self[var_name, i_sd].Dual(k)[0]
+        return self[var_name, i].Dual(k)[0]
 
     def var_names_except(self, names=()):
         return [name for name in self.var_names if not name in names]
 
-    def plot_state(self, grid, directory, filename, name_idx = None, i_sd = 0, include_ghost = True):
+    def plot_state(self, grid, directory, filename, name_idx = None, i_sd = None, include_ghost = True):
+        if i_sd==None:
+            i_sd = self.idx.gridmean()
         domain_range = grid.over_elems(Center()) if include_ghost else grid.over_elems_real(Center())
 
         x = [grid.z_half[k] for k in domain_range]
