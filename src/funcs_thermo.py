@@ -111,7 +111,6 @@ def eos(p_0, q_tot, θ_liq):
     # If not saturated
     if q_tot <= qv_star_1:
         T = T_1
-        q_liq = 0.0
     else:
         ql_1 = q_tot - qv_star_1
         θ_liq_1 = thetali_c(p_0, T_1, q_tot, ql_1, 0.0)
@@ -128,86 +127,6 @@ def eos(p_0, q_tot, θ_liq):
         q_liq = q_tot - qv_star
         if not converged:
             raise ValueErorr('saturation adjustment did not converge')
-    return T, q_liq
-
-def eos_old_(p_0, q_tot, prog):
-    q_vap = q_tot
-    q_liq = 0.0
-    pv_1 = pv_c(p_0, q_tot, q_tot)
-    pd_1 = p_0 - pv_1
-    T_1 = eos_first_guess_thetal(prog, pd_1, pv_1, q_tot)
-    pv_star_1 = pv_star(T_1)
-    qv_star_1 = qv_star_c(p_0,q_tot,pv_star_1)
-    ql_2=0.0
-    # If not saturated
-    if(q_tot <= qv_star_1):
-        T = T_1
-        q_liq = 0.0
-    else:
-        ql_1 = q_tot - qv_star_1
-        prog_1 = thetali_c(p_0, T_1, q_tot, ql_1, 0.0)
-        f_1 = prog - prog_1
-        T_2 = T_1 + ql_1 * latent_heat(T_1) /((1.0 - q_tot)*cpd + qv_star_1 * cpv)
-        delta_T  = np.fabs(T_2 - T_1)
-
-        while delta_T > 1.0e-3 or ql_2 < 0.0:
-            pv_star_2 = pv_star(T_2)
-            qv_star_2 = qv_star_c(p_0,q_tot,pv_star_2)
-            pv_2 = pv_c(p_0, q_tot, qv_star_2)
-            pd_2 = p_0 - pv_2
-            ql_2 = q_tot - qv_star_2
-            prog_2 =  thetali_c(p_0,T_2,q_tot, ql_2, 0.0   )
-            f_2 = prog - prog_2
-            T_n = T_2 - f_2*(T_2 - T_1)/(f_2 - f_1)
-            T_1 = T_2
-            T_2 = T_n
-            f_1 = f_2
-            delta_T  = np.fabs(T_2 - T_1)
-
-        T  = T_2
-        q_liq = ql_2
-
-    return T, q_liq
-
-def eos_old(p_0, q_tot, prog):
-    q_vap = q_tot
-    q_liq = 0.0
-    pv_1 = pv_c(p_0, q_tot, q_tot)
-    pd_1 = p_0 - pv_1
-    T_1 = eos_first_guess_thetal(prog, pd_1, pv_1, q_tot)
-    pv_star_1 = pv_star(T_1)
-    qv_star_1 = qv_star_c(p_0,q_tot,pv_star_1)
-    ql_2=0.0
-    # If not saturated
-    if(q_tot <= qv_star_1):
-        T = T_1
-        q_liq = 0.0
-    else:
-        ql_1 = q_tot - qv_star_1
-        prog_1 = thetali_c(p_0, T_1, q_tot, ql_1, 0.0)
-        f_1 = prog - prog_1
-        T_2 = T_1 + ql_1 * latent_heat(T_1) /((1.0 - q_tot)*cpd + qv_star_1 * cpv)
-        delta_T  = np.fabs(T_2 - T_1)
-
-        while delta_T > 1.0e-3 or ql_2 < 0.0:
-            pv_star_2 = pv_star(T_2)
-            qv_star_2 = qv_star_c(p_0,q_tot,pv_star_2)
-            pv_2 = pv_c(p_0, q_tot, qv_star_2)
-            pd_2 = p_0 - pv_2
-            ql_2 = q_tot - qv_star_2
-            prog_2 =  thetali_c(p_0,T_2,q_tot, ql_2, 0.0   )
-            f_2 = prog - prog_2
-            T_n = T_2 - f_2*(T_2 - T_1)/(f_2 - f_1)
-            T_1 = T_2
-            T_2 = T_n
-            f_1 = f_2
-            delta_T  = np.fabs(T_2 - T_1)
-        if delta_T>1e-3:
-            print('delta_T = ', delta_T)
-
-        T  = T_2
-        q_liq = ql_2
-
     return T, q_liq
 
 def eos_entropy(p_0, q_tot, prog):
