@@ -1,3 +1,5 @@
+from PlanetParameters import *
+
 #Adapated from PyCLES: https://github.com/pressel/pycles
 pi = 3.14159265359
 g = 9.80665

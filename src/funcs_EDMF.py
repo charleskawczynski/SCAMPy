@@ -8,6 +8,7 @@ from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from TimeStepping import TimeStepping
+from MoistThermodynamics import  *
 from funcs_thermo import  *
 from funcs_turbulence import  *
 from funcs_micro import *
@@ -70,17 +71,17 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             adv = - α_0_kp * advect(ρaw_cut, w_cut, grid)
             tendencies+=adv
 
-            ε_term = a_k * w_k * (+ tmp['entr_sc', i][k])
+            ε_term = a_k * w_k * (+ tmp['ε_model', i][k])
             tendencies+=ε_term
-            δ_term = a_k * w_k * (- tmp['detr_sc', i][k])
+            δ_term = a_k * w_k * (- tmp['δ_model', i][k])
             tendencies+=δ_term
 
             a_predict = a_k + TS.Δt_up * tendencies
 
             q_new['a', i][k] = bound(a_predict, params.a_bounds)
 
-        tmp['entr_sc', i][k_1] = 2.0 * dzi
-        tmp['detr_sc', i][k_1] = 0.0
+        tmp['ε_model', i][k_1] = 2.0 * dzi
+        tmp['δ_model', i][k_1] = 0.0
         q_new['a', i][k_1] = UpdVar[i].area_surface_bc
 
     # Solve for updraft velocity
@@ -91,8 +92,8 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             ρ_k = tmp['ρ_0'][k]
             w_i = q['w', i][k]
             a_k = q['a', i][k]
-            entr_w = tmp['entr_sc', i][k]
-            detr_w = tmp['detr_sc', i][k]
+            entr_w = tmp['ε_model', i][k]
+            detr_w = tmp['δ_model', i][k]
             B_k = tmp['buoy', i][k]
 
             a_cut = q['a', i].Cut(k)
@@ -139,8 +140,8 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
             ρ_k = tmp['ρ_0'][k]
             ρ_cut = tmp['ρ_0'].Cut(k)
             w_cut = q['w', i].Cut(k)
-            ε_sc = tmp['entr_sc', i][k]
-            δ_sc = tmp['detr_sc', i][k]
+            ε_sc = tmp['ε_model', i][k]
+            δ_sc = tmp['δ_model', i][k]
             ρa_k = ρ_k*a_k
 
             ρaw_cut = ρ_cut * a_cut * w_cut
@@ -190,10 +191,18 @@ def buoyancy(grid, q, tmp, params):
 def eos_update_SA_mean(grid, q, tmp):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for k in grid.over_elems_real(Center()):
+
         p_0 = tmp['p_0'][k]
-        θ_liq = q['θ_liq', en][k]
         q_tot = q['q_tot', en][k]
+        θ_liq = q['θ_liq', en][k]
         T, q_liq  = eos(p_0, q_tot, θ_liq)
+
+        ts = ActiveThermoState(q, tmp, en, k)
+        q_liq_new = PhasePartition(ts).liq
+        T_new = air_temperature(ts)
+        tmp['T_diff', en][k] = T_new - T
+        tmp['q_liq_diff', en][k] = q_liq_new - q_liq
+
         tmp['T', en][k]      = T
         tmp['q_liq', en][k]  = q_liq
         q_vap = q_tot - q_liq
@@ -212,18 +221,24 @@ def eos_update_SA_mean(grid, q, tmp):
             tmp['q_tot_dry'][k] = q_tot
     return
 
+def ActiveThermoState(q, tmp, i, k):
+    return LiquidIcePotTempSHumEquil(q['θ_liq', i][k], q['q_tot', i][k], tmp['ρ_0'][k], tmp['p_0'][k])
+
 def satadjust(grid, q, tmp):
     gm, en, ud, sd, al = q.idx.allcombinations()
-    for k in grid.over_elems(Center()):
-        θ_liq = q['θ_liq', gm][k]
+    for k in grid.over_elems_real(Center()):
+        ts = ActiveThermoState(q, tmp, gm, k)
+        q_liq = PhasePartition(ts).liq
+        T = air_temperature(ts)
         q_tot = q['q_tot', gm][k]
         p_0 = tmp['p_0'][k]
-        T, q_liq = eos(p_0, q_tot, θ_liq)
         tmp['q_liq', gm][k] = q_liq
         tmp['T', gm][k] = T
         q_vap = q_tot - q_liq
-        alpha = alpha_c(p_0, T, q_tot, q_vap)
+        alpha = alpha_c(p_0, tmp['T', gm][k], q_tot, q_vap)
         tmp['buoy', gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
+    tmp['T', gm].extrap(grid)
+    tmp['q_liq', gm].extrap(grid)
     return
 
 def predict(grid, tmp, q, q_tendencies, name, name_predict, Δt):
@@ -423,7 +438,7 @@ def compute_covariance_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp
         for i in ud:
             Δϕ = interp_func(q[ϕ, i], k) - interp_func(q[ϕ, en], k)
             Δψ = interp_func(q[ψ, i], k) - interp_func(q[ψ, en], k)
-            tmp_O2[cv]['entr_gain'][k] += tke_factor*q['a', i][k] * np.fabs(q['w', i][k]) * tmp['detr_sc', i][k] * Δϕ * Δψ
+            tmp_O2[cv]['entr_gain'][k] += tke_factor*q['a', i][k] * np.fabs(q['w', i][k]) * tmp['δ_model', i][k] * Δϕ * Δψ
         tmp_O2[cv]['entr_gain'][k] *= tmp['ρ_0'][k]
     return
 
@@ -460,7 +475,7 @@ def compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_fac
 def compute_covariance_detr(grid, q, tmp, tmp_O2, cv):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for k in grid.over_elems_real(Center()):
-        tmp_O2[cv]['detr_loss'][k] = sum([q['a', i][k] * np.fabs(q['w', i][k]) * tmp['entr_sc', i][k] for i in ud])
+        tmp_O2[cv]['detr_loss'][k] = sum([q['a', i][k] * np.fabs(q['w', i][k]) * tmp['ε_model', i][k] for i in ud])
         tmp_O2[cv]['detr_loss'][k] *= tmp['ρ_0'][k] * q[cv, en][k]
     return
 

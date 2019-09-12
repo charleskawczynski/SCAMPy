@@ -125,10 +125,12 @@ class StateVec:
     def export_state(self, grid, directory, filename, ExportType = UseDat()):
         domain = grid.over_elems(Center())
         vn = self.var_names
+        vars_exclude = ['ρ_0','p_0']
         if len(vn)==7:
             vn = vn[0:5]
         elif len(vn)>7:
             vn = vn[0:12]
+            vn = [x for x in vn if not any(y==x for y in vars_exclude)]
 
         headers = [self.var_string(name, i) for name in vn for i in self.over_sub_domains(name)]
         n_vars = len(headers)

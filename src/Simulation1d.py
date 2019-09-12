@@ -23,7 +23,6 @@ def plot_solutions_new(grid, sv, var_names, Stats):
     n = 3
     for name in var_names:
         i_each = sv.over_sub_domains(name)
-        print('name = ', name, 'i_each = ',i_each)
         for i in i_each:
             if 'T' in name:
                 plt.plot(sv[name, i][n:-n]     , grid.z[n:-n])
@@ -82,13 +81,13 @@ class Simulation1d:
         temp_vars = (
                      ('ρ_0'                    , DomainSubSet(gm=True),  Center() , Neumann()),
                      ('p_0'                    , DomainSubSet(gm=True),  Center() , Neumann()),
-                     ('HVSD_a'                 , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
-                     ('HVSD_w'                 , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
+                     ('HVSD_a'                 , DomainSubSet(ud=True),  Center() , Neumann()),
+                     ('HVSD_w'                 , DomainSubSet(ud=True),  Center() , Neumann()),
                      ('q_liq'                  , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
                      ('T'                      , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
                      ('buoy'                   , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
-                     ('entr_sc'                , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()), # Entrainment/Detrainment rates
-                     ('detr_sc'                , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()), # Entrainment/Detrainment rates
+                     ('δ_model'                , DomainSubSet(ud=True),  Center() , Neumann()),
+                     ('ε_model'                , DomainSubSet(ud=True),  Center() , Neumann()),
                      ('l_mix'                  , DomainSubSet(gm=True),  Center() , Neumann()),
                      ('K_m'                    , DomainSubSet(gm=True),  Center() , Neumann()),
                      ('K_h'                    , DomainSubSet(gm=True),  Center() , Neumann()),
@@ -99,6 +98,8 @@ class Simulation1d:
                      ('mf_q_tot_half'          , DomainSubSet(gm=True),  Center() , Neumann()),
                      ('mf_θ_liq_half'          , DomainSubSet(gm=True),  Center() , Neumann()),
                      ('temp_C'                 , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('T_diff'                 , DomainSubSet(en=True),  Center() , Neumann()),
+                     ('q_liq_diff'             , DomainSubSet(en=True),  Center() , Neumann()),
                      ('q_tot_dry'              , DomainSubSet(gm=True),  Center() , Neumann()),
                      ('θ_dry'                  , DomainSubSet(gm=True),  Center() , Neumann()),
                      ('t_cloudy'               , DomainSubSet(gm=True),  Center() , Neumann()),
@@ -111,10 +112,6 @@ class Simulation1d:
                      ('CF'                     , DomainSubSet(gm=True),  Center() , Neumann()),
                      ('dTdt'                   , DomainSubSet(gm=True),  Center() , Neumann()),
                      ('dqtdt'                  , DomainSubSet(gm=True),  Center() , Neumann()),
-                     ('gov_eq_θ_liq_ib'        , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
-                     ('gov_eq_q_tot_ib'        , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
-                     ('gov_eq_θ_liq_nb'        , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
-                     ('gov_eq_q_tot_nb'        , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
                      ('δ_src_a'                , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
                      ('δ_src_w'                , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
                      ('δ_src_q_tot'            , DomainSubSet(gm=True,en=True,ud=True),  Center() , Neumann()),
@@ -269,45 +266,16 @@ class Simulation1d:
                   )
         tmp_vars = ('q_liq',
                     'T',
+                    'T_diff',
+                    'q_liq_diff',
                     'HVSD_a',
                     'HVSD_w',
-                    # 'gov_eq_θ_liq_nb',
-                    # 'gov_eq_q_tot_nb',
-                    # 'gov_eq_θ_liq_ib',
-                    # 'gov_eq_q_tot_ib',
                     'buoy',
                     'CF',
                     )
         plot_solutions_new(self.grid, self.q, q_vars, self.Stats)
         plot_solutions_new(self.grid, self.tmp, tmp_vars, self.Stats)
 
-        i = ud[0]
-        var_name = 'gov_eq_q_tot'
-        plt.plot(self.tmp['gov_eq_q_tot_ib', i], self.grid.z,
-                 self.tmp['gov_eq_q_tot_nb', i], self.grid.z)
-        plt.legend(['ib','nb'])
-        p_nice = nice_name(var_name+'_comparison')
-        file_name = p_nice+'.png'
-        plt.title(p_nice+' vs z')
-        plt.xlabel(p_nice)
-        plt.ylabel('z')
-        plt.savefig(self.Stats.figpath+file_name)
-        plt.close()
-
-        n = 3
-        var_name = 'gov_eq_θ_liq'
-        plt.plot(self.tmp['gov_eq_θ_liq_ib', i][n:-n], self.grid.z[n:-n],
-                 self.tmp['gov_eq_θ_liq_nb', i][n:-n], self.grid.z[n:-n])
-        plt.legend(['ib','nb'])
-        p_nice = nice_name(var_name+'_comparison')
-        file_name = p_nice+'.png'
-        plt.title(p_nice+' vs z')
-        plt.xlabel(p_nice)
-        plt.ylabel('z')
-        plt.savefig(self.Stats.figpath+file_name)
-        plt.close()
-
-        # plot_solutions(sol, self.Stats)
         return sol
 
 

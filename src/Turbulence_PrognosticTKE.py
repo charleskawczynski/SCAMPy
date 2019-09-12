@@ -5,6 +5,7 @@ from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann
 
+from MoistThermodynamics import  *
 from Surface import SurfaceBase
 from Cases import  CasesBase
 from TimeStepping import TimeStepping
@@ -53,8 +54,8 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
             input_st.dwdz = grad(aw_cut, grid)
             ret = entr_detr_fp(input_st)
-            tmp['entr_sc', i][k] = ret.entr_sc * entrainment_factor
-            tmp['detr_sc', i][k] = ret.detr_sc * detrainment_factor
+            tmp['ε_model', i][k] = ret.entr_sc * entrainment_factor
+            tmp['δ_model', i][k] = ret.detr_sc * detrainment_factor
 
     return
 
@@ -184,11 +185,6 @@ class EDMF_PrognosticTKE:
 
         for i in ud:
             for k in grid.over_elems_real(Center())[1:]:
-                tmp['gov_eq_θ_liq_ib', i][k] = q['θ_liq', i][k]
-                tmp['gov_eq_q_tot_ib', i][k] = q['q_tot', i][k]
-                tmp['gov_eq_θ_liq_nb', i][k] = q['θ_liq', gm][k]
-                tmp['gov_eq_q_tot_nb', i][k] = q['q_tot', gm][k]
-
                 q['w', i][k] = bound(q['w', i][k]*tmp['HVSD_w', i][k], self.params.w_bounds)
                 q['a', i][k] = bound(q['a', i][k]*tmp['HVSD_w', i][k]          , self.params.a_bounds)
 
