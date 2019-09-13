@@ -1,6 +1,7 @@
 import numpy as np
 from RootSolvers import *
 from parameters import *
+from MoistThermodynamics import *
 
 def sd_c(p_dry, T):
     return sd_tilde + cpd*np.log(T/T_tilde) - Rd * np.log(p_dry/p_tilde)
@@ -42,19 +43,6 @@ def theta_rho_c(p_0, T, q_tot, q_vap):
 def cpm_c(q_tot):
     return (1.0-q_tot) * cpd + q_tot * cpv
 
-def thetas_entropy_c(s, q_tot):
-    return T_tilde*np.exp((s-(1.0-q_tot)*sd_tilde - q_tot*sv_tilde)/cpm_c(q_tot))
-
-def thetas_t_c(p_0, T, q_tot, q_vap, qc, L):
-    q_dry = 1.0 - q_tot
-    p_dry = pd_c(p_0,q_tot,q_tot-qc)
-    p_vap = pv_c(p_0,q_tot,q_tot-qc)
-    c_pm = cpm_c(q_tot)
-    return T * pow(p_tilde/p_dry,q_dry * Rd/c_pm)*pow(p_tilde/p_vap,q_tot*Rv/c_pm)*np.exp(-L * qc/(c_pm*T))
-
-def entropy_from_thetas_c(theta_s, q_tot):
-    return cpm_c(q_tot) * np.log(theta_s/T_tilde) + (1.0 - q_tot)*sd_tilde + q_tot * sv_tilde
-
 def buoyancy_c(alpha_0, alpha):
     return g * (alpha - alpha_0)/alpha_0
 
@@ -63,13 +51,6 @@ def qv_star_c(p_0, q_tot, p_vap):
 
 def alpha_c(p_0, T,  q_tot, q_vap):
     return (Rd * T)/p_0 * (1.0 - q_tot + eps_vi * q_vap)
-
-def t_to_entropy_c(p_0, T,  q_tot, q_liq, q_ice):
-    q_vap = q_tot - q_liq - q_ice
-    p_vap = pv_c(p_0, q_tot, q_vap)
-    p_dry = pd_c(p_0, q_tot, q_vap)
-    L = latent_heat(T)
-    return sd_c(p_dry,T) * (1.0 - q_tot) + sv_c(p_vap,T) * q_tot + sc_c(L,T)*(q_liq + q_ice)
 
 def pv_star(T):
     #    Magnus formula
@@ -89,82 +70,9 @@ def eos_first_guess_thetal(H, p_dry, p_vap, q_tot):
     p_0 = p_dry + p_vap
     return H * exner_c(p_0)
 
-def eos_first_guess_entropy(H, p_dry, p_vap, q_tot):
-    q_dry = 1.0 - q_tot
-    return (T_tilde *np.exp((H - q_dry * (sd_tilde - Rd * np.log(p_dry/p_tilde))
-                               - q_tot * (sv_tilde - Rv * np.log(p_vap/p_tilde)))/((q_dry*cpd + q_tot * cpv))))
-
-def eos_fun(T, θ_liq, p_0, q_tot):
-    p_vap_star = pv_star(T)
-    q_vap_star = qv_star_c(p_0, q_tot, p_vap_star)
-    return θ_liq - (T/exner_c(p_0))*np.exp(-latent_heat(T)/(T*cpd)*(q_tot - q_vap_star)/(1.0-q_tot))
-
-def eos(p_0, q_tot, θ_liq):
-
-    q_vap = q_tot
-    q_liq = 0.0
-    pv_1 = pv_c(p_0, q_tot, q_tot)
-    pd_1 = p_0 - pv_1
-    T_1 = eos_first_guess_thetal(θ_liq, pd_1, pv_1, q_tot)
-    pv_star_1 = pv_star(T_1)
-    qv_star_1 = qv_star_c(p_0, q_tot, pv_star_1)
-    # If not saturated
-    if q_tot <= qv_star_1:
-        T = T_1
-    else:
-        ql_1 = q_tot - qv_star_1
-        θ_liq_1 = thetali_c(p_0, T_1, q_tot, ql_1, 0.0)
-        f_1 = θ_liq - θ_liq_1
-        T_2 = T_1 + ql_1 * latent_heat(T_1) /((1.0 - q_tot)*cpd + qv_star_1 * cpv)
-        def eos_fun(T):
-            p_vap_star = pv_star(T)
-            q_vap_star = qv_star_c(p_0, q_tot, p_vap_star)
-            return θ_liq - (T/exner_c(p_0))*np.exp(-latent_heat(T)/(T*cpd)*(q_tot - q_vap_star)/(1.0-q_tot))
-
-        T, converged = find_zero(eos_fun, T_1, T_2, SecantMethod(), 1e-3, 10)
-        p_vap_star = pv_star(T)
-        qv_star = qv_star_c(p_0, q_tot, p_vap_star)
-        q_liq = q_tot - qv_star
-        if not converged:
-            raise ValueErorr('saturation adjustment did not converge')
-    return T, q_liq
-
-def eos_entropy(p_0, q_tot, prog):
-    q_vap = q_tot
-    q_liq = 0.0
-    pv_1 = pv_c(p_0, q_tot, q_tot)
-    pd_1 = p_0 - pv_1
-    T_1 = eos_first_guess_entropy(prog, pd_1, pv_1, q_tot)
-    pv_star_1 = pv_star(T_1)
-    qv_star_1 = qv_star_c(p_0,q_tot,pv_star_1)
-    ql_2=0.0
-    # If not saturated
-    if(q_tot <= qv_star_1):
-        T = T_1
-        q_liq = 0.0
-    else:
-        ql_1 = q_tot - qv_star_1
-        prog_1 = t_to_entropy_c(p_0, T_1, q_tot, ql_1, 0.0)
-        f_1 = prog - prog_1
-        T_2 = T_1 + ql_1 * latent_heat(T_1) /((1.0 - q_tot)*cpd + qv_star_1 * cpv)
-        delta_T  = np.fabs(T_2 - T_1)
-
-        while delta_T > 1.0e-3 or ql_2 < 0.0:
-            pv_star_2 = pv_star(T_2)
-            qv_star_2 = qv_star_c(p_0,q_tot,pv_star_2)
-            pv_2 = pv_c(p_0, q_tot, qv_star_2)
-            pd_2 = p_0 - pv_2
-            ql_2 = q_tot - qv_star_2
-            prog_2 =  t_to_entropy_c(p_0,T_2,q_tot, ql_2, 0.0   )
-            f_2 = prog - prog_2
-            T_n = T_2 - f_2*(T_2 - T_1)/(f_2 - f_1)
-            T_1 = T_2
-            T_2 = T_n
-            f_1 = f_2
-            delta_T  = np.fabs(T_2 - T_1)
-
-        T  = T_2
-        q_liq = ql_2
-
+def eos(p_0, q_tot, θ_liq, ρ_0):
+    ts = LiquidIcePotTempSHumEquil(θ_liq, q_tot, ρ_0, p_0)
+    T = air_temperature(ts)
+    q_liq = PhasePartition(ts).liq
     return T, q_liq
 

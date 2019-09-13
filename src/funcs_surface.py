@@ -28,14 +28,6 @@ def psi_h_stable(zeta, zeta0):
     psi_h = -beta_h * (zeta - zeta0)
     return  psi_h
 
-def entropy_flux(tflux,qtflux, p0_1, T_1, qt_1):
-        cp_1 = cpm_c(qt_1)
-        pd_1 = pd_c(p0_1, qt_1, qt_1)
-        pv_1 = pv_c(p0_1, qt_1, qt_1)
-        sd_1 = sd_c(pd_1, T_1)
-        sv_1 = sv_c(pv_1, T_1)
-        return cp_1*tflux/T_1 + qtflux*(sv_1-sd_1)
-
 def compute_ustar(windspeed, buoyancy_flux, z0, z1) :
     logz = np.log(z1 / z0)
     #use neutral condition as first guess

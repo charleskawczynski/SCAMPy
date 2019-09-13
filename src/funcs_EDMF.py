@@ -194,15 +194,9 @@ def eos_update_SA_mean(grid, q, tmp):
 
         p_0 = tmp['p_0'][k]
         q_tot = q['q_tot', en][k]
-        θ_liq = q['θ_liq', en][k]
-        T, q_liq  = eos(p_0, q_tot, θ_liq)
-
         ts = ActiveThermoState(q, tmp, en, k)
-        q_liq_new = PhasePartition(ts).liq
-        T_new = air_temperature(ts)
-        tmp['T_diff', en][k] = T_new - T
-        tmp['q_liq_diff', en][k] = q_liq_new - q_liq
-
+        q_liq = PhasePartition(ts).liq
+        T = air_temperature(ts)
         tmp['T', en][k]      = T
         tmp['q_liq', en][k]  = q_liq
         q_vap = q_tot - q_liq

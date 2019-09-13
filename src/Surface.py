@@ -2,7 +2,7 @@ import numpy as np
 from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node
 from funcs_thermo import *
-from funcs_surface import entropy_flux, compute_ustar, buoyancy_flux, exchange_coefficients_byun
+from funcs_surface import compute_ustar, buoyancy_flux, exchange_coefficients_byun
 from funcs_turbulence import *
 from funcs_EDMF import *
 from Field import Field, Full, Half, Dirichlet, Neumann

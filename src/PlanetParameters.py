@@ -51,5 +51,5 @@ grav              = 9.81                         #"Gravitational acceleration (m
 year_anom         = 365.26*day                   #"Length of anomalistic year (s)"
 orbit_semimaj     = 1*astro_unit                 #"Length of semimajor orbital axis (m)"
 TSI               = 1362                         #"Total solar irradiance (W/m^2)"
-MSLP              = 1.01325e5                    #"Mean sea level pressure (Pa)"
-
+# MSLP              = 1.01325e5                    #"Mean sea level pressure (Pa)"
+MSLP              = 100000.0                     #"Mean sea level pressure (Pa)"

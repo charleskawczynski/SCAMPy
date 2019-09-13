@@ -55,7 +55,9 @@ def entr_detr_buoyancy_sorting(entr_in):
                 for m_h in range(entr_in.quadrature_order):
                     θ_liq_hat = (sqrt2 * sigma_θ_liq_star * abscissas[m_h] + mu_θ_liq_star + entr_in.θ_liq_up)/2.0
                     # condensation
-                    T, q_liq  = eos(entr_in.p0, q_tot_hat, θ_liq_hat)
+                    ts = LiquidIcePotTempSHumEquil(θ_liq_hat, q_tot_hat, entr_in.ρ0, entr_in.p0)
+                    q_liq = PhasePartition(ts).liq
+                    T = air_temperature(ts)
                     # calcualte buoyancy
                     q_vap = q_tot_hat - q_liq
                     alpha_mix = alpha_c(entr_in.p0, T, q_tot_hat, q_vap)
@@ -70,7 +72,9 @@ def entr_detr_buoyancy_sorting(entr_in):
             q_tot_hat = ( entr_in.qt_env + entr_in.qt_up)/2.0
 
             # condensation
-            T, q_liq  = eos(entr_in.p0, q_tot_hat, θ_liq_hat)
+            ts = LiquidIcePotTempSHumEquil(θ_liq_hat, q_tot_hat, entr_in.ρ0, entr_in.p0)
+            q_liq = PhasePartition(ts).liq
+            T = air_temperature(ts)
             # calcualte buoyancy
             alpha_mix = alpha_c(entr_in.p0, T, q_tot_hat, q_tot_hat - q_liq)
             bmix = buoyancy_c(entr_in.alpha0, alpha_mix) - entr_in.b_mean

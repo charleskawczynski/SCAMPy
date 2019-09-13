@@ -164,7 +164,11 @@ class EDMF_PrognosticTKE:
                 θ_liq = q['θ_liq', i][k]
                 q_tot = q['q_tot', i][k]
                 p_0 = tmp['p_0'][k]
-                T, q_liq = eos(p_0, q_tot, θ_liq)
+
+                ts = ActiveThermoState(q, tmp, i, k)
+                q_liq = PhasePartition(ts).liq
+                T = air_temperature(ts)
+
                 tmp['T', i][k] = T
                 tmp['q_liq', i][k] = q_liq
                 cwe = acnv_instant(q_liq, q_tot, self.params.max_supersaturation, T, p_0)

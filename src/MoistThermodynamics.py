@@ -184,24 +184,36 @@ def latent_heat_fusion(ts):
 def latent_heat_generic(T, LH_0, Δcp):
     return LH_0 + Δcp * (T - T_0)
 
-def saturation_vapor_pressure_raw_liq(T):
-    return saturation_vapor_pressure_raw_liq(T, LH_v0, cp_v - cp_l)
+class Phase:
+    def __init__(self):
+        pass
+class Liquid(Phase):
+    def __init__(self):
+        pass
+class Ice(Phase):
+    def __init__(self):
+        pass
 
-def saturation_vapor_pressure(ts):
-    return saturation_vapor_pressure_raw_liq(air_temperature(ts), LH_v0, cp_v - cp_l)
+def saturation_vapor_pressure_raw(T, phase):
+    if isinstance(phase, Liquid):
+        return saturation_vapor_pressure_raw_generic(T, LH_v0, cp_v - cp_l)
+    elif isinstance(phase, Liquid):
+        return saturation_vapor_pressure_raw_generic(T, LH_s0, cp_v - cp_i)
 
-def saturation_vapor_pressure_raw_ice(T):
-    return saturation_vapor_pressure_raw_ice(T, LH_s0, cp_v - cp_i)
+def saturation_vapor_pressure(ts, phase):
+    if isinstance(phase, Liquid):
+        return saturation_vapor_pressure_raw_generic(air_temperature(ts), LH_v0, cp_v - cp_l)
+    elif isinstance(phase, Ice):
+        return saturation_vapor_pressure_raw_generic(air_temperature(ts), LH_s0, cp_v - cp_i)
+    else:
+        raise ValueErorr("Bad phase in saturation_vapor_pressure in MoistThermodynamics.py")
 
-def saturation_vapor_pressure(ts):
-    return saturation_vapor_pressure_raw_ice(air_temperature(ts), LH_s0, cp_v - cp_i)
-
-def saturation_vapor_pressure(T, LH_0, Δcp):
+def saturation_vapor_pressure_raw_generic(T, LH_0, Δcp):
     return press_triple * (T/T_triple)**(Δcp/R_v) * np.exp( (LH_0 - Δcp*T_0)/R_v * (1.0 / T_triple - 1.0 / T) )
 
-# def q_vap_saturation_generic(T, ρ; phase::Phase=Liquid()):
-#     p_v_sat = saturation_vapor_pressure(T, phase)
-#     return q_vap_saturation_from_pressure(T, ρ, p_v_sat)
+def q_vap_saturation_generic(T, ρ, phase=Liquid()):
+    p_v_sat = saturation_vapor_pressure_raw(T, phase)
+    return q_vap_saturation_from_pressure(T, ρ, p_v_sat)
 
 def q_vap_saturation_raw(T, ρ, q=q_pt0):
 
@@ -215,7 +227,7 @@ def q_vap_saturation_raw(T, ρ, q=q_pt0):
     Δcp     = _liquid_frac * (cp_v - cp_l) + _ice_frac * (cp_v - cp_i)
 
     # saturation vapor pressure over possible mixture of liquid and ice
-    p_v_sat = saturation_vapor_pressure(T, LH_0, Δcp)
+    p_v_sat = saturation_vapor_pressure_raw_generic(T, LH_0, Δcp)
 
     return q_vap_saturation_from_pressure(T, ρ, p_v_sat)
 
@@ -267,14 +279,21 @@ def saturation_adjustment(e_int, ρ, q_tot):
 
 def saturation_adjustment_q_tot_θ_liq_ice(θ_liq_ice, q_tot, ρ, p):
     T_1 = air_temperature_from_liquid_ice_pottemp(θ_liq_ice, p) # Assume all vapor
-    # print('θ_liq_ice, q_tot, ρ, p = ', θ_liq_ice, q_tot, ρ, p)
     q_v_sat = q_vap_saturation_raw(T_1, ρ)
     if q_tot <= q_v_sat: # If not saturated
         return T_1
     else:  # If saturated, iterate
         T_2 = air_temperature_from_liquid_ice_pottemp(θ_liq_ice, p, PhasePartitionRaw(q_tot, 0.0, q_tot)) # Assume all ice
         def eos(T):
-            return θ_liq_ice - liquid_ice_pottemp_sat_raw(T, p, PhasePartition_equil(T, ρ, q_tot))
+
+            # TOFIX: CLIMA version
+            # return θ_liq_ice - liquid_ice_pottemp_sat_raw(T, p, PhasePartition_equil(T, ρ, q_tot))
+
+            # TOFIX: SCAMPY version
+            q_vap_sat = q_vap_saturation_raw(T, ρ)
+            q_pt = PhasePartitionRaw(q_vap_sat)
+            return θ_liq_ice - dry_pottemp_raw(T, p, q_pt) * np.exp(-latent_heat_vapor_raw(T)/(T*cp_d)*(q_tot - q_vap_sat)/(1.0-q_tot))
+
         T, converged = find_zero(eos, T_1, T_2, SecantMethod(), 1e-3, 10)
         if not converged:
             raise ValueErorr('saturation_adjustment_q_tot_θ_liq_ice did not converge')
