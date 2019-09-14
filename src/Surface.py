@@ -54,8 +54,8 @@ class SurfaceFixedFlux(SurfaceBase):
         gm, en, ud, sd, al = tmp.idx.allcombinations()
         k_1 = grid.first_interior(Zmin())
         z_1 = grid.z_half[k_1]
-        ρ_0_surf = tmp.surface(grid, 'ρ_0')
-        α_0_surf = tmp.surface(grid, 'α_0')
+        ρ_0_surf = air_density_raw(self.Ref.Tg, self.Ref.Pg, PhasePartition(self.Ref.qtg))
+        α_0_surf = 1/ρ_0_surf
         T_1 = tmp['T', gm][k_1]
         θ_liq_1 = q['θ_liq', gm][k_1]
         q_tot_1 = q['q_tot', gm][k_1]
@@ -109,8 +109,8 @@ class SurfaceFixedCoeffs(SurfaceBase):
     def update(self, grid, q, tmp):
         gm, en, ud, sd, al = tmp.idx.allcombinations()
         k_1 = grid.first_interior(Zmin())
-        ρ_0_surf = tmp.surface(grid, 'ρ_0')
-        α_0_surf = tmp.surface(grid, 'α_0')
+        ρ_0_surf = air_density_raw(self.Ref.Tg, self.Ref.Pg, PhasePartition(self.Ref.qtg))
+        α_0_surf = 1/ρ_0_surf
         T_1 = tmp['T', gm][k_1]
         θ_liq_1 = q['θ_liq', gm][k_1]
         q_tot_1 = q['q_tot', gm][k_1]
@@ -144,8 +144,8 @@ class SurfaceMoninObukhov(SurfaceBase):
         gm, en, ud, sd, al = tmp.idx.allcombinations()
         k_1 = grid.first_interior(Zmin())
         z_1 = grid.z_half[k_1]
-        ρ_0_surf = tmp.surface(grid, 'ρ_0')
-        α_0_surf = tmp.surface(grid, 'α_0')
+        ρ_0_surf = air_density_raw(self.Ref.Tg, self.Ref.Pg, PhasePartition(self.Ref.qtg))
+        α_0_surf = 1/ρ_0_surf
         p_1 = tmp['p_0'][k_1]
         T_1 = tmp['T', gm][k_1]
         θ_liq_1 = q['θ_liq', gm][k_1]
@@ -199,7 +199,8 @@ class SurfaceSullivanPatton(SurfaceBase):
         z_1 = grid.z_half[k_1]
         p_0_1 = tmp['p_0'][k_1]
         α_0_1 = tmp['α_0'][k_1]
-        ρ_0_surf = tmp.surface(grid, 'ρ_0')
+        ρ_0_surf = air_density_raw(self.Ref.Tg, self.Ref.Pg, PhasePartition(self.Ref.qtg))
+        α_0_surf = 1/ρ_0_surf
         T_1 = tmp['T', gm][k_1]
         θ_liq_1 = q['θ_liq', gm][k_1]
         q_tot_1 = q['q_tot', gm][k_1]
