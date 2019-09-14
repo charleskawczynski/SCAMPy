@@ -215,9 +215,6 @@ def eos_update_SA_mean(grid, q, tmp):
             tmp['q_tot_dry'][k] = q_tot
     return
 
-def ActiveThermoState(q, tmp, i, k):
-    return LiquidIcePotTempSHumEquil(q['θ_liq', i][k], q['q_tot', i][k], tmp['ρ_0'][k], tmp['p_0'][k])
-
 def satadjust(grid, q, tmp):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for k in grid.over_elems_real(Center()):
@@ -260,9 +257,6 @@ def reset_surface_covariance(grid, q, tmp, Case, wstar):
     flux2 = Case.Sur.rho_q_tot_flux
     k_1 = grid.first_interior(Zmin())
     zLL = grid.z_half[k_1]
-    alpha0LL  = tmp['α_0'][k_1]
-    ustar = Case.Sur.ustar
-    oblength = Case.Sur.obukhov_length
     q['tke', gm][k_1]            = surface_tke(Case.Sur.ustar, wstar, zLL, Case.Sur.obukhov_length)
     return
 

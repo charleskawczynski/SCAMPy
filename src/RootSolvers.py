@@ -4,7 +4,7 @@ class SecantMethod:
     def __init__(self):
         return
 
-def SecantMethodFunc(f, x0, x1, xatol=1e-3, maxiters=10):
+def SecantMethodFunc(f, x0, x1, xatol=1e-3, maxiters=10000):
     y0 = f(x0)
     y1 = f(x1)
     for i in range(0, maxiters):
@@ -17,6 +17,6 @@ def SecantMethodFunc(f, x0, x1, xatol=1e-3, maxiters=10):
             return x1, True
     return x1, False
 
-def find_zero(f, x0, x1, method=SecantMethod(), xatol=1e-3, maxiters=10):
+def find_zero(f, x0, x1, method=SecantMethod(), xatol=1e-3, maxiters=10000):
     if isinstance(method, SecantMethod):
         return SecantMethodFunc(f, x0, x1, xatol, maxiters)

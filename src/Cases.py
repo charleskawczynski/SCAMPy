@@ -10,6 +10,7 @@ import Surface
 import Forcing
 from NetCDFIO import NetCDFIO_Stats
 from funcs_thermo import *
+from MoistThermodynamics import *
 import math as mt
 
 def CasesFactory(namelist, paramlist):
@@ -201,8 +202,9 @@ class Bomex(CasesBase):
                 q['u', gm][k] = -8.75 + (z[k] - 700.0) * (-4.61 - -8.75)/(3000.0 - 700.0)
 
         for k in grid.over_elems_real(Center()):
-            tmp['T', gm][k] = thetal[k] * exner_c(tmp['p_0'][k])
             q['θ_liq', gm][k] = thetal[k]
+            ts = ActiveThermoState(q, tmp, gm, k)
+            tmp['T', gm][k] = air_temperature(ts)
 
         q['u', gm].apply_bc(grid, 0.0)
         q['q_tot', gm].apply_bc(grid, 0.0)

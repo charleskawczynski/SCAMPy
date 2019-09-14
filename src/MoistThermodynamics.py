@@ -2,6 +2,9 @@ from RootSolvers import *
 import numpy as np
 from PlanetParameters import *
 
+def ActiveThermoState(q, tmp, i, k):
+    return LiquidIcePotTempSHumEquil(q['θ_liq', i][k], q['q_tot', i][k], tmp['ρ_0'][k], tmp['p_0'][k])
+
 class PhasePartitionRaw:
     def __init__(self, tot, liq=0.0, ice=0.0):
         self.tot = tot
@@ -280,24 +283,25 @@ def saturation_adjustment(e_int, ρ, q_tot):
 def saturation_adjustment_q_tot_θ_liq_ice(θ_liq_ice, q_tot, ρ, p):
     T_1 = air_temperature_from_liquid_ice_pottemp(θ_liq_ice, p) # Assume all vapor
     q_v_sat = q_vap_saturation_raw(T_1, ρ)
+    T_sol = T_1
     if q_tot <= q_v_sat: # If not saturated
-        return T_1
+        pass
     else:  # If saturated, iterate
         T_2 = air_temperature_from_liquid_ice_pottemp(θ_liq_ice, p, PhasePartitionRaw(q_tot, 0.0, q_tot)) # Assume all ice
         def eos(T):
 
-            # TOFIX: CLIMA version
+            # TOFIX: CLIMA implementation
             # return θ_liq_ice - liquid_ice_pottemp_sat_raw(T, p, PhasePartition_equil(T, ρ, q_tot))
 
-            # TOFIX: SCAMPY version
+            # TOFIX: SCAMPY implementation
             q_vap_sat = q_vap_saturation_raw(T, ρ)
             q_pt = PhasePartitionRaw(q_vap_sat)
             return θ_liq_ice - dry_pottemp_raw(T, p, q_pt) * np.exp(-latent_heat_vapor_raw(T)/(T*cp_d)*(q_tot - q_vap_sat)/(1.0-q_tot))
 
-        T, converged = find_zero(eos, T_1, T_2, SecantMethod(), 1e-3, 10)
+        T_sol, converged = find_zero(eos, T_1, T_2, SecantMethod(), 1e-3, 10)
         if not converged:
             raise ValueErorr('saturation_adjustment_q_tot_θ_liq_ice did not converge')
-        return T
+    return T_sol
 
 def liquid_ice_pottemp_raw(T, p, q=q_pt0):
     # liquid-ice potential temperature, approximating latent heats
