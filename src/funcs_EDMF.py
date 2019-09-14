@@ -9,7 +9,6 @@ from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from TimeStepping import TimeStepping
 from MoistThermodynamics import  *
-from funcs_thermo import  *
 from funcs_turbulence import  *
 from funcs_micro import *
 

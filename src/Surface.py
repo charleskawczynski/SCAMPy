@@ -1,7 +1,6 @@
 import numpy as np
 from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node
-from funcs_thermo import *
 from MoistThermodynamics import *
 from funcs_surface import compute_ustar, buoyancy_flux, exchange_coefficients_byun
 from funcs_turbulence import *
@@ -100,7 +99,10 @@ class SurfaceFixedCoeffs(SurfaceBase):
     def initialize(self):
         pvg = saturation_vapor_pressure_raw(self.Tsurface, Liquid())
         pdg = self.Ref.Pg - pvg
-        self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
+
+        q_pt = PhasePartitionRaw(0.0)
+        ρ = air_density_raw(self.Tsurface, self.Ref.Pg, q_pt)
+        self.qsurface = q_vap_saturation_raw(self.Tsurface, ρ, q_pt)
         self.s_surface = (1.0-self.qsurface) * sd_c(pdg, self.Tsurface) + self.qsurface * sv_c(pvg,self.Tsurface)
         return
 
@@ -151,7 +153,10 @@ class SurfaceMoninObukhov(SurfaceBase):
         V_1 = q['v', gm][k_1]
         U_1 = q['u', gm][k_1]
 
-        self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
+        q_pt = PhasePartitionRaw(0.0)
+        ρ = air_density_raw(self.Tsurface, self.Ref.Pg, q_pt)
+        self.qsurface = q_vap_saturation_raw(self.Tsurface, ρ, q_pt)
+
         q_pt = PhasePartitionRaw(self.qsurface)
         theta_rho_g = virtual_pottemp_raw(self.Tsurface, self.Ref.Pg, q_pt)
         theta_rho_b = virtual_pottemp_raw(T_1, p_1, q_pt)
@@ -201,7 +206,9 @@ class SurfaceSullivanPatton(SurfaceBase):
         V_1 = q['v', gm][k_1]
         U_1 = q['u', gm][k_1]
 
-        self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
+        q_pt = PhasePartitionRaw(0.0)
+        ρ = air_density_raw(self.Tsurface, self.Ref.Pg, q_pt)
+        self.qsurface = q_vap_saturation_raw(self.Tsurface, ρ, q_pt)
 
         q_pt = PhasePartitionRaw(self.qsurface)
         theta_rho_g = virtual_pottemp_raw(self.Tsurface, self.Ref.Pg, q_pt)

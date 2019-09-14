@@ -12,7 +12,6 @@ from TimeStepping import TimeStepping
 from NetCDFIO import NetCDFIO_Stats
 from EDMF_Updrafts import *
 from funcs_EDMF import *
-from funcs_thermo import  *
 from funcs_turbulence import *
 
 def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, wstar, tke_ed_coeff, entrainment_factor, detrainment_factor):

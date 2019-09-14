@@ -9,7 +9,6 @@ from TimeStepping import  TimeStepping
 import Surface
 import Forcing
 from NetCDFIO import NetCDFIO_Stats
-from funcs_thermo import *
 from MoistThermodynamics import *
 import math as mt
 

@@ -1,6 +1,5 @@
 import numpy as np
 
-from funcs_thermo import *
 from parameters import *
 
 def r2q(r_, q_tot):
