@@ -4,14 +4,8 @@ from parameters import *
 from PlanetParameters import *
 from MoistThermodynamics import *
 
-def density_temperature_c(T, q_tot, q_vap):
-    return T * (1.0 - q_tot + eps_vi * q_vap)
-
 def theta_rho_c(p_0, T, q_tot, q_vap):
-    return density_temperature_c(T,q_tot,q_vap)/exner(p_0)
-
-def cpm_c(q_tot):
-    return (1.0-q_tot) * cpd + q_tot * cpv
+    return (T * (1.0 - q_tot + eps_vi * q_vap))/exner(p_0)
 
 def buoyancy_c(alpha_0, alpha):
     return grav * (alpha - alpha_0)/alpha_0

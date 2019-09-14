@@ -338,7 +338,7 @@ def compute_tke_buoy(grid, q, tmp, tmp_O2, cv):
         p_0 = tmp['p_0'][k]
 
         lh = latent_heat_vapor_raw(t_cloudy)
-        cpm = cpm_c(q_tot_cloudy)
+        cpm = cp_m(q_tot_cloudy)
         grad_θ_liq = grad_neg(q['θ_liq', en].Cut(k), grid)
         grad_q_tot = grad_neg(q['q_tot', en].Cut(k), grid)
 

@@ -120,7 +120,7 @@ def cp_m_raw(q=q_pt0):
 def cp_m(ts):
     if isinstance(ts, PhasePartitionRaw):
         return cp_m_raw(ts)
-    elif isinstance(ts, PhaseEquil):
+    else:
         return cp_m_raw(PhasePartition(ts))
 
 def cv_m_raw(q=q_pt0):
@@ -129,7 +129,7 @@ def cv_m_raw(q=q_pt0):
 def cv_m(ts):
     if isinstance(ts, PhasePartitionRaw):
         return cv_m_raw(ts)
-    elif isinstance(ts, PhaseEquil):
+    else:
         return cv_m_raw(PhasePartition(ts))
 
 def moist_gas_constants_raw(q=q_pt0):
@@ -142,7 +142,7 @@ def moist_gas_constants_raw(q=q_pt0):
 def moist_gas_constants(ts):
     if isinstance(ts, PhasePartitionRaw):
         return moist_gas_constants_raw(ts)
-    elif isinstance(ts, PhaseEquil):
+    else:
         return moist_gas_constants_raw(PhasePartition(ts))
 
 def air_temperature_raw(e_int, q=q_pt0):

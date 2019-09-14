@@ -60,7 +60,7 @@ class SurfaceFixedFlux(SurfaceBase):
         V_1 = q['v', gm][k_1]
         U_1 = q['u', gm][k_1]
 
-        rho_tflux =  self.shf /(cpm_c(self.qsurface))
+        rho_tflux =  self.shf /(cp_m(self.qsurface))
         self.windspeed = compute_windspeed(grid, q, 0.0)
         self.rho_q_tot_flux = self.lhf/(latent_heat_vapor_raw(self.Tsurface))
         self.rho_θ_liq_flux = rho_tflux / exner(self.Ref.Pg)
@@ -112,7 +112,7 @@ class SurfaceFixedCoeffs(SurfaceBase):
         V_1 = q['v', gm][k_1]
         U_1 = q['u', gm][k_1]
 
-        cp_ = cpm_c(q_tot_1)
+        cp_ = cp_m(q_tot_1)
         lv = latent_heat_vapor_raw(T_1)
         windspeed = compute_windspeed(grid, q, 0.01)
         self.rho_q_tot_flux = -self.cq * windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
@@ -167,7 +167,7 @@ class SurfaceMoninObukhov(SurfaceBase):
         self.rho_q_tot_flux = -self.ch * self.windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
 
         self.lhf = lv * self.rho_q_tot_flux
-        self.shf = cpm_c(q_tot_1) * self.rho_θ_liq_flux
+        self.shf = cp_m(q_tot_1) * self.rho_θ_liq_flux
 
         self.bflux = buoyancy_flux(self.shf, self.lhf, T_1, q_tot_1, α_0_surf)
         self.ustar =  np.sqrt(self.cm) * self.windspeed
@@ -218,7 +218,7 @@ class SurfaceSullivanPatton(SurfaceBase):
         self.rho_θ_liq_flux =  -self.ch * self.windspeed * (θ_liq_1 - θ_liq_star) * ρ_0_surf
         self.rho_q_tot_flux = -self.ch * self.windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
         self.lhf = lv * self.rho_q_tot_flux
-        self.shf = cpm_c(q_tot_1)  * self.rho_θ_liq_flux
+        self.shf = cp_m(q_tot_1)  * self.rho_θ_liq_flux
 
         self.bflux = g * theta_flux * exner(p_0_1) / T0
         self.ustar =  sqrt(self.cm) * self.windspeed

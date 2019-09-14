@@ -118,7 +118,7 @@ class Soares(CasesBase):
         self.Sur.Tsurface = 300.0
         self.Sur.qsurface = 5e-3
         self.Sur.lhf = 2.5e-5 * tmp.surface(grid, 'ρ_0') * latent_heat_vapor_raw(self.Sur.Tsurface)
-        self.Sur.shf = 6.0e-2 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
+        self.Sur.shf = 6.0e-2 * cp_m(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.Sur.ustar_fixed = False
         self.Sur.grid = grid
         self.Sur.Ref = Ref
@@ -216,7 +216,7 @@ class Bomex(CasesBase):
         self.Sur.Tsurface = 299.1 * exner(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
         self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat_vapor_raw(self.Sur.Tsurface)
-        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
+        self.Sur.shf = 8.0e-3 * cp_m(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # m/s
         self.Sur.grid = grid
@@ -333,7 +333,7 @@ class life_cycle_Tan2018(CasesBase):
         self.Sur.Tsurface = 299.1 * exner(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
         self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat_vapor_raw(self.Sur.Tsurface)
-        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
+        self.Sur.shf = 8.0e-3 * cp_m(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.lhf0 = self.Sur.lhf
         self.shf0 = self.Sur.shf
         self.Sur.ustar_fixed = True
@@ -616,7 +616,7 @@ class TRMM_LBA(CasesBase):
         self.Sur.Tsurface = (273.15+23) * exner(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
         self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat_vapor_raw(self.Sur.Tsurface)
-        self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
+        self.Sur.shf = 8.0e-3 * cp_m(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # this is taken from Bomex -- better option is to approximate from LES tke above the surface
         self.Sur.grid = grid
@@ -1182,7 +1182,7 @@ class DYCOMS_RF01(CasesBase):
         #density_surface  = 1.22     # kg/m^3
 
         # buoyancy flux
-        theta_flux       = self.Sur.shf / cpm_c(self.Sur.qsurface)        / tmp.surface(grid, 'ρ_0')
+        theta_flux       = self.Sur.shf / cp_m(self.Sur.qsurface)        / tmp.surface(grid, 'ρ_0')
         qt_flux          = self.Sur.lhf / latent_heat_vapor_raw(self.Sur.Tsurface)  / tmp.surface(grid, 'ρ_0')
         theta_surface    = self.Sur.Tsurface / exner(Ref.Pg)
         self.Sur.bflux   =  g * ((theta_flux + (eps_vi - 1.0) * (theta_surface * qt_flux + self.Sur.qsurface * theta_flux))
