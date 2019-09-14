@@ -198,19 +198,16 @@ def buoyancy(grid, q, tmp, params):
             tmp['buoy', i][k] -= tmp['buoy', gm][k]
     return
 
-def eos_update_SA_mean(grid, q, tmp):
+def compute_cloud_phys(grid, q, tmp):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for k in grid.over_elems_real(Center()):
 
-        p_0 = tmp['p_0'][k]
         q_tot = q['q_tot', en][k]
         ts = ActiveThermoState(q, tmp, en, k)
-        q_liq = PhasePartition(ts).liq
         T = air_temperature(ts)
-        tmp['T', en][k]      = T
-        tmp['q_liq', en][k]  = q_liq
+        q_liq = PhasePartition(ts).liq
         q_vap = q_tot - q_liq
-        θ = theta_c(p_0, T)
+        θ = dry_pottemp(ts)
         if q_liq > 0.0:
             tmp['CF'][k] = 1.
             tmp['θ_cloudy'][k]     = θ

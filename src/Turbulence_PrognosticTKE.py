@@ -226,7 +226,7 @@ class EDMF_PrognosticTKE:
         TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
         TS.Δti_up = 1.0/TS.Δt_up
         compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
-        eos_update_SA_mean(grid, q, tmp)
+        compute_cloud_phys(grid, q, tmp)
         buoyancy(grid, q, tmp, self.params)
         solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
         solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
