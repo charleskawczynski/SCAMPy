@@ -9,7 +9,7 @@ from scipy.integrate import odeint
 
 def initialize_ref_state(grid, Stats, p_0, ρ_0, α_0, loc, Pg, Tg, qtg):
 
-    q_pt_g = PhasePartitionRaw(qtg)
+    q_pt_g = PhasePartition(qtg)
     θ_liq_ice_g = liquid_ice_pottemp_raw(Tg, Pg, q_pt_g)
     logp = np.log(Pg)
 

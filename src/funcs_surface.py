@@ -1,10 +1,10 @@
 import numpy as np
-from funcs_thermo import latent_heat, pd_c, pv_c, sd_c, sv_c, cpm_c, theta_rho_c
+from MoistThermodynamics import *
 from parameters import *
 
 def buoyancy_flux(shf, lhf, T_b, qt_b, alpha0_0):
-    cp_ = cpm_c(qt_b)
-    lv = latent_heat(T_b)
+    cp_ = cp_m(PhasePartition(qt_b))
+    lv = latent_heat_vapor(T_b)
     return (g * alpha0_0 / cp_ / T_b * (shf + (eps_vi-1.0) * cp_ * T_b * lhf /lv))
 
 def psi_m_unstable(zeta, zeta0):

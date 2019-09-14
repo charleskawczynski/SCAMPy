@@ -88,7 +88,10 @@ def gas_constant_air_raw(q):
 
 
 def PhasePartition(ts):
-    return PhasePartition_equil(air_temperature(ts), air_density(ts), ts.q_tot)
+    if isinstance(ts, PhaseEquil):
+        return PhasePartition_equil(air_temperature(ts), air_density(ts), ts.q_tot)
+    else:
+        return PhasePartitionRaw(ts)
 
 def gas_constant_air(ts):
     return gas_constant_air_raw(PhasePartition(ts))
@@ -115,13 +118,19 @@ def cp_m_raw(q=q_pt0):
     return cp_d + (cp_v - cp_d)*q.tot + (cp_l - cp_v)*q.liq + (cp_i - cp_v)*q.ice
 
 def cp_m(ts):
-    return cp_m_raw(PhasePartition(ts))
+    if isinstance(ts, PhasePartitionRaw):
+        return cp_m_raw(ts)
+    elif isinstance(ts, PhaseEquil):
+        return cp_m_raw(PhasePartition(ts))
 
 def cv_m_raw(q=q_pt0):
     return cv_d + (cv_v - cv_d)*q.tot + (cv_l - cv_v)*q.liq + (cv_i - cv_v)*q.ice
 
 def cv_m(ts):
-    return cv_m_raw(PhasePartition(ts))
+    if isinstance(ts, PhasePartitionRaw):
+        return cv_m_raw(ts)
+    elif isinstance(ts, PhaseEquil):
+        return cv_m_raw(PhasePartition(ts))
 
 def moist_gas_constants_raw(q=q_pt0):
     R_gas  = gas_constant_air_raw(q)
@@ -131,14 +140,19 @@ def moist_gas_constants_raw(q=q_pt0):
     return (R_gas, cp, cv, γ)
 
 def moist_gas_constants(ts):
-    return moist_gas_constants_raw(PhasePartition(ts))
+    if isinstance(ts, PhasePartitionRaw):
+        return moist_gas_constants_raw(ts)
+    elif isinstance(ts, PhaseEquil):
+        return moist_gas_constants_raw(PhasePartition(ts))
 
-def air_temperature_e(e_int, q=q_pt0):
+def air_temperature_raw(e_int, q=q_pt0):
     return T_0 + (e_int - (q.tot - q.liq) * e_int_v0 + q.ice * (e_int_v0 + e_int_i0)) / cv_m_raw(q)
 
-def air_temperature(ts):
-    if isinstance(ts, PhaseEquil): return ts.T
-    else: return air_temperature_e(ts.e_int, PhasePartition(ts))
+def air_temperature(ts, q=None):
+    if q==None:
+        return ts.T
+    else:
+        return air_temperature_raw(ts, q)
 
 def internal_energy_raw(T, q):
     return cv_m_raw(q) * (T - T_0) + (q.tot - q.liq) * e_int_v0 - q.ice * (e_int_v0 + e_int_i0)
