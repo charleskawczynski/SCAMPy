@@ -403,7 +403,7 @@ class Rico(CasesBase):
     def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 1.0154e5  #Pressure at ground
         Ref.Tg = 299.8  #Temperature at ground
-        pvg = pv_star(Ref.Tg)
+        pvg = saturation_vapor_pressure_raw(Ref.Tg, Liquid())
         Ref.qtg = eps_v * pvg/(Ref.Pg - pvg)   #Total water mixing ratio at surface
         Ref.initialize(grid, Stats, tmp)
         return
@@ -513,7 +513,7 @@ class TRMM_LBA(CasesBase):
     def initialize_reference(self, grid, Ref, Stats, tmp):
         Ref.Pg = 991.3*100  #Pressure at ground
         Ref.Tg = 296.85   # surface values for reference state (RS) which outputs p0 rho0 alpha0
-        pvg = pv_star(Ref.Tg)
+        pvg = saturation_vapor_pressure_raw(Ref.Tg, Liquid())
         Ref.qtg = eps_v * pvg/(Ref.Pg - pvg)#Total water mixing ratio at surface
         Ref.initialize(grid, Stats, tmp)
         return
@@ -593,7 +593,7 @@ class TRMM_LBA(CasesBase):
 
 
         for k in grid.over_elems_real(Center()):
-            p_vap_star = pv_star(tmp['T', gm][k])
+            p_vap_star = saturation_vapor_pressure_raw(tmp['T', gm][k], Liquid())
             # eq. 37 in pressel et al and the def of RH
             q_vap_star = p_vap_star*epsi/(p_1[k]- p_vap_star + epsi*p_vap_star*RH[k]/100.0)
             q['q_tot', gm][k] = q_vap_star*RH[k]/100.0
