@@ -354,7 +354,10 @@ def exner_raw(p, q=q_pt0):
     return (p/MSLP)**(_R_m/_cp_m)
 
 def exner(ts):
-    return exner_raw(air_pressure(ts), PhasePartition(ts))
+    if isinstance(ts, PhaseEquil):
+        return exner_raw(air_pressure(ts), PhasePartition(ts))
+    else:
+        return exner_raw(ts)
 
 def relative_humidity(ts):
     return air_pressure(ts)/saturation_vapor_pressure(ts, Liquid())

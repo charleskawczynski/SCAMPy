@@ -62,8 +62,8 @@ class SurfaceFixedFlux(SurfaceBase):
 
         rho_tflux =  self.shf /(cpm_c(self.qsurface))
         self.windspeed = compute_windspeed(grid, q, 0.0)
-        self.rho_q_tot_flux = self.lhf/(latent_heat(self.Tsurface))
-        self.rho_θ_liq_flux = rho_tflux / exner_c(self.Ref.Pg)
+        self.rho_q_tot_flux = self.lhf/(latent_heat_vapor_raw(self.Tsurface))
+        self.rho_θ_liq_flux = rho_tflux / exner(self.Ref.Pg)
         self.bflux = buoyancy_flux(self.shf, self.lhf, T_1, q_tot_1, α_0_surf)
 
         if not self.ustar_fixed:
@@ -113,10 +113,10 @@ class SurfaceFixedCoeffs(SurfaceBase):
         U_1 = q['u', gm][k_1]
 
         cp_ = cpm_c(q_tot_1)
-        lv = latent_heat(T_1)
+        lv = latent_heat_vapor_raw(T_1)
         windspeed = compute_windspeed(grid, q, 0.01)
         self.rho_q_tot_flux = -self.cq * windspeed * (q_tot_1 - self.qsurface) * ρ_0_surf
-        self.rho_θ_liq_flux = -self.ch * windspeed * (θ_liq_1 - self.Tsurface/exner_c(self.Ref.Pg)) * ρ_0_surf
+        self.rho_θ_liq_flux = -self.ch * windspeed * (θ_liq_1 - self.Tsurface/exner(self.Ref.Pg)) * ρ_0_surf
 
         self.lhf = lv * self.rho_q_tot_flux
         self.shf = cp_  * self.rho_θ_liq_flux
@@ -151,7 +151,7 @@ class SurfaceMoninObukhov(SurfaceBase):
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
         theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
         theta_rho_b = theta_rho_c(p_1, T_1, self.qsurface, self.qsurface)
-        lv = latent_heat(T_1)
+        lv = latent_heat_vapor_raw(T_1)
 
         θ_liq_star = thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
 
@@ -200,7 +200,7 @@ class SurfaceSullivanPatton(SurfaceBase):
 
         theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
         theta_rho_b = theta_rho_c(p_0_1, T_1, self.qsurface, self.qsurface)
-        lv = latent_heat(T_1)
+        lv = latent_heat_vapor_raw(T_1)
         T0 = p_0_1 * α_0_1/Rd
 
         theta_flux = 0.24
@@ -220,7 +220,7 @@ class SurfaceSullivanPatton(SurfaceBase):
         self.lhf = lv * self.rho_q_tot_flux
         self.shf = cpm_c(q_tot_1)  * self.rho_θ_liq_flux
 
-        self.bflux = g * theta_flux * exner_c(p_0_1) / T0
+        self.bflux = g * theta_flux * exner(p_0_1) / T0
         self.ustar =  sqrt(self.cm) * self.windspeed
         self.obukhov_length = compute_MO_len(self.ustar, self.bflux)
         return

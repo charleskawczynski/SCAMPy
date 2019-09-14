@@ -337,12 +337,12 @@ def compute_tke_buoy(grid, q, tmp, tmp_O2, cv):
         θ_cloudy = tmp['θ_cloudy'][k]
         p_0 = tmp['p_0'][k]
 
-        lh = latent_heat(t_cloudy)
+        lh = latent_heat_vapor_raw(t_cloudy)
         cpm = cpm_c(q_tot_cloudy)
         grad_θ_liq = grad_neg(q['θ_liq', en].Cut(k), grid)
         grad_q_tot = grad_neg(q['q_tot', en].Cut(k), grid)
 
-        prefactor = Rd * exner_c(p_0)/p_0
+        prefactor = Rd * exner(p_0)/p_0
 
         d_alpha_θ_liq_dry = prefactor * (1.0 + (eps_vi - 1.0) * q_tot_dry)
         d_alpha_q_tot_dry = prefactor * θ_dry * (eps_vi - 1.0)

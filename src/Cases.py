@@ -106,7 +106,7 @@ class Soares(CasesBase):
 
         for k in grid.over_elems_real(Center()):
             q['θ_liq', gm][k] = theta[k]
-            tmp['T', gm][k] =  theta[k] * exner_c(tmp['p_0'][k])
+            tmp['T', gm][k] =  theta[k] * exner(tmp['p_0'][k])
 
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
@@ -117,7 +117,7 @@ class Soares(CasesBase):
         self.Sur.zrough = 1.0e-4
         self.Sur.Tsurface = 300.0
         self.Sur.qsurface = 5e-3
-        self.Sur.lhf = 2.5e-5 * tmp.surface(grid, 'ρ_0') * latent_heat(self.Sur.Tsurface)
+        self.Sur.lhf = 2.5e-5 * tmp.surface(grid, 'ρ_0') * latent_heat_vapor_raw(self.Sur.Tsurface)
         self.Sur.shf = 6.0e-2 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.Sur.ustar_fixed = False
         self.Sur.grid = grid
@@ -213,9 +213,9 @@ class Bomex(CasesBase):
         return
     def initialize_surface(self, grid, Ref, tmp):
         self.Sur.zrough = 1.0e-4 # not actually used, but initialized to reasonable value
-        self.Sur.Tsurface = 299.1 * exner_c(Ref.Pg)
+        self.Sur.Tsurface = 299.1 * exner(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
-        self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat(self.Sur.Tsurface)
+        self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat_vapor_raw(self.Sur.Tsurface)
         self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # m/s
@@ -233,10 +233,10 @@ class Bomex(CasesBase):
             self.Fo.ug[k] = -10.0 + (1.8e-3)*z[k]
             # Set large-scale cooling
             if z[k] <= 1500.0:
-                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(tmp['p_0'][k])
+                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner(tmp['p_0'][k])
             else:
                 self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (z[k] - 1500.0)
-                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(tmp['p_0'][k])
+                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner(tmp['p_0'][k])
             # Set large-scale drying
             if z[k] <= 300.0:
                 self.Fo.dqtdt[k] = -1.2e-8   #kg/(kg * s)
@@ -320,7 +320,7 @@ class life_cycle_Tan2018(CasesBase):
 
         for k in grid.over_elems_real(Center()):
             q['θ_liq', gm][k] = thetal[k]
-            tmp['T', gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
+            tmp['T', gm][k] =  thetal[k] * exner(tmp['p_0'][k])
 
         q['u', gm].apply_bc(grid, 0.0)
         q['q_tot', gm].apply_bc(grid, 0.0)
@@ -330,9 +330,9 @@ class life_cycle_Tan2018(CasesBase):
         return
     def initialize_surface(self, grid, Ref, tmp):
         self.Sur.zrough = 1.0e-4 # not actually used, but initialized to reasonable value
-        self.Sur.Tsurface = 299.1 * exner_c(Ref.Pg)
+        self.Sur.Tsurface = 299.1 * exner(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
-        self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat(self.Sur.Tsurface)
+        self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat_vapor_raw(self.Sur.Tsurface)
         self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.lhf0 = self.Sur.lhf
         self.shf0 = self.Sur.shf
@@ -353,10 +353,10 @@ class life_cycle_Tan2018(CasesBase):
             self.Fo.ug[k] = -10.0 + (1.8e-3)*z[k]
             # Set large-scale cooling
             if z[k] <= 1500.0:
-                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner_c(tmp['p_0'][k])
+                self.Fo.dTdt[k] =  (-2.0/(3600 * 24.0))  * exner(tmp['p_0'][k])
             else:
                 self.Fo.dTdt[k] = (-2.0/(3600 * 24.0) + (z[k] - 1500.0)
-                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner_c(tmp['p_0'][k])
+                                    * (0.0 - -2.0/(3600 * 24.0)) / (3000.0 - 1500.0)) * exner(tmp['p_0'][k])
             # Set large-scale drying
             if z[k] <= 300.0:
                 self.Fo.dqtdt[k] = -1.2e-8   #kg/(kg * s)
@@ -433,7 +433,7 @@ class Rico(CasesBase):
 
         for k in grid.over_elems_real(Center()):
             q['θ_liq', gm][k] = thetal[k]
-            tmp['T', gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
+            tmp['T', gm][k] =  thetal[k] * exner(tmp['p_0'][k])
 
         q['u', gm].apply_bc(grid, 0.0)
         q['q_tot', gm].apply_bc(grid, 0.0)
@@ -469,7 +469,7 @@ class Rico(CasesBase):
             self.Fo.ug[k] = -9.9 + 2.0e-3 * z[k]
             self.Fo.vg[k] = -3.8
             # Set large-scale cooling
-            self.Fo.dTdt[k] =  (-2.5/(3600.0 * 24.0))  * exner_c(tmp['p_0'][k])
+            self.Fo.dTdt[k] =  (-2.5/(3600.0 * 24.0))  * exner(tmp['p_0'][k])
 
             # Set large-scale moistening
             if z[k] <= 2980.0:
@@ -603,7 +603,7 @@ class TRMM_LBA(CasesBase):
                                             q['q_tot', gm][k],
                                             0.0,
                                             0.0,
-                                            latent_heat(tmp['T', gm][k]))
+                                            latent_heat_vapor_raw(tmp['T', gm][k]))
 
             theta_rho[k] = theta_rho_c(tmp['p_0'][k], tmp['T', gm][k], q['q_tot', gm][k], q_vap)
 
@@ -613,9 +613,9 @@ class TRMM_LBA(CasesBase):
 
     def initialize_surface(self, grid, Ref, tmp):
         #self.Sur.zrough = 1.0e-4 # not actually used, but initialized to reasonable value
-        self.Sur.Tsurface = (273.15+23) * exner_c(Ref.Pg)
+        self.Sur.Tsurface = (273.15+23) * exner(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
-        self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat(self.Sur.Tsurface)
+        self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat_vapor_raw(self.Sur.Tsurface)
         self.Sur.shf = 8.0e-3 * cpm_c(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # this is taken from Bomex -- better option is to approximate from LES tke above the surface
@@ -842,9 +842,9 @@ class ARM_SGP(CasesBase):
         for k in grid.over_elems_real(Center()):
             q['u', gm][k] = 10.0
             q['q_tot', gm][k] = q_tot[k]
-            tmp['T', gm][k] = Theta[k]*exner_c(tmp['p_0'][k])
+            tmp['T', gm][k] = Theta[k]*exner(tmp['p_0'][k])
             q['θ_liq', gm][k] = thetali_c(tmp['p_0'][k],tmp['T', gm][k],
-                                            q['q_tot', gm][k], 0.0, 0.0, latent_heat(tmp['T', gm][k]))
+                                            q['q_tot', gm][k], 0.0, 0.0, latent_heat_vapor_raw(tmp['T', gm][k]))
 
         q['u', gm].apply_bc(grid, 0.0)
         q['q_tot', gm].apply_bc(grid, 0.0)
@@ -854,7 +854,7 @@ class ARM_SGP(CasesBase):
         return
 
     def initialize_surface(self, grid, Ref, tmp):
-        self.Sur.Tsurface = 299.0 * exner_c(Ref.Pg)
+        self.Sur.Tsurface = 299.0 * exner(Ref.Pg)
         self.Sur.qsurface = 15.2e-3 # kg/kg
         self.Sur.lhf = 5.0
         self.Sur.shf = -30.0
@@ -913,10 +913,10 @@ class ARM_SGP(CasesBase):
         for k in self.Fo.grid.over_elems(Center()):
                 if z[k] <=1000.0:
                     self.Fo.dTdt[k] = dTdt
-                    self.Fo.dqtdt[k]  = dqtdt * exner_c(tmp['p_0'][k])
+                    self.Fo.dqtdt[k]  = dqtdt * exner(tmp['p_0'][k])
                 elif z[k] > 1000.0  and z[k] <= 2000.0:
                     self.Fo.dTdt[k] = dTdt*(1-(z[k]-1000.0)/1000.0)
-                    self.Fo.dqtdt[k]  = dqtdt * exner_c(tmp['p_0'][k])\
+                    self.Fo.dqtdt[k]  = dqtdt * exner(tmp['p_0'][k])\
                                         *(1-(z[k]-1000.0)/1000.0)
         self.Fo.update(grid, q, q_tendencies, tmp)
 
@@ -976,7 +976,7 @@ class GATE_III(CasesBase):
             q['u', gm][k] = U[k]
 
             q['θ_liq', gm][k] = thetali_c(tmp['p_0'][k],tmp['T', gm][k],
-                                           q['q_tot', gm][k], 0.0, 0.0, latent_heat(tmp['T', gm][k]))
+                                           q['q_tot', gm][k], 0.0, 0.0, latent_heat_vapor_raw(tmp['T', gm][k]))
 
         q['u', gm].apply_bc(grid, 0.0)
         q['q_tot', gm].apply_bc(grid, 0.0)
@@ -1063,7 +1063,7 @@ class DYCOMS_RF01(CasesBase):
         Ref.Pg   = 1017.8 * 100.0
         Ref.qtg  = 9.0 / 1000.0
         # Use an exner function with values for Rd, and cp given in Stevens 2005 to compute temperature
-        Ref.Tg   = 289.0 * exner_c(Ref.Pg, kappa = dycoms_Rd / dycoms_cp)
+        Ref.Tg   = 289.0 * exner(Ref.Pg)
         Ref.initialize(grid, Stats, tmp)
         return
 
@@ -1076,7 +1076,7 @@ class DYCOMS_RF01(CasesBase):
         :param q_liq: liquid water specific humidity
         :return: theta l
         """
-        theta_ = T_ / exner_c(p_, kappa = dycoms_Rd / dycoms_cp)
+        theta_ = T_ / exner(p_)
         return theta_ * mt.exp(-1. * dycoms_L * ql_ / (dycoms_cp * T_))
 
     # helper function
@@ -1090,7 +1090,7 @@ class DYCOMS_RF01(CasesBase):
         :return: T, q_liq
         '''
         #Compute temperature
-        t_1 = thetal_ * exner_c(p_, kappa = dycoms_Rd / dycoms_cp)
+        t_1 = thetal_ * exner(p_)
         #Compute saturation vapor pressure
         pv_star_1 = pv_star(t_1)
         #Compute saturation specific humidity
@@ -1183,8 +1183,8 @@ class DYCOMS_RF01(CasesBase):
 
         # buoyancy flux
         theta_flux       = self.Sur.shf / cpm_c(self.Sur.qsurface)        / tmp.surface(grid, 'ρ_0')
-        qt_flux          = self.Sur.lhf / latent_heat(self.Sur.Tsurface)  / tmp.surface(grid, 'ρ_0')
-        theta_surface    = self.Sur.Tsurface / exner_c(Ref.Pg)
+        qt_flux          = self.Sur.lhf / latent_heat_vapor_raw(self.Sur.Tsurface)  / tmp.surface(grid, 'ρ_0')
+        theta_surface    = self.Sur.Tsurface / exner(Ref.Pg)
         self.Sur.bflux   =  g * ((theta_flux + (eps_vi - 1.0) * (theta_surface * qt_flux + self.Sur.qsurface * theta_flux))
                                  / (theta_surface * (1.0 + (eps_vi-1) * self.Sur.qsurface)))
         self.Sur.grid  = grid
@@ -1275,7 +1275,7 @@ class GABLS(CasesBase):
 
         for k in grid.over_elems_real(Center()):
             q['θ_liq', gm][k] = thetal[k]
-            tmp['T', gm][k] =  thetal[k] * exner_c(tmp['p_0'][k]) # No water content
+            tmp['T', gm][k] =  thetal[k] * exner(tmp['p_0'][k]) # No water content
 
         q['u', gm].apply_bc(grid, 0.0)
         q['v', gm].apply_bc(grid, 0.0)
@@ -1362,7 +1362,7 @@ class SP(CasesBase):
 
         for k in grid.over_elems_real(Center()):
             q['θ_liq', gm][k] = thetal[k]
-            tmp['T', gm][k] =  thetal[k] * exner_c(tmp['p_0'][k])
+            tmp['T', gm][k] =  thetal[k] * exner(tmp['p_0'][k])
 
         q['u', gm].apply_bc(grid, 0.0)
         q['v', gm].apply_bc(grid, 0.0)
@@ -1377,10 +1377,10 @@ class SP(CasesBase):
         self.Sur.Ref = Ref
         self.Sur.zrough = 0.1
         self.Sur.Tsurface = 300.0
-        theta_surface    = self.Sur.Tsurface / exner_c(Ref.Pg)
+        theta_surface    = self.Sur.Tsurface / exner(Ref.Pg)
         theta_flux = 0.24
         self.Sur.bflux   =  g * theta_flux / theta_surface
-        # self.Sur.bflux = 0.24 * exner_c(tmp['p_0'][k_1]) * g / (tmp['p_0'][k_1]*tmp['α_0'][k_1]/Rd)
+        # self.Sur.bflux = 0.24 * exner(tmp['p_0'][k_1]) * g / (tmp['p_0'][k_1]*tmp['α_0'][k_1]/Rd)
         self.Sur.initialize()
         return
 
