@@ -21,13 +21,7 @@ class SurfaceBase:
         return
     def free_convection_windspeed(self, grid, q, tmp):
         gm, en, ud, sd, al = tmp.idx.allcombinations()
-        theta_rho = Half(grid)
-        for k in grid.over_elems(Center()):
-            q_pt = PhasePartitionRaw(q['q_tot', gm][k], tmp['q_liq', gm][k])
-            theta_rho[k] = virtual_pottemp_raw(tmp['T', gm][k], tmp['p_0'][k], q_pt)
-
-
-        zi = compute_inversion_height(theta_rho, q['u', gm], q['v', gm], grid, self.Ri_bulk_crit)
+        zi = compute_inversion_height(tmp['θ_ρ'], q['u', gm], q['v', gm], grid, self.Ri_bulk_crit)
         wstar = compute_convective_velocity(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
         return

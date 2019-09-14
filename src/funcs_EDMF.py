@@ -262,11 +262,6 @@ def update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag):
     solve_tridiag_wrapper(grid, q_new['θ_liq', gm], tri_diag)
     return
 
-def compute_inversion(grid, q, option, tmp, Ri_bulk_crit, temp_C):
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    zi = compute_inversion_height(temp_C, q['u', gm], q['v', gm], grid, Ri_bulk_crit)
-    return zi
-
 def compute_mixing_length(grid, q, tmp, obukhov_length, zi, wstar):
     for k in grid.over_elems_real(Center()):
         tmp['l_mix'][k] = 100.0

@@ -120,7 +120,12 @@ class EDMF_PrognosticTKE:
 
     def initialize_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
         gm, en, ud, sd, al = q.idx.allcombinations()
-        self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
+
+        for k in grid.over_elems_real(Center()):
+            ts = ActiveThermoState(q, tmp, gm, k)
+            tmp['θ_ρ'][k] = virtual_pottemp(ts)
+        self.zi = compute_inversion_height(tmp['θ_ρ'], q['u', gm], q['v', gm], grid, self.Ri_bulk_crit)
+
         zs = self.zi
         self.wstar = compute_convective_velocity(Case.Sur.bflux, zs)
         ws = self.wstar
@@ -182,7 +187,11 @@ class EDMF_PrognosticTKE:
                 q['θ_liq', i][k] = weight*q['θ_liq', i][k] + (1.0-weight)*q['θ_liq', gm][k]
                 q['q_tot', i][k] = weight*q['q_tot', i][k] + (1.0-weight)*q['q_tot', gm][k]
 
-        self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
+        for k in grid.over_elems_real(Center()):
+            ts = ActiveThermoState(q, tmp, gm, k)
+            tmp['θ_ρ'][k] = virtual_pottemp(ts)
+        self.zi = compute_inversion_height(tmp['θ_ρ'], q['u', gm], q['v', gm], grid, self.Ri_bulk_crit)
+
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
         diagnose_environment(grid, q)
         compute_cv_gm(grid, q, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)

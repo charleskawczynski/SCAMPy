@@ -106,7 +106,7 @@ class Simulation1d:
                      ('mf_tend_θ_liq'          , DomainSubSet(gm=True),  Center() , Neumann()), # gm
                      ('mf_tend_q_tot'          , DomainSubSet(gm=True),  Center() , Neumann()), # gm
                      ('mf_tmp'                 , DomainSubSet(ud=True),  Center() , Neumann()), # ud
-                     ('temp_C'                 , DomainSubSet(gm=True),  Center() , Neumann()),
+                     ('θ_ρ'                    , DomainSubSet(gm=True),  Center() , Neumann()),
                      )
 
         q_2MO = (
