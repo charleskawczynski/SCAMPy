@@ -19,68 +19,6 @@ def entr_detr_inverse_z(entr_in):
     _ret.detr_sc= 0.0
     return _ret
 
-def entr_detr_inverse_w(entr_in):
-    eps_w = 1.0/(np.fmax(np.fabs(entr_in.w),1.0)* 500)
-    _ret = type('', (), {})()
-    if entr_in.af>0.0:
-        partiation_func  = entr_detr_buoyancy_sorting(entr_in)
-        _ret.entr_sc = partiation_func*eps_w/2.0
-        _ret.detr_sc = (1.0-partiation_func/2.0)*eps_w
-    else:
-        _ret.entr_sc = 0.0
-        _ret.detr_sc = 0.0
-    return _ret
-
-def entr_detr_buoyancy_sorting(entr_in):
-        sqpi_inv = 1.0/np.sqrt(pi)
-        sqrt2 = np.sqrt(2.0)
-        partiation_func = 0.0
-        inner_partiation_func = 0.0
-        abscissas, weights = np.polynomial.hermite.hermgauss(entr_in.quadrature_order)
-
-        if entr_in.env_QTvar != 0.0 and entr_in.env_Hvar != 0.0:
-            sd_q = np.sqrt(entr_in.env_QTvar)
-            sd_h = np.sqrt(entr_in.env_Hvar)
-            corr = np.fmax(np.fmin(entr_in.env_HQTcov/np.fmax(sd_h*sd_q, 1e-13),1.0),-1.0)
-
-            # limit sd_q to prevent negative q_tot_hat
-            sd_q_lim = (1e-10 - entr_in.qt_env)/(sqrt2 * abscissas[0])
-            sd_q = np.fmin(sd_q, sd_q_lim)
-            sigma_θ_liq_star = np.sqrt(np.fmax(1.0-corr*corr,0.0)) * sd_h
-
-            for m_q in range(entr_in.quadrature_order):
-                q_tot_hat    = (entr_in.qt_env + sqrt2 * sd_q * abscissas[m_q] + entr_in.qt_up)/2.0
-                mu_θ_liq_star = entr_in.θ_liq_env + sqrt2 * corr * sd_h * abscissas[m_q]
-                inner_partiation_func = 0.0
-                for m_h in range(entr_in.quadrature_order):
-                    θ_liq_hat = (sqrt2 * sigma_θ_liq_star * abscissas[m_h] + mu_θ_liq_star + entr_in.θ_liq_up)/2.0
-                    # condensation
-                    ts = LiquidIcePotTempSHumEquil(θ_liq_hat, q_tot_hat, entr_in.ρ0, entr_in.p0)
-                    q_liq = PhasePartition(ts).liq
-                    T = air_temperature(ts)
-                    # calcualte buoyancy
-                    q_vap = q_tot_hat - q_liq
-                    alpha_mix = alpha_c(entr_in.p0, T, q_tot_hat, q_vap)
-                    bmix = buoyancy_c(entr_in.alpha0, alpha_mix) - entr_in.b_mean
-
-                    # sum only the points with positive buoyancy to get the buoyant fraction
-                    if bmix >0.0:
-                        inner_partiation_func  += weights[m_h] * sqpi_inv
-                partiation_func  += inner_partiation_func * weights[m_q] * sqpi_inv
-        else:
-            θ_liq_hat = ( entr_in.θ_liq_env + entr_in.θ_liq_up)/2.0
-            q_tot_hat = ( entr_in.qt_env + entr_in.qt_up)/2.0
-
-            # condensation
-            ts = LiquidIcePotTempSHumEquil(θ_liq_hat, q_tot_hat, entr_in.ρ0, entr_in.p0)
-            q_liq = PhasePartition(ts).liq
-            T = air_temperature(ts)
-            # calcualte buoyancy
-            alpha_mix = alpha_c(entr_in.p0, T, q_tot_hat, q_tot_hat - q_liq)
-            bmix = buoyancy_c(entr_in.alpha0, alpha_mix) - entr_in.b_mean
-
-        return partiation_func
-
 def entr_detr_tke2(entr_in):
     # in cloud portion from Soares 2004
     if entr_in.z >= entr_in.zi :

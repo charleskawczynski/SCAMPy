@@ -180,9 +180,9 @@ def buoyancy(grid, q, tmp, params):
     for i in list(ud)+[en]:
         for k in grid.over_elems_real(Center()):
             q_tot = q['q_tot', i][k]
-            q_vap = q_tot - tmp['q_liq', i][k]
+            q_liq = tmp['q_liq', i][k]
             T = tmp['T', i][k]
-            α_i = alpha_c(tmp['p_0'][k], T, q_tot, q_vap)
+            α_i = specific_volume_raw(T, tmp['p_0'][k], PhasePartitionRaw(q_tot, q_liq))
             tmp['buoy', i][k] = buoyancy_c(tmp['α_0'][k], α_i)
 
     # Filter buoyancy

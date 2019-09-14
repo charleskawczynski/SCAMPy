@@ -111,7 +111,6 @@ class EDMF_PrognosticTKE:
         entr_src = namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']
         if str(entr_src) == 'inverse_z':        self.entr_detr_fp = entr_detr_inverse_z
         elif str(entr_src) == 'dry':            self.entr_detr_fp = entr_detr_dry
-        elif str(entr_src) == 'inverse_w':      self.entr_detr_fp = entr_detr_inverse_w
         elif str(entr_src) == 'b_w2':           self.entr_detr_fp = entr_detr_b_w2
         elif str(entr_src) == 'entr_detr_tke':  self.entr_detr_fp = entr_detr_tke
         elif str(entr_src) == 'entr_detr_tke2': self.entr_detr_fp = entr_detr_tke2

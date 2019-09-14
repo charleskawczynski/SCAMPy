@@ -10,9 +10,6 @@ def buoyancy_c(alpha_0, alpha):
 def qv_star_c(p_0, q_tot, p_vap):
     return eps_v * (1.0 - q_tot) * p_vap / (p_0 - p_vap)
 
-def alpha_c(p_0, T,  q_tot, q_vap):
-    return (R_d * T)/p_0 * (1.0 - q_tot + eps_vi * q_vap)
-
 def pv_star(T):
     #    Magnus formula
     T_C = T - 273.15
