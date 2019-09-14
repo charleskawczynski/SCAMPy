@@ -110,7 +110,6 @@ class Soares(CasesBase):
 
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        saturation_adjustment_gm(grid, q, tmp)
 
         return
 
@@ -210,7 +209,6 @@ class Bomex(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        saturation_adjustment_gm(grid, q, tmp)
 
         return
     def initialize_surface(self, grid, Ref, tmp):
@@ -328,7 +326,6 @@ class life_cycle_Tan2018(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        saturation_adjustment_gm(grid, q, tmp)
 
         return
     def initialize_surface(self, grid, Ref, tmp):
@@ -442,7 +439,6 @@ class Rico(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        saturation_adjustment_gm(grid, q, tmp)
 
 
         return
@@ -613,7 +609,6 @@ class TRMM_LBA(CasesBase):
 
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
-        saturation_adjustment_gm(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -855,7 +850,6 @@ class ARM_SGP(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        saturation_adjustment_gm(grid, q, tmp)
 
         return
 
@@ -988,7 +982,6 @@ class GATE_III(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
-        saturation_adjustment_gm(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1159,7 +1152,6 @@ class DYCOMS_RF01(CasesBase):
             # buoyancy profile
             q_vap = q['q_tot', gm][k] - q_ice - tmp['q_liq', gm][k]
             alpha = alpha_c(tmp['p_0'][k], tmp['T', gm][k], q['q_tot', gm][k], q_vap)
-            tmp['buoy', gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
 
             # velocity profile (geostrophic)
             q['u', gm][k] = 7.0
@@ -1172,7 +1164,6 @@ class DYCOMS_RF01(CasesBase):
         tmp['q_liq', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        tmp['buoy', gm].apply_bc(grid, 0.0)
 
         return
 
@@ -1291,7 +1282,6 @@ class GABLS(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        saturation_adjustment_gm(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1379,7 +1369,6 @@ class SP(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        saturation_adjustment_gm(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):

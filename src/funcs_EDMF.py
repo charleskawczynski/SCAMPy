@@ -175,26 +175,9 @@ def saturation_adjustment_sd(grid, q, tmp):
             tmp['T', i][k] = T
             tmp['q_liq', i][k] = q_liq
 
-def saturation_adjustment_gm(grid, q, tmp):
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    for k in grid.over_elems_real(Center()):
-        ts = ActiveThermoState(q, tmp, gm, k)
-        q_liq = PhasePartition(ts).liq
-        T = air_temperature(ts)
-        q_tot = q['q_tot', gm][k]
-        p_0 = tmp['p_0'][k]
-        tmp['q_liq', gm][k] = q_liq
-        tmp['T', gm][k] = T
-        q_vap = q_tot - q_liq
-        alpha = alpha_c(p_0, tmp['T', gm][k], q_tot, q_vap)
-        tmp['buoy', gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
-    tmp['T', gm].extrap(grid)
-    tmp['q_liq', gm].extrap(grid)
-    return
-
 def buoyancy(grid, q, tmp, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
-    for i in ud:
+    for i in list(ud)+[en]:
         for k in grid.over_elems_real(Center()):
             q_tot = q['q_tot', i][k]
             q_vap = q_tot - tmp['q_liq', i][k]
@@ -227,8 +210,6 @@ def eos_update_SA_mean(grid, q, tmp):
         tmp['T', en][k]      = T
         tmp['q_liq', en][k]  = q_liq
         q_vap = q_tot - q_liq
-        alpha = alpha_c(p_0, T, q_tot, q_vap)
-        tmp['buoy', en][k]   = buoyancy_c(tmp['α_0'][k], alpha)
         θ = theta_c(p_0, T)
         if q_liq > 0.0:
             tmp['CF'][k] = 1.
@@ -413,7 +394,7 @@ def compute_grid_means(grid, q, tmp):
     for k in grid.over_elems_real(Center()):
         tmp['q_liq', gm][k] = np.sum([ q['a', i][k] * tmp['q_liq', i][k] for i in sd])
         tmp['T', gm][k]     = np.sum([ q['a', i][k] * tmp['T', i][k] for i in sd])
-        tmp['buoy', gm][k]     = np.sum([ q['a', i][k] * tmp['buoy', i][k] for i in sd])
+        tmp['buoy', gm][k]  = np.sum([ q['a', i][k] * tmp['buoy', i][k] for i in sd])
     return
 
 def compute_cv_gm(grid, q, ϕ, ψ, cv, tke_factor, interp_func):
