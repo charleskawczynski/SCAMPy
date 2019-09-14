@@ -157,29 +157,23 @@ class EDMF_PrognosticTKE:
             UpdVar[i].q_tot_surface_bc = (q_tot_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_q_tot))
         return
 
-    def aux_rain(self, grid, q, tmp, TS):
+    def saturation_adjustment(self, grid, q, tmp):
         gm, en, ud, sd, al = q.idx.allcombinations()
-        for i in ud:
+        for i in sd:
             for k in grid.over_elems_real(Center()):
-                θ_liq = q['θ_liq', i][k]
-                q_tot = q['q_tot', i][k]
-                p_0 = tmp['p_0'][k]
-
                 ts = ActiveThermoState(q, tmp, i, k)
                 q_liq = PhasePartition(ts).liq
                 T = air_temperature(ts)
-
                 tmp['T', i][k] = T
                 tmp['q_liq', i][k] = q_liq
-                cwe = acnv_instant(q_liq, q_tot, self.params.max_supersaturation, T, p_0)
-                tmp['cloud_water_excess', i][k] = cwe
-                tmp['θ_liq_src_rain', i][k] = rain_source_to_thetal(p_0, T, q_tot, q_liq, 0.0, cwe)
 
     def pre_compute_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
         gm, en, ud, sd, al = q.idx.allcombinations()
 
         k_1 = grid.first_interior(Zmin())
         k_2 = grid.first_interior(Zmax())
+        self.saturation_adjustment(grid, q, tmp)
+
         z_star_a, z_star_w = top_of_updraft(grid, q, self.params)
 
         for i in ud:
@@ -190,7 +184,7 @@ class EDMF_PrognosticTKE:
         for i in ud:
             for k in grid.over_elems_real(Center())[1:]:
                 q['w', i][k] = bound(q['w', i][k]*tmp['HVSD_w', i][k], self.params.w_bounds)
-                q['a', i][k] = bound(q['a', i][k]*tmp['HVSD_w', i][k]          , self.params.a_bounds)
+                q['a', i][k] = bound(q['a', i][k]*tmp['HVSD_w', i][k], self.params.a_bounds)
 
                 weight = tmp['HVSD_w', i][k]
                 q['θ_liq', i][k] = weight*q['θ_liq', i][k] + (1.0-weight)*q['θ_liq', gm][k]
@@ -198,7 +192,6 @@ class EDMF_PrognosticTKE:
 
         self.zi = compute_inversion(grid, q, Case.inversion_option, tmp, self.Ri_bulk_crit, tmp['temp_C'])
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
-        self.aux_rain(grid, q, tmp, TS)
         diagnose_environment(grid, q)
         compute_cv_gm(grid, q, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         update_GMV_MF(grid, q, TS, tmp)
