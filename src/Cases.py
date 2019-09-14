@@ -110,7 +110,7 @@ class Soares(CasesBase):
 
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        satadjust(grid, q, tmp)
+        saturation_adjustment_gm(grid, q, tmp)
 
         return
 
@@ -210,7 +210,7 @@ class Bomex(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        satadjust(grid, q, tmp)
+        saturation_adjustment_gm(grid, q, tmp)
 
         return
     def initialize_surface(self, grid, Ref, tmp):
@@ -328,7 +328,7 @@ class life_cycle_Tan2018(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        satadjust(grid, q, tmp)
+        saturation_adjustment_gm(grid, q, tmp)
 
         return
     def initialize_surface(self, grid, Ref, tmp):
@@ -442,7 +442,7 @@ class Rico(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        satadjust(grid, q, tmp)
+        saturation_adjustment_gm(grid, q, tmp)
 
 
         return
@@ -613,7 +613,7 @@ class TRMM_LBA(CasesBase):
 
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
-        satadjust(grid, q, tmp)
+        saturation_adjustment_gm(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -855,7 +855,7 @@ class ARM_SGP(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        satadjust(grid, q, tmp)
+        saturation_adjustment_gm(grid, q, tmp)
 
         return
 
@@ -988,7 +988,7 @@ class GATE_III(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
-        satadjust(grid, q, tmp)
+        saturation_adjustment_gm(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1291,7 +1291,7 @@ class GABLS(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        satadjust(grid, q, tmp)
+        saturation_adjustment_gm(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):
@@ -1379,7 +1379,7 @@ class SP(CasesBase):
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)
         tmp['T', gm].apply_bc(grid, 0.0)
-        satadjust(grid, q, tmp)
+        saturation_adjustment_gm(grid, q, tmp)
         return
 
     def initialize_surface(self, grid, Ref, tmp):

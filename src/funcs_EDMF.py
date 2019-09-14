@@ -165,6 +165,33 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
             q_new['q_tot', i][k] = q_tot_predict
     return
 
+def saturation_adjustment_sd(grid, q, tmp):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    for i in sd:
+        for k in grid.over_elems_real(Center()):
+            ts = ActiveThermoState(q, tmp, i, k)
+            q_liq = PhasePartition(ts).liq
+            T = air_temperature(ts)
+            tmp['T', i][k] = T
+            tmp['q_liq', i][k] = q_liq
+
+def saturation_adjustment_gm(grid, q, tmp):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    for k in grid.over_elems_real(Center()):
+        ts = ActiveThermoState(q, tmp, gm, k)
+        q_liq = PhasePartition(ts).liq
+        T = air_temperature(ts)
+        q_tot = q['q_tot', gm][k]
+        p_0 = tmp['p_0'][k]
+        tmp['q_liq', gm][k] = q_liq
+        tmp['T', gm][k] = T
+        q_vap = q_tot - q_liq
+        alpha = alpha_c(p_0, tmp['T', gm][k], q_tot, q_vap)
+        tmp['buoy', gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
+    tmp['T', gm].extrap(grid)
+    tmp['q_liq', gm].extrap(grid)
+    return
+
 def buoyancy(grid, q, tmp, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for i in ud:
@@ -213,23 +240,6 @@ def eos_update_SA_mean(grid, q, tmp):
             tmp['CF'][k] = 0.
             tmp['θ_dry'][k]     = θ
             tmp['q_tot_dry'][k] = q_tot
-    return
-
-def satadjust(grid, q, tmp):
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    for k in grid.over_elems_real(Center()):
-        ts = ActiveThermoState(q, tmp, gm, k)
-        q_liq = PhasePartition(ts).liq
-        T = air_temperature(ts)
-        q_tot = q['q_tot', gm][k]
-        p_0 = tmp['p_0'][k]
-        tmp['q_liq', gm][k] = q_liq
-        tmp['T', gm][k] = T
-        q_vap = q_tot - q_liq
-        alpha = alpha_c(p_0, tmp['T', gm][k], q_tot, q_vap)
-        tmp['buoy', gm][k] = buoyancy_c(tmp['α_0'][k], alpha)
-    tmp['T', gm].extrap(grid)
-    tmp['q_liq', gm].extrap(grid)
     return
 
 def predict(grid, tmp, q, q_tendencies, name, name_predict, Δt):

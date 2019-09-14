@@ -157,22 +157,12 @@ class EDMF_PrognosticTKE:
             UpdVar[i].q_tot_surface_bc = (q_tot_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_q_tot))
         return
 
-    def saturation_adjustment(self, grid, q, tmp):
-        gm, en, ud, sd, al = q.idx.allcombinations()
-        for i in sd:
-            for k in grid.over_elems_real(Center()):
-                ts = ActiveThermoState(q, tmp, i, k)
-                q_liq = PhasePartition(ts).liq
-                T = air_temperature(ts)
-                tmp['T', i][k] = T
-                tmp['q_liq', i][k] = q_liq
-
     def pre_compute_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
         gm, en, ud, sd, al = q.idx.allcombinations()
 
         k_1 = grid.first_interior(Zmin())
         k_2 = grid.first_interior(Zmax())
-        self.saturation_adjustment(grid, q, tmp)
+        saturation_adjustment_sd(grid, q, tmp)
 
         z_star_a, z_star_w = top_of_updraft(grid, q, self.params)
 
