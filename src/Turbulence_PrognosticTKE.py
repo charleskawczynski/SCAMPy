@@ -129,13 +129,17 @@ class EDMF_PrognosticTKE:
         k_1 = grid.first_interior(Zmin())
         reset_surface_covariance(grid, q, tmp, Case, ws)
         if ws > 0.0:
-            for k in grid.over_elems(Center()):
+            for k in grid.over_elems_real(Center())[1:]:
                 z = grid.z_half[k]
                 temp = ws * 1.3 * np.cbrt(us3/ws3 + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
                 q['tke', gm][k] = temp
-            reset_surface_covariance(grid, q, tmp, Case, ws)
             compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, self.zi, self.wstar)
         self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
+        # print('')
+        # print('zi          = ',self.zi)
+        # print('wstar       = ',self.wstar)
+        # print('surface_tke = ', q['tke', gm][k_1])
+        # raise NameError("Done")
         return
 
     def set_updraft_surface_bc(self, grid, q, tmp, UpdVar, Case):

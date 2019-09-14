@@ -264,27 +264,7 @@ def update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag):
 
 def compute_inversion(grid, q, option, tmp, Ri_bulk_crit, temp_C):
     gm, en, ud, sd, al = q.idx.allcombinations()
-    maxgrad = 0.0
-    domain = grid.over_elems_real(Center())
-    theta_rho_bl = temp_C.first_interior(grid)
-    for k in domain:
-        q_pt = PhasePartitionRaw(q['q_tot', gm][k], tmp['q_liq', gm][k])
-        temp_C[k] = virtual_pottemp_raw(tmp['T', gm][k], tmp['p_0'][k], q_pt)
-    if option == 'theta_rho':
-        for k in domain:
-            if temp_C[k] > theta_rho_bl:
-                zi = grid.z_half[k]
-                break
-    elif option == 'thetal_maxgrad':
-        for k in domain:
-            grad_TH = grad(q['θ_liq', gm].Dual(k), grid)
-            if grad_TH > maxgrad:
-                maxgrad = grad_TH
-                zi = grid.z[k]
-    elif option == 'critical_Ri':
-        zi = compute_inversion_height(temp_C, q['u', gm], q['v', gm], grid, Ri_bulk_crit)
-    else:
-        print('INVERSION HEIGHT OPTION NOT RECOGNIZED')
+    zi = compute_inversion_height(temp_C, q['u', gm], q['v', gm], grid, Ri_bulk_crit)
     return zi
 
 def compute_mixing_length(grid, q, tmp, obukhov_length, zi, wstar):

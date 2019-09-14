@@ -43,7 +43,7 @@ def compute_MO_len(ustar, bflux):
     else:
         return -ustar * ustar * ustar / bflux / vkb
 
-class SurfaceFixedFlux(SurfaceBase):
+class SurfaceFixedFlux(SurfaceBase): # Bomex
     def __init__(self,paramlist):
         SurfaceBase.__init__(self, paramlist)
         return

@@ -214,8 +214,9 @@ class Bomex(CasesBase):
         self.Sur.zrough = 1.0e-4 # not actually used, but initialized to reasonable value
         self.Sur.Tsurface = 299.1 * exner(Ref.Pg)
         self.Sur.qsurface = 22.45e-3 # kg/kg
-        self.Sur.lhf = 5.2e-5 * tmp.surface(grid, 'ρ_0') * latent_heat_vapor_raw(self.Sur.Tsurface)
-        self.Sur.shf = 8.0e-3 * cp_m(self.Sur.qsurface) * tmp.surface(grid, 'ρ_0')
+        ρ_0_surf = air_density_raw(Ref.Tg, Ref.Pg, PhasePartition(Ref.qtg))
+        self.Sur.lhf = 5.2e-5 * ρ_0_surf * latent_heat_vapor_raw(self.Sur.Tsurface)
+        self.Sur.shf = 8.0e-3 * cp_m(self.Sur.qsurface) * ρ_0_surf
         self.Sur.ustar_fixed = True
         self.Sur.ustar = 0.28 # m/s
         self.Sur.grid = grid
