@@ -124,7 +124,7 @@ class EDMF_PrognosticTKE:
         for k in grid.over_elems_real(Center()):
             ts = ActiveThermoState(q, tmp, gm, k)
             tmp['θ_ρ'][k] = virtual_pottemp(ts)
-        self.zi = compute_inversion_height(tmp['θ_ρ'], q['u', gm], q['v', gm], grid, self.Ri_bulk_crit)
+        self.zi = compute_inversion_height(grid, q, tmp, self.Ri_bulk_crit)
 
         zs = self.zi
         self.wstar = compute_convective_velocity(Case.Sur.bflux, zs)
@@ -190,7 +190,7 @@ class EDMF_PrognosticTKE:
         for k in grid.over_elems_real(Center()):
             ts = ActiveThermoState(q, tmp, gm, k)
             tmp['θ_ρ'][k] = virtual_pottemp(ts)
-        self.zi = compute_inversion_height(tmp['θ_ρ'], q['u', gm], q['v', gm], grid, self.Ri_bulk_crit)
+        self.zi = compute_inversion_height(grid, q, tmp, self.Ri_bulk_crit)
 
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
         diagnose_environment(grid, q)

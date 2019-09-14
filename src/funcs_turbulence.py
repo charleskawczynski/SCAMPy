@@ -65,31 +65,6 @@ def entr_detr_none(entr_in):
 def compute_convective_velocity(bflux, zi):
     return np.cbrt(np.fmax(bflux * zi, 0.0))
 
-# BL height
-def compute_inversion_height(theta_rho, u, v, grid, Ri_bulk_crit):
-    theta_rho_b = theta_rho.first_interior(grid)
-    h = 0.0
-    Ri_bulk=0.0
-    Ri_bulk_low = 0.0
-    kmin = grid.first_interior(Zmin())
-    k = kmin
-    z = grid.z_half
-    # test if we need to look at the free convective limit
-    if (u[kmin] * u[kmin] + v[kmin] * v[kmin]) <= 0.01:
-        for k in grid.over_elems_real(Center()):
-            if theta_rho[k] > theta_rho_b:
-                break
-        h = (z[k] - z[k-1])/(theta_rho[k] - theta_rho[k-1]) * (theta_rho_b - theta_rho[k-1]) + z[k-1]
-    else:
-        for k in grid.over_elems_real(Center()):
-            Ri_bulk_low = Ri_bulk
-            Ri_bulk = g * (theta_rho[k] - theta_rho_b) * z[k]/theta_rho_b / (u[k] * u[k] + v[k] * v[k])
-            if Ri_bulk > Ri_bulk_crit:
-                break
-        h = (z[k] - z[k-1])/(Ri_bulk - Ri_bulk_low) * (Ri_bulk_crit - Ri_bulk_low) + z[k-1]
-
-    return h
-
 # Teixiera convective tau
 def compute_mixing_tau(zi, wstar):
     # return 0.5 * zi / wstar

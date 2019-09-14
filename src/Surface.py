@@ -20,16 +20,10 @@ class SurfaceBase:
     def update(self):
         return
     def free_convection_windspeed(self, grid, q, tmp):
-        gm, en, ud, sd, al = tmp.idx.allcombinations()
-        zi = compute_inversion_height(tmp['θ_ρ'], q['u', gm], q['v', gm], grid, self.Ri_bulk_crit)
+        zi = compute_inversion_height(grid, q, tmp, self.Ri_bulk_crit)
         wstar = compute_convective_velocity(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
         return
-
-def compute_windspeed(grid, q, windspeed_min):
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    k_1 = grid.first_interior(Zmin())
-    return np.maximum(np.sqrt(q['u', gm][k_1]**2.0 + q['v', gm][k_1]**2.0), windspeed_min)
 
 def compute_MO_len(ustar, bflux):
     if np.fabs(bflux) < 1e-10:

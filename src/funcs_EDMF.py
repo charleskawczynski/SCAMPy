@@ -262,6 +262,35 @@ def update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag):
     solve_tridiag_wrapper(grid, q_new['θ_liq', gm], tri_diag)
     return
 
+def compute_windspeed(grid, q, windspeed_min):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    k_1 = grid.first_interior(Zmin())
+    return np.maximum(np.sqrt(q['u', gm][k_1]**2.0 + q['v', gm][k_1]**2.0), windspeed_min)
+
+def compute_inversion_height(grid, q, tmp, Ri_bulk_crit):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    Ri_bulk = 0.0
+    Ri_bulk_low = 0.0
+    k_1 = grid.first_interior(Zmin())
+    windspeed = compute_windspeed(grid, q, 0.0)
+    θ_ρ_b = tmp['θ_ρ'][k_1]
+    z = grid.z_half
+    # test if we need to look at the free convective limit
+    if windspeed <= 0.01:
+        for k in grid.over_elems_real(Center()):
+            if tmp['θ_ρ'][k] > θ_ρ_b:
+                break
+        h = (z[k] - z[k-1])/(tmp['θ_ρ'][k] - tmp['θ_ρ'][k-1]) * (θ_ρ_b - tmp['θ_ρ'][k-1]) + z[k-1]
+    else:
+        for k in grid.over_elems_real(Center()):
+            Ri_bulk_low = Ri_bulk
+            Ri_bulk = grav * (tmp['θ_ρ'][k] - θ_ρ_b) * z[k]/θ_ρ_b / (q['u', gm][k]**2.0 + q['v', gm][k]**2.0)
+            if Ri_bulk > Ri_bulk_crit:
+                break
+        h = (z[k] - z[k-1])/(Ri_bulk - Ri_bulk_low) * (Ri_bulk_crit - Ri_bulk_low) + z[k-1]
+
+    return h
+
 def compute_mixing_length(grid, q, tmp, obukhov_length, zi, wstar):
     for k in grid.over_elems_real(Center()):
         tmp['l_mix'][k] = 100.0
