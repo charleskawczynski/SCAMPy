@@ -4,9 +4,6 @@ from parameters import *
 from PlanetParameters import *
 from MoistThermodynamics import *
 
-def buoyancy_c(alpha_0, alpha):
-    return grav * (alpha - alpha_0)/alpha_0
-
 def qv_star_c(p_0, q_tot, p_vap):
     return eps_v * (1.0 - q_tot) * p_vap / (p_0 - p_vap)
 

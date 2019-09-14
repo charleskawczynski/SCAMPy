@@ -175,7 +175,7 @@ def saturation_adjustment_sd(grid, q, tmp):
             tmp['T', i][k] = T
             tmp['q_liq', i][k] = q_liq
 
-def buoyancy(grid, q, tmp, params):
+def compute_buoyancy(grid, q, tmp, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for i in list(ud)+[en]:
         for k in grid.over_elems_real(Center()):
@@ -183,7 +183,7 @@ def buoyancy(grid, q, tmp, params):
             q_liq = tmp['q_liq', i][k]
             T = tmp['T', i][k]
             α_i = specific_volume_raw(T, tmp['p_0'][k], PhasePartitionRaw(q_tot, q_liq))
-            tmp['buoy', i][k] = buoyancy_c(tmp['α_0'][k], α_i)
+            tmp['buoy', i][k] = buoyancy(tmp['α_0'][k], α_i)
 
     # Filter buoyancy
     for i in ud:

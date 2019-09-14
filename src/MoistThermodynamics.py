@@ -111,6 +111,9 @@ def air_density(ts):
 def specific_volume_raw(T, p, q):
     return (gas_constant_air_raw(q) * T) / p
 
+def buoyancy(α_0, α):
+    return grav * (α - α_0)/α_0
+
 def specific_volume(ts):
     return specific_volume_raw(air_temperature(ts), air_pressure(ts), PhasePartition(ts))
 
