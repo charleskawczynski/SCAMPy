@@ -14,15 +14,6 @@ def rain_source_to_thetal(p_0, T, q_tot, q_liq, q_ice, q_rai):
     θ_liq_ice_new = thetali_c(p_0, T, q_tot - q_rai, q_liq - q_rai, q_ice)
     return θ_liq_ice_new - θ_liq_ice_old
 
-# instantly convert all cloud water exceeding a threshold to rain water
-# the threshold is specified as excess saturation
-# rain water is immediately removed from the domain
-# Tiedke:   TODO - add reference
-def acnv_instant(q_liq, q_tot, sat_treshold, T, p_0):
-    p_sat = pv_star(T)
-    q_sat = qv_star_c(p_0, q_tot, p_sat)
-    return np.fmax(0.0, q_liq - sat_treshold * q_sat)
-
 # time-rate expressions for 1-moment microphysics
 # autoconversion:   Kessler 1969, see Table 1 in Wood 2005: https://doi.org/10.1175/JAS3530.1
 # accretion, rain evaporation rain terminal velocity:
@@ -41,16 +32,6 @@ def accr_rate(q_liq, q_rai, q_tot):
     r_liq = q2r(q_liq, q_tot)
     r_rai = q2r(q_rai, q_tot)
     return (1. - q_tot) * 2.2 * r_liq * r_rai**0.875
-
-def evap_rate(rho, q_vap, q_rai, q_tot, T, p_0):
-    p_sat = pv_star(T)
-    q_sat = qv_star_c(p_0, q_tot, p_sat)
-    r_rai = q2r(q_rai, q_tot)
-    r_vap = q2r(q_vap, q_tot)
-    r_sat = q2r(q_sat, q_tot)
-    C = 1.6 + 124.9 * (1e-3 * rho * r_rai)**0.2046 # ventilation factor
-    return (1 - q_tot) * (1. - r_vap/r_sat) * C * (1e-3 * rho * r_rai)**0.525 / rho / (540 + 2.55 * 1e5 / (p_0 * r_sat))
-    #      dq/dr     * dr/dt
 
 def terminal_velocity(rho, rho_0, q_rai, q_tot):
     r_rai = q2r(q_rai, q_tot)

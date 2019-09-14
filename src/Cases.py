@@ -1079,46 +1079,6 @@ class DYCOMS_RF01(CasesBase):
         theta_ = T_ / exner(p_)
         return theta_ * mt.exp(-1. * dycoms_L * ql_ / (dycoms_cp * T_))
 
-    # helper function
-    def dycoms_sat_adjst(self, p_, thetal_, qt_):
-        '''
-        Use saturation adjustment scheme to compute temperature and q_liq given thetal and q_tot.
-        We can't use the default scampy function because of different values of cp, Rd and L
-        :param p: pressure [Pa]
-        :param thetal: liquid water potential temperature  [K]
-        :param q_tot:  total water specific humidity
-        :return: T, q_liq
-        '''
-        #Compute temperature
-        t_1 = thetal_ * exner(p_)
-        #Compute saturation vapor pressure
-        pv_star_1 = pv_star(t_1)
-        #Compute saturation specific humidity
-        qs_1 = qv_star_c(p_, qt_, pv_star_1)
-
-        if qt_ <= qs_1:
-            #If not saturated return temperature and q_liq = 0.0
-            return t_1, 0.0
-        else:
-            ql_1 = qt_ - qs_1
-            f_1 = thetal_ - self.dycoms_compute_thetal(p_, t_1, ql_1)
-            t_2 = t_1 + dycoms_L * ql_1 / dycoms_cp
-            pv_star_2 = pv_star(t_2)
-            qs_2 = qv_star_c(p_, qt_, pv_star_2)
-            ql_2 = qt_ - qs_2
-
-            while np.fabs(t_2 - t_1) >= 1e-9:
-                pv_star_2 = pv_star(t_2)
-                qs_2 = qv_star_c(p_, qt_, pv_star_2)
-                ql_2 = qt_ - qs_2
-                f_2 = thetal_ - self.dycoms_compute_thetal(p_, t_2, ql_2)
-                t_n = t_2 - f_2 * (t_2 - t_1)/(f_2 - f_1)
-                t_1 = t_2
-                t_2 = t_n
-                f_1 = f_2
-
-            return t_2, ql_2
-
     def initialize_profiles(self, grid, Ref, tmp, q):
         gm, en, ud, sd, al = q.idx.allcombinations()
         thetal = Half(grid)
@@ -1142,7 +1102,7 @@ class DYCOMS_RF01(CasesBase):
             # q_liq and T profile
             # (calculated by saturation adjustment using thetal and q_tot values provided in DYCOMS
             # and using Rd, cp and L constants as defined in DYCOMS)
-            tmp['T', gm][k], tmp['q_liq', gm][k] = self.dycoms_sat_adjst(tmp['p_0'][k], thetal[k], q['q_tot', gm][k])
+            # tmp['T', gm][k], tmp['q_liq', gm][k] = self.dycoms_sat_adjst(tmp['p_0'][k], thetal[k], q['q_tot', gm][k])
 
             # thermodynamic variable profile (either entropy or thetal)
             # (calculated based on T and q_liq profiles.
