@@ -596,7 +596,6 @@ class TRMM_LBA(CasesBase):
             p_vap_star = pv_star(tmp['T', gm][k])
             # eq. 37 in pressel et al and the def of RH
             q_vap_star = p_vap_star*epsi/(p_1[k]- p_vap_star + epsi*p_vap_star*RH[k]/100.0)
-            q_vap = q['q_tot', gm][k] - tmp['q_liq', gm][k]
             q['q_tot', gm][k] = q_vap_star*RH[k]/100.0
             q['θ_liq', gm][k] = thetali_c(tmp['p_0'][k],
                                             tmp['T', gm][k],
@@ -605,7 +604,8 @@ class TRMM_LBA(CasesBase):
                                             0.0,
                                             latent_heat_vapor_raw(tmp['T', gm][k]))
 
-            theta_rho[k] = theta_rho_c(tmp['p_0'][k], tmp['T', gm][k], q['q_tot', gm][k], q_vap)
+            q_pt = PhasePartitionRaw(q['q_tot', gm][k], tmp['q_liq', gm][k])
+            theta_rho[k] = virtual_pottemp_raw(tmp['T', gm][k], tmp['p_0'][k], q_pt)
 
         q['q_tot', gm].apply_bc(grid, 0.0)
         q['θ_liq', gm].apply_bc(grid, 0.0)

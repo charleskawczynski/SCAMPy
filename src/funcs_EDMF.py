@@ -269,9 +269,8 @@ def compute_inversion(grid, q, option, tmp, Ri_bulk_crit, temp_C):
     domain = grid.over_elems_real(Center())
     theta_rho_bl = temp_C.first_interior(grid)
     for k in domain:
-        q_tot = q['q_tot', gm][k]
-        q_vap = q_tot - tmp['q_liq', gm][k]
-        temp_C[k] = theta_rho_c(tmp['p_0'][k], tmp['T', gm][k], q_tot, q_vap)
+        q_pt = PhasePartitionRaw(q['q_tot', gm][k], tmp['q_liq', gm][k])
+        temp_C[k] = virtual_pottemp_raw(tmp['T', gm][k], tmp['p_0'][k], q_pt)
     if option == 'theta_rho':
         for k in domain:
             if temp_C[k] > theta_rho_bl:

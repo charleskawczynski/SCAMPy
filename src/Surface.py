@@ -2,6 +2,7 @@ import numpy as np
 from parameters import *
 from Grid import Grid, Zmin, Zmax, Center, Node
 from funcs_thermo import *
+from MoistThermodynamics import *
 from funcs_surface import compute_ustar, buoyancy_flux, exchange_coefficients_byun
 from funcs_turbulence import *
 from funcs_EDMF import *
@@ -23,8 +24,10 @@ class SurfaceBase:
         gm, en, ud, sd, al = tmp.idx.allcombinations()
         theta_rho = Half(grid)
         for k in grid.over_elems(Center()):
-            q_vap = q['q_tot', gm][k] - tmp['q_liq', gm][k]
-            theta_rho[k] = theta_rho_c(tmp['p_0'][k], tmp['T', gm][k], q['q_tot', gm][k], q_vap)
+            q_pt = PhasePartitionRaw(q['q_tot', gm][k], tmp['q_liq', gm][k])
+            theta_rho[k] = virtual_pottemp_raw(tmp['T', gm][k], tmp['p_0'][k], q_pt)
+
+
         zi = compute_inversion_height(theta_rho, q['u', gm], q['v', gm], grid, self.Ri_bulk_crit)
         wstar = compute_convective_velocity(self.bflux, zi) # yair here zi in TRMM should be adjusted
         self.windspeed = np.sqrt(self.windspeed*self.windspeed  + (1.2 *wstar)*(1.2 * wstar) )
@@ -149,8 +152,10 @@ class SurfaceMoninObukhov(SurfaceBase):
         U_1 = q['u', gm][k_1]
 
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
-        theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
-        theta_rho_b = theta_rho_c(p_1, T_1, self.qsurface, self.qsurface)
+        q_pt = PhasePartitionRaw(self.qsurface)
+        theta_rho_g = virtual_pottemp_raw(self.Tsurface, self.Ref.Pg, q_pt)
+        theta_rho_b = virtual_pottemp_raw(T_1, p_1, q_pt)
+
         lv = latent_heat_vapor_raw(T_1)
 
         θ_liq_star = thetali_c(self.Ref.Pg, self.Tsurface, self.qsurface, 0.0, 0.0)
@@ -198,8 +203,9 @@ class SurfaceSullivanPatton(SurfaceBase):
 
         self.qsurface = qv_star_t(self.Ref.Pg, self.Tsurface)
 
-        theta_rho_g = theta_rho_c(self.Ref.Pg, self.Tsurface, self.qsurface, self.qsurface)
-        theta_rho_b = theta_rho_c(p_0_1, T_1, self.qsurface, self.qsurface)
+        q_pt = PhasePartitionRaw(self.qsurface)
+        theta_rho_g = virtual_pottemp_raw(self.Tsurface, self.Ref.Pg, q_pt)
+        theta_rho_b = virtual_pottemp_raw(T_1, p_1, q_pt)
         lv = latent_heat_vapor_raw(T_1)
         T0 = p_0_1 * α_0_1/Rd
 
