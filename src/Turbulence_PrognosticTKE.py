@@ -225,7 +225,21 @@ class EDMF_PrognosticTKE:
         self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
 
         assign_new_to_values(grid, q_new, q, tmp)
-        self.compute_prognostic_updrafts(grid, q_new, q, q_tendencies, tmp, UpdVar, Case, TS)
+
+        u_max = np.max([q['w', i][k] for i in ud for k in grid.over_elems(Center())])
+        TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
+        TS.Δti_up = 1.0/TS.Δt_up
+        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
+        compute_cloud_phys(grid, q, tmp)
+        compute_buoyancy(grid, q, tmp, self.params)
+
+        compute_tendencies_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+        compute_tendencies_w(grid, q_new, q, q_tendencies, tmp, TS, self.params)
+        compute_tendencies_scalars(grid, q, q_tendencies, tmp, self.params)
+
+        compute_new_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+        compute_new_w(grid, q_new, q, q_tendencies, tmp, TS, self.params)
+        compute_new_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
 
         update_sol_env(grid, q, q_tendencies, tmp, tmp_O2, TS, 'tke'           , tri_diag, self.tke_diss_coeff)
         update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag)
@@ -233,16 +247,4 @@ class EDMF_PrognosticTKE:
         assign_values_to_new(grid, q, q_new, tmp)
         apply_bcs(grid, q)
 
-        return
-
-    def compute_prognostic_updrafts(self, grid, q_new, q, q_tendencies, tmp, UpdVar, Case, TS):
-        gm, en, ud, sd, al = q.idx.allcombinations()
-        u_max = np.max([q['w', i][k] for i in ud for k in grid.over_elems(Center())])
-        TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
-        TS.Δti_up = 1.0/TS.Δt_up
-        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
-        compute_cloud_phys(grid, q, tmp)
-        compute_buoyancy(grid, q, tmp, self.params)
-        solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-        solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
         return

@@ -48,11 +48,8 @@ def top_of_updraft(grid, q, params):
         z_star_w[i] = np.min([grid.z[k] if not inside_bounds(q['w', i][k], params.w_bounds) else grid.z[k_2+1] for k in grid.over_elems_real(Center())])
     return z_star_a, z_star_w
 
-def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
+def compute_tendencies_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
-    k_1 = grid.first_interior(Zmin())
-
-    # Solve for area fraction
     for i in ud:
         for k in grid.over_elems_real(Center()):
 
@@ -63,23 +60,28 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             w_cut = q['w', i].Cut(k)
             a_cut = q['a', i].Cut(k)
             ρ_cut = tmp['ρ_0'].Cut(k)
-            tendencies = 0.0
 
+            tendencies = 0.0
             ρaw_cut = ρ_cut*a_cut*w_cut
             adv = - α_0_kp * advect(ρaw_cut, w_cut, grid)
             tendencies+=adv
-
             ε_term = a_k * w_k * (+ tmp['ε_model', i][k])
             tendencies+=ε_term
             δ_term = a_k * w_k * (- tmp['δ_model', i][k])
             tendencies+=δ_term
+            q_tendencies['a', i][k] = tendencies
 
-            a_predict = a_k + TS.Δt_up * tendencies
-
+def compute_new_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    k_1 = grid.first_interior(Zmin())
+    for i in ud:
+        for k in grid.over_elems_real(Center()):
+            a_predict = q['a', i][k] + TS.Δt_up * q_tendencies['a', i][k]
             q_new['a', i][k] = bound(a_predict, params.a_bounds)
-
         q_new['a', i][k_1] = UpdVar[i].area_surface_bc
 
+def compute_tendencies_w(grid, q_new, q, q_tendencies, tmp, TS, params):
+    gm, en, ud, sd, al = q.idx.allcombinations()
     # Solve for updraft velocity
     for i in ud:
         for k in grid.over_elems_real(Center()):
@@ -88,8 +90,8 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             ρ_k = tmp['ρ_0'][k]
             w_i = q['w', i][k]
             a_k = q['a', i][k]
-            entr_w = tmp['ε_model', i][k]
-            detr_w = tmp['δ_model', i][k]
+            ε_model = tmp['ε_model', i][k]
+            δ_model = tmp['δ_model', i][k]
             B_k = tmp['buoy', i][k]
 
             a_cut = q['a', i].Cut(k)
@@ -102,7 +104,7 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             ρaww_cut = ρ_cut*a_cut*w_cut*w_cut
 
             adv = -advect(ρaww_cut, w_cut, grid)
-            exch = ρaw_k * (- detr_w * w_i + entr_w * w_env)
+            exch = ρaw_k * (- δ_model * w_i + ε_model * w_env)
             buoy = ρa_k * B_k
             press_buoy = - ρa_k * B_k * params.pressure_buoy_coeff
             p_coeff = params.pressure_drag_coeff/params.pressure_plume_spacing
@@ -110,40 +112,44 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
             nh_press = press_buoy + press_drag
 
             tendencies = (adv + exch + buoy + nh_press)
+            q_tendencies['w', i][k] = tendencies
+    return
 
-            w_predict = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*tendencies
+def compute_new_w(grid, q_new, q, q_tendencies, tmp, TS, params):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    # Solve for updraft velocity
+    for i in ud:
+        for k in grid.over_elems_real(Center()):
+            a_new_k = q_new['a', i][k]
+            ρ_k = tmp['ρ_0'][k]
+            w_i = q['w', i][k]
+            a_k = q['a', i][k]
+            ρa_k = ρ_k * a_k
+            ρa_new_k = ρ_k * a_new_k
+            ρaw_k = ρa_k * w_i
+
+            w_predict = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*q_tendencies['w', i][k]
             q_new['w', i][k] = bound(w_predict, params.w_bounds)
     return
 
-def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
+def compute_tendencies_scalars(grid, q, q_tendencies, tmp, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
-    dzi = grid.dzi
-    k_1 = grid.first_interior(Zmin())
-
     for i in ud:
-        q_new['θ_liq', i][k_1] = UpdVar[i].θ_liq_surface_bc
-        q_new['q_tot', i][k_1] = UpdVar[i].q_tot_surface_bc
-
         for k in grid.over_elems_real(Center())[1:]:
             θ_liq_env = q['θ_liq', en][k]
             q_tot_env = q['q_tot', en][k]
 
-            a_k = q['a', i][k]
             a_cut = q['a', i].Cut(k)
-            a_k_new = q_new['a', i][k]
             θ_liq_cut = q['θ_liq', i].Cut(k)
             q_tot_cut = q['q_tot', i].Cut(k)
-            ρ_k = tmp['ρ_0'][k]
             ρ_cut = tmp['ρ_0'].Cut(k)
             w_cut = q['w', i].Cut(k)
             ε_sc = tmp['ε_model', i][k]
             δ_sc = tmp['δ_model', i][k]
-            ρa_k = ρ_k*a_k
 
             ρaw_cut = ρ_cut * a_cut * w_cut
             ρawθ_liq_cut = ρaw_cut * θ_liq_cut
             ρawq_tot_cut = ρaw_cut * q_tot_cut
-            ρa_new_k = ρ_k * a_k_new
 
             tendencies_θ_liq = 0.0
             tendencies_q_tot = 0.0
@@ -154,9 +160,24 @@ def solve_updraft_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
             tendencies_θ_liq += ρaw_cut[1] * (ε_sc * θ_liq_env - δ_sc * θ_liq_cut[1])
             tendencies_q_tot += ρaw_cut[1] * (ε_sc * q_tot_env - δ_sc * q_tot_cut[1])
 
-            θ_liq_predict = ρa_k/ρa_new_k * θ_liq_cut[1] + TS.Δt_up*tendencies_θ_liq/ρa_new_k
-            q_tot_predict = ρa_k/ρa_new_k * q_tot_cut[1] + TS.Δt_up*tendencies_q_tot/ρa_new_k
+            q_tendencies['θ_liq', i][k] = tendencies_θ_liq
+            q_tendencies['q_tot', i][k] = tendencies_q_tot
+    return
 
+def compute_new_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    k_1 = grid.first_interior(Zmin())
+    for i in ud:
+        q_new['θ_liq', i][k_1] = UpdVar[i].θ_liq_surface_bc
+        q_new['q_tot', i][k_1] = UpdVar[i].q_tot_surface_bc
+        for k in grid.over_elems_real(Center())[1:]:
+            a_k = q['a', i][k]
+            a_k_new = q_new['a', i][k]
+            ρ_k = tmp['ρ_0'][k]
+            ρa_k = ρ_k*a_k
+            ρa_new_k = ρ_k * a_k_new
+            θ_liq_predict = (ρa_k * q['θ_liq', i][k] + TS.Δt_up*q_tendencies['θ_liq', i][k])/ρa_new_k
+            q_tot_predict = (ρa_k * q['q_tot', i][k] + TS.Δt_up*q_tendencies['q_tot', i][k])/ρa_new_k
             q_new['θ_liq', i][k] = θ_liq_predict
             q_new['q_tot', i][k] = q_tot_predict
     return
