@@ -405,11 +405,28 @@ def cleanup_covariance(grid, q):
 
 def compute_grid_means(grid, q, tmp):
     gm, en, ud, sd, al = q.idx.allcombinations()
-    ae = q['a', en]
     for k in grid.over_elems_real(Center()):
-        tmp['q_liq', gm][k] = np.sum([ q['a', i][k] * tmp['q_liq', i][k] for i in sd])
-        tmp['T', gm][k]     = np.sum([ q['a', i][k] * tmp['T', i][k] for i in sd])
-        tmp['buoy', gm][k]  = np.sum([ q['a', i][k] * tmp['buoy', i][k] for i in sd])
+        for name in ['q_liq', 'T', 'buoy']:
+            tmp[name, gm][k] = np.sum([ q['a', i][k] * tmp[name, i][k] for i in sd])
+    return
+
+def diagnose_environment(grid, q):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    for k in grid.over_elems(Center()):
+        q['a', en][k] = 1.0 - np.sum([q['a', i][k] for i in ud])
+        a_env = q['a', en][k]
+        q['q_tot', en][k] = (q['q_tot', gm][k] - np.sum([q['a', i][k]*q['q_tot', i][k] for i in ud]))/a_env
+        q['θ_liq', en][k] = (q['θ_liq', gm][k] - np.sum([q['a', i][k]*q['θ_liq', i][k] for i in ud]))/a_env
+        # Assuming w_gm = 0!
+        q['w', en][k] = (0.0 - np.sum([q['a', i][k]*q['w', i][k] for i in ud]))/a_env
+    return
+
+def distribute(grid, q, var_names):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    for k in grid.over_elems(Center()):
+        for i in ud:
+            for v in var_names:
+                q[v, i][k] = q[v, gm][k]
     return
 
 def compute_cv_gm(grid, q, ϕ, ψ, cv, tke_factor, interp_func):
@@ -503,17 +520,6 @@ def compute_cv_env(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
             q[cv, en][k] = 0.0
     return
 
-def diagnose_environment(grid, q):
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    for k in grid.over_elems(Center()):
-        q['a', en][k] = 1.0 - np.sum([q['a', i][k] for i in ud])
-        a_env = q['a', en][k]
-        q['q_tot', en][k] = (q['q_tot', gm][k] - np.sum([q['a', i][k]*q['q_tot', i][k] for i in ud]))/a_env
-        q['θ_liq', en][k] = (q['θ_liq', gm][k] - np.sum([q['a', i][k]*q['θ_liq', i][k] for i in ud]))/a_env
-        # Assuming w_gm = 0!
-        q['w', en][k] = (0.0 - np.sum([q['a', i][k]*q['w', i][k] for i in ud]))/a_env
-    return
-
 def compute_tendencies_gm_scalars(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
     gm, en, ud, sd, al = q.idx.allcombinations()
     k_1 = grid.first_interior(Zmin())
@@ -563,19 +569,18 @@ def assign_new_to_values(grid, q_new, q, tmp):
     gm, en, ud, sd, al = q.idx.allcombinations()
     slice_all_c = grid.slice_all(Center())
     for i in ud:
-        q_new['w', i][slice_all_c] = [q['w', i][k] for k in grid.over_elems(Center())]
-        q_new['q_tot', i][slice_all_c] = [q['q_tot', i][k] for k in grid.over_elems(Center())]
-        q_new['θ_liq', i][slice_all_c] = [q['θ_liq', i][k] for k in grid.over_elems(Center())]
+        for name in ['w', 'q_tot', 'θ_liq']:
+            q_new[name, i][slice_all_c] = q[name, i][slice_all_c]
     return
 
 def assign_values_to_new(grid, q, q_new, tmp):
     gm, en, ud, sd, al = q.idx.allcombinations()
+    slice_all_c = grid.slice_all(Center())
+    for i in ud:
+        for name in ['a', 'w', 'q_tot', 'θ_liq']:
+            q[name, i][slice_all_c] = q_new[name, i][slice_all_c]
+
     for k in grid.over_elems(Center()):
-        for i in ud:
-            q['w', i][k] = q_new['w', i][k]
-            q['q_tot', i][k] = q_new['q_tot', i][k]
-            q['θ_liq', i][k] = q_new['θ_liq', i][k]
-            q['a', i][k] = q_new['a', i][k]
         q['tke', en][k] = q_new['tke', en][k]
         q['a', en][k] = 1.0 - np.sum([q_new['a', i][k] for i in ud])
         q['θ_liq', gm][k] = q_new['θ_liq', gm][k]
@@ -591,14 +596,6 @@ def initialize_updrafts(grid, tmp, q, params, updraft_fraction):
             q['w', i][k] = 0.0
             q['a', i][k] = bound(0.0, params.a_bounds)
         q['a', i][k_1] = bound(updraft_fraction/n_updrafts, params.a_bounds)
-    return
-
-def distribute(grid, q, var_names):
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    for k in grid.over_elems(Center()):
-        for i in ud:
-            for v in var_names:
-                q[v, i][k] = q[v, gm][k]
     return
 
 def pre_export_data_compute(grid, q, tmp, tmp_O2, Stats, tke_diss_coeff):
