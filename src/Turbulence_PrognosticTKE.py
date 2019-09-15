@@ -151,23 +151,6 @@ class EDMF_PrognosticTKE:
         # raise NameError("Done")
         return
 
-    def set_updraft_surface_bc(self, grid, q, tmp, UpdVar, Case):
-        gm, en, ud, sd, al = tmp.idx.allcombinations()
-        k_1 = grid.first_interior(Zmin())
-        zLL = grid.z_half[k_1]
-        θ_liq_1 = q['θ_liq', gm][k_1]
-        q_tot_1 = q['q_tot', gm][k_1]
-        alpha0LL  = tmp['α_0'][k_1]
-        S = Case.Sur
-        cv_q_tot = surface_variance(S.ρq_tot_flux*alpha0LL, S.ρq_tot_flux*alpha0LL, S.ustar, zLL, S.obukhov_length)
-        cv_θ_liq = surface_variance(S.ρθ_liq_flux*alpha0LL, S.ρθ_liq_flux*alpha0LL, S.ustar, zLL, S.obukhov_length)
-        for i in ud:
-            UpdVar[i].area_surface_bc = self.surface_area/self.n_updrafts
-            UpdVar[i].w_surface_bc = 0.0
-            UpdVar[i].θ_liq_surface_bc = (θ_liq_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_θ_liq))
-            UpdVar[i].q_tot_surface_bc = (q_tot_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_q_tot))
-        return
-
     def pre_compute_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
         gm, en, ud, sd, al = q.idx.allcombinations()
 
@@ -221,7 +204,7 @@ class EDMF_PrognosticTKE:
         compute_cv_env(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
 
         cleanup_covariance(grid, q)
-        self.set_updraft_surface_bc(grid, q, tmp, UpdVar, Case)
+        set_updraft_surface_bc(grid, q, tmp, UpdVar, Case, self.surface_area, self.n_updrafts)
 
     def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
 
@@ -231,10 +214,10 @@ class EDMF_PrognosticTKE:
         assign_new_to_values(grid, q_new, q, tmp)
 
         compute_tendencies_en_O2(grid, q_tendencies, tmp_O2, 'tke')
-        compute_tendencies_gm_scalars(grid, q_tendencies, q, Case, TS, tmp, tri_diag)
-        compute_tendencies_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-        compute_tendencies_w(grid, q_new, q, q_tendencies, tmp, TS, self.params)
-        compute_tendencies_scalars(grid, q, q_tendencies, tmp, self.params)
+        compute_tendencies_gm_scalars(grid, q_tendencies, q, tmp, Case, TS)
+        compute_tendencies_a(grid, q_tendencies, q, tmp, TS, self.params)
+        compute_tendencies_w(grid, q_tendencies, q, tmp, TS, self.params)
+        compute_tendencies_scalars(grid, q_tendencies, q, tmp, self.params)
 
         compute_new_ud_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
         compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, self.params)
