@@ -13,49 +13,43 @@ from funcs_turbulence import  *
 from funcs_micro import *
 
 ####  Compute tendencies
-def compute_tendencies_a(grid, q_tendencies, q, tmp, TS, params):
+def compute_tendencies_ud(grid, q_tendencies, q, tmp, TS, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for i in ud:
         for k in grid.over_elems_real(Center()):
 
             a_k = q['a', i][k]
             α_0_kp = tmp['α_0'][k]
-            w_k = q['w', i][k]
-
-            w_cut = q['w', i].Cut(k)
-            a_cut = q['a', i].Cut(k)
-            ρ_cut = tmp['ρ_0'].Cut(k)
-
-            tendencies = 0.0
-            ρaw_cut = ρ_cut*a_cut*w_cut
-            adv = - α_0_kp * advect(ρaw_cut, w_cut, grid)
-            tendencies+=adv
-            ε_term = a_k * w_k * (+ tmp['ε_model', i][k])
-            tendencies+=ε_term
-            δ_term = a_k * w_k * (- tmp['δ_model', i][k])
-            tendencies+=δ_term
-            q_tendencies['a', i][k] = tendencies
-
-def compute_tendencies_w(grid, q_tendencies, q, tmp, TS, params):
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    # Solve for updraft velocity
-    for i in ud:
-        for k in grid.over_elems_real(Center()):
             w_env = q['w', en][k]
             ρ_k = tmp['ρ_0'][k]
             w_i = q['w', i][k]
-            a_k = q['a', i][k]
             ε_model = tmp['ε_model', i][k]
             δ_model = tmp['δ_model', i][k]
+            θ_liq_env = q['θ_liq', en][k]
+            q_tot_env = q['q_tot', en][k]
             B_k = tmp['buoy', i][k]
-
-            a_cut = q['a', i].Cut(k)
-            ρ_cut = tmp['ρ_0'].Cut(k)
-            w_cut = q['w', i].Cut(k)
-
             ρa_k = ρ_k * a_k
             ρaw_k = ρa_k * w_i
+
+            a_cut = q['a', i].Cut(k)
+            θ_liq_cut = q['θ_liq', i].Cut(k)
+            q_tot_cut = q['q_tot', i].Cut(k)
+            w_cut = q['w', i].Cut(k)
+            ρ_cut = tmp['ρ_0'].Cut(k)
+
+            ρaw_cut = ρ_cut * a_cut * w_cut
+            ρawθ_liq_cut = ρaw_cut * θ_liq_cut
+            ρawq_tot_cut = ρaw_cut * q_tot_cut
             ρaww_cut = ρ_cut*a_cut*w_cut*w_cut
+
+            tendencies = 0.0
+            adv = - α_0_kp * advect(ρaw_cut, w_cut, grid)
+            tendencies+=adv
+            ε_term =   a_k * w_i * ε_model
+            tendencies+=ε_term
+            δ_term = - a_k * w_i * δ_model
+            tendencies+=δ_term
+            q_tendencies['a', i][k] = tendencies
 
             adv = -advect(ρaww_cut, w_cut, grid)
             exch = ρaw_k * (- δ_model * w_i + ε_model * w_env)
@@ -67,26 +61,6 @@ def compute_tendencies_w(grid, q_tendencies, q, tmp, TS, params):
 
             tendencies = (adv + exch + buoy + nh_press)
             q_tendencies['w', i][k] = tendencies
-    return
-
-def compute_tendencies_scalars(grid, q_tendencies, q, tmp, params):
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    for i in ud:
-        for k in grid.over_elems_real(Center()):
-            θ_liq_env = q['θ_liq', en][k]
-            q_tot_env = q['q_tot', en][k]
-
-            a_cut = q['a', i].Cut(k)
-            θ_liq_cut = q['θ_liq', i].Cut(k)
-            q_tot_cut = q['q_tot', i].Cut(k)
-            ρ_cut = tmp['ρ_0'].Cut(k)
-            w_cut = q['w', i].Cut(k)
-            ε_sc = tmp['ε_model', i][k]
-            δ_sc = tmp['δ_model', i][k]
-
-            ρaw_cut = ρ_cut * a_cut * w_cut
-            ρawθ_liq_cut = ρaw_cut * θ_liq_cut
-            ρawq_tot_cut = ρaw_cut * q_tot_cut
 
             tendencies_θ_liq = 0.0
             tendencies_q_tot = 0.0
@@ -94,12 +68,12 @@ def compute_tendencies_scalars(grid, q_tendencies, q, tmp, params):
             tendencies_θ_liq += -advect(ρawθ_liq_cut, w_cut, grid)
             tendencies_q_tot += -advect(ρawq_tot_cut, w_cut, grid)
 
-            tendencies_θ_liq += ρaw_cut[1] * (ε_sc * θ_liq_env - δ_sc * θ_liq_cut[1])
-            tendencies_q_tot += ρaw_cut[1] * (ε_sc * q_tot_env - δ_sc * q_tot_cut[1])
+            tendencies_θ_liq += ρaw_k * (ε_model * θ_liq_env - δ_model * θ_liq_cut[1])
+            tendencies_q_tot += ρaw_k * (ε_model * q_tot_env - δ_model * q_tot_cut[1])
 
             q_tendencies['θ_liq', i][k] = tendencies_θ_liq
             q_tendencies['q_tot', i][k] = tendencies_q_tot
-    return
+
 
 def compute_tendencies_en_O2(grid, q_tendencies, tmp_O2, cv):
     gm, en, ud, sd, al = q_tendencies.idx.allcombinations()

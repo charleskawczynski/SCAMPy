@@ -215,9 +215,7 @@ class EDMF_PrognosticTKE:
 
         compute_tendencies_en_O2(grid, q_tendencies, tmp_O2, 'tke')
         compute_tendencies_gm_scalars(grid, q_tendencies, q, tmp, Case, TS)
-        compute_tendencies_a(grid, q_tendencies, q, tmp, TS, self.params)
-        compute_tendencies_w(grid, q_tendencies, q, tmp, TS, self.params)
-        compute_tendencies_scalars(grid, q_tendencies, q, tmp, self.params)
+        compute_tendencies_ud(grid, q_tendencies, q, tmp, TS, self.params)
 
         compute_new_ud_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
         compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, self.params)
