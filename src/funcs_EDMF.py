@@ -292,7 +292,7 @@ def compute_inversion_height(grid, q, tmp, Ri_bulk_crit):
     return h
 
 def compute_mixing_length(grid, q, tmp, obukhov_length, zi, wstar):
-    for k in grid.over_elems_real(Center()):
+    for k in grid.over_elems(Center()):
         tmp['l_mix'][k] = 100.0
     return
 
@@ -375,8 +375,6 @@ def apply_bcs(grid, q):
         q['θ_liq', i].apply_bc(grid, 0.0)
         q['q_tot', i].apply_bc(grid, 0.0)
     q['w', en].apply_bc(grid, 0.0)
-    q['θ_liq', gm].apply_bc(grid, 0.0)
-    q['q_tot', gm].apply_bc(grid, 0.0)
     q['tke', gm].apply_bc(grid, 0.0)
 
 def cleanup_covariance(grid, q):
