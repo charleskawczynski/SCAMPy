@@ -51,7 +51,6 @@ def top_of_updraft(grid, q, params):
 def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     k_1 = grid.first_interior(Zmin())
-    dzi = grid.dzi
 
     # Solve for area fraction
     for i in ud:
@@ -79,8 +78,6 @@ def solve_updraft_velocity_area(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, p
 
             q_new['a', i][k] = bound(a_predict, params.a_bounds)
 
-        tmp['ε_model', i][k_1] = 2.0 * dzi
-        tmp['δ_model', i][k_1] = 0.0
         q_new['a', i][k_1] = UpdVar[i].area_surface_bc
 
     # Solve for updraft velocity

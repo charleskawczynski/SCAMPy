@@ -18,6 +18,8 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
     quadrature_order = 3
     gm, en, ud, sd, al = q.idx.allcombinations()
     compute_cloud_base_top_cover(grid, q, tmp, UpdVar)
+    k_1 = grid.first_interior(Zmin())
+    dzi = grid.dzi
     n_updrafts = len(ud)
     input_st = type('', (), {})()
     input_st.wstar = wstar
@@ -55,6 +57,8 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             ret = entr_detr_fp(input_st)
             tmp['ε_model', i][k] = ret.entr_sc * entrainment_factor
             tmp['δ_model', i][k] = ret.detr_sc * detrainment_factor
+        tmp['ε_model', i][k_1] = 2.0 * dzi
+        tmp['δ_model', i][k_1] = 0.0
 
     return
 
