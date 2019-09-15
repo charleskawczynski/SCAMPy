@@ -71,7 +71,7 @@ def compute_tendencies_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
             tendencies+=δ_term
             q_tendencies['a', i][k] = tendencies
 
-def compute_new_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
+def compute_new_ud_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     k_1 = grid.first_interior(Zmin())
     for i in ud:
@@ -115,7 +115,7 @@ def compute_tendencies_w(grid, q_new, q, q_tendencies, tmp, TS, params):
             q_tendencies['w', i][k] = tendencies
     return
 
-def compute_new_w(grid, q_new, q, q_tendencies, tmp, TS, params):
+def compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     # Solve for updraft velocity
     for i in ud:
@@ -164,7 +164,7 @@ def compute_tendencies_scalars(grid, q, q_tendencies, tmp, params):
             q_tendencies['q_tot', i][k] = tendencies_q_tot
     return
 
-def compute_new_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
+def compute_new_ud_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     k_1 = grid.first_interior(Zmin())
     for i in ud:
@@ -258,14 +258,14 @@ def compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, cv):
 
 def reset_surface_covariance(grid, q, tmp, Case, wstar):
     gm, en, ud, sd, al = q.idx.allcombinations()
-    flux1 = Case.Sur.rho_θ_liq_flux
-    flux2 = Case.Sur.rho_q_tot_flux
+    flux1 = Case.Sur.ρθ_liq_flux
+    flux2 = Case.Sur.ρq_tot_flux
     k_1 = grid.first_interior(Zmin())
     zLL = grid.z_half[k_1]
     q['tke', gm][k_1]            = surface_tke(Case.Sur.ustar, wstar, zLL, Case.Sur.obukhov_length)
     return
 
-def update_sol_gm(grid, q_new, q, q_tendencies, TS, tmp, tri_diag):
+def compute_new_gm_scalars(grid, q_new, q, q_tendencies, TS, tmp, tri_diag):
     gm, en, ud, sd, al = q.idx.allcombinations()
     ρ_0_half = tmp['ρ_0']
     ae = q['a', en]
@@ -334,7 +334,7 @@ def compute_eddy_diffusivities_tke(grid, q, tmp, Case, zi, wstar, prandtl_number
             tmp['K_h'][k] = K_m_k / prandtl_number
     return
 
-def compute_cv_env_tendencies(grid, q_tendencies, tmp_O2, cv):
+def compute_tendencies_en_O2(grid, q_tendencies, tmp_O2, cv):
     gm, en, ud, sd, al = q_tendencies.idx.allcombinations()
     k_1 = grid.first_interior(Zmin())
     for k in grid.over_elems_real(Center()):
@@ -514,7 +514,7 @@ def diagnose_environment(grid, q):
         q['w', en][k] = (0.0 - np.sum([q['a', i][k]*q['w', i][k] for i in ud]))/a_env
     return
 
-def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
+def compute_tendencies_gm_scalars(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
     gm, en, ud, sd, al = q.idx.allcombinations()
     k_1 = grid.first_interior(Zmin())
     dzi = grid.dzi
@@ -525,11 +525,11 @@ def compute_tendencies_gm(grid, q_tendencies, q, Case, TS, tmp, tri_diag):
     q_tendencies['q_tot', gm][slice_all_c] += [tmp['mf_tend_q_tot'][k] for k in grid.over_elems(Center())]
     q_tendencies['θ_liq', gm][slice_all_c] += [tmp['mf_tend_θ_liq'][k] for k in grid.over_elems(Center())]
 
-    q_tendencies['q_tot', gm][k_1] += Case.Sur.rho_q_tot_flux * dzi * α_1/ae_1
-    q_tendencies['θ_liq', gm][k_1] += Case.Sur.rho_θ_liq_flux * dzi * α_1/ae_1
+    q_tendencies['q_tot', gm][k_1] += Case.Sur.ρq_tot_flux * dzi * α_1/ae_1
+    q_tendencies['θ_liq', gm][k_1] += Case.Sur.ρθ_liq_flux * dzi * α_1/ae_1
     return
 
-def update_sol_env(grid, q, q_tendencies, tmp, tmp_O2, TS, cv, tri_diag, tke_diss_coeff):
+def compute_new_en_O2(grid, q_new, q, q_tendencies, tmp, tmp_O2, TS, cv, tri_diag, tke_diss_coeff):
     gm, en, ud, sd, al = q.idx.allcombinations()
     construct_tridiag_diffusion_O2(grid, q, tmp, TS, tri_diag, tke_diss_coeff)
     k_1 = grid.first_interior(Zmin())
@@ -538,11 +538,11 @@ def update_sol_env(grid, q, q_tendencies, tmp, tmp_O2, TS, cv, tri_diag, tke_dis
     a_e = q['a', en]
     tri_diag.f[slice_all_c] = [tmp['ρ_0'][k] * a_e[k] * q[cv, en][k] * TS.Δti + q_tendencies[cv, en][k] for k in grid.over_elems(Center())]
     tri_diag.f[k_1] = tmp['ρ_0'][k_1] * a_e[k_1] * q[cv, en][k_1] * TS.Δti + q[cv, en][k_1]
-    solve_tridiag_wrapper(grid, q[cv, en], tri_diag)
+    solve_tridiag_wrapper(grid, q_new[cv, en], tri_diag)
 
     return
 
-def update_GMV_MF(grid, q, TS, tmp):
+def compute_mf_gm(grid, q, TS, tmp):
     gm, en, ud, sd, al = q.idx.allcombinations()
     slice_all_c = grid.slice_real(Center())
     domain_c = grid.over_elems_real(Center())
@@ -576,6 +576,7 @@ def assign_values_to_new(grid, q, q_new, tmp):
             q['q_tot', i][k] = q_new['q_tot', i][k]
             q['θ_liq', i][k] = q_new['θ_liq', i][k]
             q['a', i][k] = q_new['a', i][k]
+        q['tke', en][k] = q_new['tke', en][k]
         q['a', en][k] = 1.0 - np.sum([q_new['a', i][k] for i in ud])
         q['θ_liq', gm][k] = q_new['θ_liq', gm][k]
         q['q_tot', gm][k] = q_new['q_tot', gm][k]
