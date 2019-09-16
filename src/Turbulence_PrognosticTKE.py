@@ -14,7 +14,7 @@ from EDMF_Updrafts import *
 from funcs_EDMF import *
 from funcs_turbulence import *
 
-def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params, wstar):
+def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params):
     quadrature_order = 3
     gm, en, ud, sd, al = q.idx.allcombinations()
     compute_cloud_base_top_cover(grid, q, tmp, UpdVar)
@@ -22,7 +22,7 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params, wstar):
     dzi = grid.dzi
     n_updrafts = len(ud)
     input_st = type('', (), {})()
-    input_st.wstar = wstar
+    input_st.wstar = params.wstar
     input_st.b_mean = 0
     input_st.dz = grid.dz
     for i in ud:
@@ -74,21 +74,21 @@ class EDMF_PrognosticTKE:
         self.zi = compute_inversion_height(grid, q, tmp, params.Ri_bulk_crit)
 
         zs = self.zi
-        self.wstar = compute_convective_velocity(Case.Sur.bflux, zs)
-        ws = self.wstar
+        params.wstar = compute_convective_velocity(Case.Sur.bflux, zs)
+        ws = params.wstar
         ws3 = ws**3.0
         us3 = Case.Sur.ustar**3.0
         k_1 = grid.first_interior(Zmin())
-        reset_surface_covariance(grid, q, tmp, Case, ws)
+        reset_surface_covariance(grid, q, tmp, Case, params)
         if ws > 0.0:
             for k in grid.over_elems_real(Center())[1:]:
                 z = grid.z_half[k]
                 temp = ws * 1.3 * np.cbrt(us3/ws3 + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
                 q['tke', gm][k] = temp
-            compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, self.zi, self.wstar)
+            compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, self.zi, params)
         # print('')
         # print('zi          = ',self.zi)
-        # print('wstar       = ',self.wstar)
+        # print('wstar       = ',params.wstar)
         # print('surface_tke = ', q['tke', gm][k_1])
         # raise NameError("Done")
         return
@@ -101,7 +101,7 @@ class EDMF_PrognosticTKE:
 
         update_dt(grid, TS, q)
 
-        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params, self.wstar)
+        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params)
         compute_cloud_phys(grid, q, tmp)
         compute_buoyancy(grid, q, tmp, params)
 
@@ -112,20 +112,18 @@ class EDMF_PrognosticTKE:
             tmp['θ_ρ'][k] = virtual_pottemp(ts)
         self.zi = compute_inversion_height(grid, q, tmp, params.Ri_bulk_crit)
 
-        self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
+        params.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
         compute_cv_gm(grid, q, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         compute_mf_gm(grid, q, TS, tmp)
-        compute_eddy_diffusivities_tke(grid, q, tmp, Case, self.zi, self.wstar,
-            params.prandtl_number, params.tke_ed_coeff, params.similarity_diffusivity)
+        compute_eddy_diffusivities_tke(grid, q, tmp, Case, params, self.zi)
 
         compute_tke_buoy(grid, q, tmp, tmp_O2, 'tke')
         compute_covariance_entr(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         compute_covariance_shear(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke')
         compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
-        compute_tke_pressure(grid, q, tmp, tmp_O2, params.pressure_buoy_coeff,
-            params.pressure_drag_coeff, params.pressure_plume_spacing, 'tke')
+        compute_tke_pressure(grid, q, tmp, tmp_O2, 'tke', params)
 
-        reset_surface_covariance(grid, q, tmp, Case, self.wstar)
+        reset_surface_covariance(grid, q, tmp, Case, params)
 
         compute_cv_env(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
 
@@ -140,17 +138,17 @@ class EDMF_PrognosticTKE:
         compute_tendencies_ud(grid, q_tendencies, q, tmp, TS, params)
 
         compute_new_ud_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
-        apply_bcs(grid, q_new, tmp, UpdVar, Case, params.surface_area, params.n_updrafts)
+        apply_bcs(grid, q_new, tmp, UpdVar, Case, params)
 
         compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, params)
         compute_new_ud_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
 
-        apply_bcs(grid, q_new, tmp, UpdVar, Case, params.surface_area, params.n_updrafts)
+        apply_bcs(grid, q_new, tmp, UpdVar, Case, params)
 
         compute_new_en_O2(grid, q_new, q, q_tendencies, tmp, tmp_O2, TS, 'tke', tri_diag, params.tke_diss_coeff)
         compute_new_gm_scalars(grid, q_new, q, q_tendencies, TS, tmp, tri_diag)
 
         assign_values_to_new(grid, q, q_new, tmp)
-        apply_bcs(grid, q, tmp, UpdVar, Case, params.surface_area, params.n_updrafts)
+        apply_bcs(grid, q, tmp, UpdVar, Case, params)
 
         return

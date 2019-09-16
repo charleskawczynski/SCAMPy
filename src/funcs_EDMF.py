@@ -222,13 +222,13 @@ def compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, cv):
         tmp_O2[cv]['dissipation'][k] = (tmp['ρ_0'][k] * ae[k] * q[cv, en][k] * pow(tke_env, 0.5)/l_mix * tke_diss_coeff)
     return
 
-def reset_surface_covariance(grid, q, tmp, Case, wstar):
+def reset_surface_covariance(grid, q, tmp, Case, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     flux1 = Case.Sur.ρθ_liq_flux
     flux2 = Case.Sur.ρq_tot_flux
     k_1 = grid.first_interior(Zmin())
     zLL = grid.z_half[k_1]
-    q['tke', gm][k_1]            = surface_tke(Case.Sur.ustar, wstar, zLL, Case.Sur.obukhov_length)
+    q['tke', gm][k_1]            = surface_tke(Case.Sur.ustar, params.wstar, zLL, Case.Sur.obukhov_length)
     return
 
 def compute_windspeed(grid, q, windspeed_min):
@@ -260,15 +260,16 @@ def compute_inversion_height(grid, q, tmp, Ri_bulk_crit):
 
     return h
 
-def compute_mixing_length(grid, q, tmp, obukhov_length, zi, wstar):
+def compute_mixing_length(grid, q, tmp, obukhov_length, zi, params):
     for k in grid.over_elems(Center()):
         tmp['l_mix'][k] = 100.0
     return
 
-def compute_eddy_diffusivities_tke(grid, q, tmp, Case, zi, wstar, prandtl_number, tke_ed_coeff, similarity_diffusivity):
+def compute_eddy_diffusivities_tke(grid, q, tmp, Case, params, zi):
     gm, en, ud, sd, al = q.idx.allcombinations()
+    wstar = params.wstar
     compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, zi, wstar)
-    if similarity_diffusivity:
+    if params.similarity_diffusivity:
         ustar = Case.Sur.ustar
         for k in grid.over_elems_real(Center()):
             zzi = grid.z_half[k]/zi
@@ -276,13 +277,13 @@ def compute_eddy_diffusivities_tke(grid, q, tmp, Case, zi, wstar, prandtl_number
             tmp['K_m'][k] = 0.0
             if zzi <= 1.0 and not (wstar<1e-6):
                 tmp['K_h'][k] = vkb * ( (ustar/wstar)**3.0 + 39.0*vkb*zzi)**(1.0/3.0) * zzi * (1.0-zzi) * (1.0-zzi) * wstar * zi
-                tmp['K_m'][k] = tmp['K_h'][k] * prandtl_number
+                tmp['K_m'][k] = tmp['K_h'][k] * params.prandtl_number
     else:
         for k in grid.over_elems_real(Center()):
             lm = tmp['l_mix'][k]
-            K_m_k = tke_ed_coeff * lm * np.sqrt(np.fmax(q['tke', en][k],0.0) )
+            K_m_k = params.tke_ed_coeff * lm * np.sqrt(np.fmax(q['tke', en][k],0.0) )
             tmp['K_m'][k] = K_m_k
-            tmp['K_h'][k] = K_m_k / prandtl_number
+            tmp['K_h'][k] = K_m_k / params.prandtl_number
     return
 
 def compute_tke_buoy(grid, q, tmp, tmp_O2, cv):
@@ -330,7 +331,7 @@ def compute_tke_buoy(grid, q, tmp, tmp_O2, cv):
         tmp_O2[cv]['buoy'][k] = g / tmp['α_0'][k] * ae[k] * tmp['ρ_0'][k] * (term_1 + term_2)
     return
 
-def apply_bcs(grid, q, tmp, UpdVar, Case, surface_area, n_updrafts):
+def apply_bcs(grid, q, tmp, UpdVar, Case, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     k_1 = grid.first_interior(Zmin())
     zLL = grid.z_half[k_1]
@@ -341,7 +342,7 @@ def apply_bcs(grid, q, tmp, UpdVar, Case, surface_area, n_updrafts):
     cv_q_tot = surface_variance(S.ρq_tot_flux*alpha0LL, S.ρq_tot_flux*alpha0LL, S.ustar, zLL, S.obukhov_length)
     cv_θ_liq = surface_variance(S.ρθ_liq_flux*alpha0LL, S.ρθ_liq_flux*alpha0LL, S.ustar, zLL, S.obukhov_length)
     for i in ud:
-        UpdVar[i].area_surface_bc = surface_area/n_updrafts
+        UpdVar[i].area_surface_bc = params.surface_area/params.n_updrafts
         UpdVar[i].w_surface_bc = 0.0
         UpdVar[i].θ_liq_surface_bc = (θ_liq_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_θ_liq))
         UpdVar[i].q_tot_surface_bc = (q_tot_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_q_tot))
@@ -451,7 +452,7 @@ def compute_covariance_detr(grid, q, tmp, tmp_O2, cv):
         tmp_O2[cv]['detr_loss'][k] *= tmp['ρ_0'][k] * q[cv, en][k]
     return
 
-def compute_tke_pressure(grid, q, tmp, tmp_O2, pressure_buoy_coeff, pressure_drag_coeff, pressure_plume_spacing, cv):
+def compute_tke_pressure(grid, q, tmp, tmp_O2, cv, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for k in grid.over_elems_real(Center()):
         tmp_O2[cv]['press'][k] = 0.0
@@ -460,8 +461,8 @@ def compute_tke_pressure(grid, q, tmp, tmp_O2, pressure_buoy_coeff, pressure_dra
             we_half = q['w', en][k]
             a_i = q['a', i][k]
             ρ_0_k = tmp['ρ_0'][k]
-            press_buoy = (-1.0 * ρ_0_k * a_i * tmp['buoy', i][k] * pressure_buoy_coeff)
-            press_drag_coeff = -1.0 * ρ_0_k * np.sqrt(a_i) * pressure_drag_coeff/pressure_plume_spacing
+            press_buoy = (-1.0 * ρ_0_k * a_i * tmp['buoy', i][k] * params.pressure_buoy_coeff)
+            press_drag_coeff = -1.0 * ρ_0_k * np.sqrt(a_i) * params.pressure_drag_coeff/params.pressure_plume_spacing
             press_drag = press_drag_coeff * (wu_half - we_half)*np.fabs(wu_half - we_half)
             tmp_O2[cv]['press'][k] += (we_half - wu_half) * (press_buoy + press_drag)
     return
