@@ -14,7 +14,7 @@ from EDMF_Updrafts import *
 from funcs_EDMF import *
 from funcs_turbulence import *
 
-def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, wstar, tke_ed_coeff, entrainment_factor, detrainment_factor):
+def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params, wstar):
     quadrature_order = 3
     gm, en, ud, sd, al = q.idx.allcombinations()
     compute_cloud_base_top_cover(grid, q, tmp, UpdVar)
@@ -45,7 +45,7 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             input_st.p0               = tmp['p_0'][k]
             input_st.alpha0           = tmp['α_0'][k]
             input_st.tke              = q['tke', en][k]
-            input_st.tke_ed_coeff     = tke_ed_coeff
+            input_st.tke_ed_coeff     = params.tke_ed_coeff
             input_st.L                = 20000.0 # need to define the scale of the GCM grid resolution
             input_st.n_up             = n_updrafts
             w_cut = q['w', i].Cut(k)
@@ -54,12 +54,11 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
             a_env_cut = (1.0-q['a', i].Cut(k))
             aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
             input_st.dwdz = grad(aw_cut, grid)
-            ret = entr_detr_fp(input_st)
-            tmp['ε_model', i][k] = ret.entr_sc * entrainment_factor
-            tmp['δ_model', i][k] = ret.detr_sc * detrainment_factor
+            ret = params.entr_detr_fp(input_st)
+            tmp['ε_model', i][k] = ret.entr_sc * params.entrainment_factor
+            tmp['δ_model', i][k] = ret.detr_sc * params.detrainment_factor
         tmp['ε_model', i][k_1] = 2.0 * dzi
         tmp['δ_model', i][k_1] = 0.0
-
     return
 
 class EDMF_PrognosticTKE:
@@ -87,7 +86,6 @@ class EDMF_PrognosticTKE:
                 temp = ws * 1.3 * np.cbrt(us3/ws3 + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
                 q['tke', gm][k] = temp
             compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, self.zi, self.wstar)
-        self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag, params)
         # print('')
         # print('zi          = ',self.zi)
         # print('wstar       = ',self.wstar)
@@ -103,8 +101,7 @@ class EDMF_PrognosticTKE:
 
         update_dt(grid, TS, q)
 
-        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params.entr_detr_fp, self.wstar,
-            params.tke_ed_coeff, params.entrainment_factor, params.detrainment_factor)
+        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params, self.wstar)
         compute_cloud_phys(grid, q, tmp)
         compute_buoyancy(grid, q, tmp, params)
 
@@ -135,10 +132,6 @@ class EDMF_PrognosticTKE:
         cleanup_covariance(grid, q)
 
     def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag, params):
-
-        gm, en, ud, sd, al = q.idx.allcombinations()
-
-        self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag, params)
 
         assign_new_to_values(grid, q_new, q, tmp)
 
