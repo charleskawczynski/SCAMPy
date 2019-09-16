@@ -260,15 +260,16 @@ def compute_inversion_height(grid, q, tmp, Ri_bulk_crit):
 
     return h
 
-def compute_mixing_length(grid, q, tmp, obukhov_length, zi, params):
+def compute_mixing_length(grid, q, tmp, obukhov_length, params):
     for k in grid.over_elems(Center()):
         tmp['l_mix'][k] = 100.0
     return
 
-def compute_eddy_diffusivities_tke(grid, q, tmp, Case, params, zi):
+def compute_eddy_diffusivities_tke(grid, q, tmp, Case, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
     wstar = params.wstar
-    compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, zi, wstar)
+    zi = params.zi
+    compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, params)
     if params.similarity_diffusivity:
         ustar = Case.Sur.ustar
         for k in grid.over_elems_real(Center()):

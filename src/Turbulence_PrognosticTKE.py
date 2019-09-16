@@ -71,9 +71,9 @@ class EDMF_PrognosticTKE:
         for k in grid.over_elems_real(Center()):
             ts = ActiveThermoState(q, tmp, gm, k)
             tmp['θ_ρ'][k] = virtual_pottemp(ts)
-        self.zi = compute_inversion_height(grid, q, tmp, params.Ri_bulk_crit)
+        params.zi = compute_inversion_height(grid, q, tmp, params.Ri_bulk_crit)
 
-        zs = self.zi
+        zs = params.zi
         params.wstar = compute_convective_velocity(Case.Sur.bflux, zs)
         ws = params.wstar
         ws3 = ws**3.0
@@ -85,7 +85,7 @@ class EDMF_PrognosticTKE:
                 z = grid.z_half[k]
                 temp = ws * 1.3 * np.cbrt(us3/ws3 + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
                 q['tke', gm][k] = temp
-            compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, self.zi, params)
+            compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, params)
         # print('')
         # print('zi          = ',self.zi)
         # print('wstar       = ',params.wstar)
@@ -110,12 +110,12 @@ class EDMF_PrognosticTKE:
         for k in grid.over_elems_real(Center()):
             ts = ActiveThermoState(q, tmp, gm, k)
             tmp['θ_ρ'][k] = virtual_pottemp(ts)
-        self.zi = compute_inversion_height(grid, q, tmp, params.Ri_bulk_crit)
+        params.zi = compute_inversion_height(grid, q, tmp, params.Ri_bulk_crit)
 
-        params.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
+        params.wstar = compute_convective_velocity(Case.Sur.bflux, params.zi)
         compute_cv_gm(grid, q, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         compute_mf_gm(grid, q, TS, tmp)
-        compute_eddy_diffusivities_tke(grid, q, tmp, Case, params, self.zi)
+        compute_eddy_diffusivities_tke(grid, q, tmp, Case, params)
 
         compute_tke_buoy(grid, q, tmp, tmp_O2, 'tke')
         compute_covariance_entr(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
