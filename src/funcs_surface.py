@@ -5,7 +5,7 @@ from parameters import *
 def buoyancy_flux(shf, lhf, T_b, qt_b, alpha0_0):
     cp_ = cp_m(PhasePartition(qt_b))
     lv = latent_heat_vapor(T_b)
-    return (g * alpha0_0 / cp_ / T_b * (shf + (eps_vi-1.0) * cp_ * T_b * lhf /lv))
+    return (grav * alpha0_0 / cp_ / T_b * (shf + (eps_vi-1.0) * cp_ * T_b * lhf /lv))
 
 def psi_m_unstable(zeta, zeta0):
     x = (1.0 - gamma_m * zeta)**0.25
