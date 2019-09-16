@@ -209,6 +209,7 @@ class EDMF_PrognosticTKE:
     def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
 
         gm, en, ud, sd, al = q.idx.allcombinations()
+        k_1 = grid.first_interior(Zmin())
         self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
 
         assign_new_to_values(grid, q_new, q, tmp)
@@ -218,12 +219,17 @@ class EDMF_PrognosticTKE:
         compute_tendencies_ud(grid, q_tendencies, q, tmp, TS, self.params)
 
         compute_new_ud_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+        apply_bcs(grid, q_new, UpdVar)
+
         compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, self.params)
         compute_new_ud_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+
+        apply_bcs(grid, q_new, UpdVar)
+
         compute_new_en_O2(grid, q_new, q, q_tendencies, tmp, tmp_O2, TS, 'tke', tri_diag, self.tke_diss_coeff)
         compute_new_gm_scalars(grid, q_new, q, q_tendencies, TS, tmp, tri_diag)
 
         assign_values_to_new(grid, q, q_new, tmp)
-        apply_bcs(grid, q)
+        apply_bcs(grid, q, UpdVar)
 
         return

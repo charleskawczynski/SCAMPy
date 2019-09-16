@@ -74,7 +74,6 @@ def compute_tendencies_ud(grid, q_tendencies, q, tmp, TS, params):
             q_tendencies['θ_liq', i][k] = tendencies_θ_liq
             q_tendencies['q_tot', i][k] = tendencies_q_tot
 
-
 def compute_tendencies_en_O2(grid, q_tendencies, tmp_O2, cv):
     gm, en, ud, sd, al = q_tendencies.idx.allcombinations()
     k_1 = grid.first_interior(Zmin())
@@ -87,12 +86,10 @@ def compute_tendencies_en_O2(grid, q_tendencies, tmp_O2, cv):
 
 def compute_new_ud_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
-    k_1 = grid.first_interior(Zmin())
     for i in ud:
         for k in grid.over_elems_real(Center()):
             a_predict = q['a', i][k] + TS.Δt_up * q_tendencies['a', i][k]
             q_new['a', i][k] = bound(a_predict, params.a_bounds)
-        q_new['a', i][k_1] = UpdVar[i].area_surface_bc
 
 def compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
@@ -106,18 +103,13 @@ def compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, params):
             ρa_k = ρ_k * a_k
             ρa_new_k = ρ_k * a_new_k
             ρaw_k = ρa_k * w_i
-
             w_predict = ρaw_k/ρa_new_k + TS.Δt_up/ρa_new_k*q_tendencies['w', i][k]
             q_new['w', i][k] = bound(w_predict, params.w_bounds)
-    return
 
 def compute_new_ud_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
-    k_1 = grid.first_interior(Zmin())
     for i in ud:
-        q_new['θ_liq', i][k_1] = UpdVar[i].θ_liq_surface_bc
-        q_new['q_tot', i][k_1] = UpdVar[i].q_tot_surface_bc
-        for k in grid.over_elems_real(Center())[1:]:
+        for k in grid.over_elems_real(Center()):
             a_k = q['a', i][k]
             a_k_new = q_new['a', i][k]
             ρ_k = tmp['ρ_0'][k]
@@ -127,7 +119,6 @@ def compute_new_ud_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params
             q_tot_predict = (ρa_k * q['q_tot', i][k] + TS.Δt_up*q_tendencies['q_tot', i][k])/ρa_new_k
             q_new['θ_liq', i][k] = θ_liq_predict
             q_new['q_tot', i][k] = q_tot_predict
-    return
 
 def compute_new_gm_scalars(grid, q_new, q, q_tendencies, TS, tmp, tri_diag):
     gm, en, ud, sd, al = q.idx.allcombinations()
@@ -356,8 +347,14 @@ def set_updraft_surface_bc(grid, q, tmp, UpdVar, Case, surface_area, n_updrafts)
         UpdVar[i].q_tot_surface_bc = (q_tot_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_q_tot))
     return
 
-def apply_bcs(grid, q):
+def apply_bcs(grid, q, UpdVar):
     gm, en, ud, sd, al = q.idx.allcombinations()
+    k_1 = grid.first_interior(Zmin())
+    for i in ud:
+        q['a', i][k_1] = UpdVar[i].area_surface_bc
+    for i in ud:
+        q['θ_liq', i][k_1] = UpdVar[i].θ_liq_surface_bc
+        q['q_tot', i][k_1] = UpdVar[i].q_tot_surface_bc
     for i in sd:
         q['θ_liq', i].apply_bc(grid, 0.0)
         q['q_tot', i].apply_bc(grid, 0.0)

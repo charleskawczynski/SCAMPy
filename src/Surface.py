@@ -56,24 +56,6 @@ class SurfaceFixedFlux(SurfaceBase): # Bomex
         self.ρθ_liq_flux = rho_tflux / exner(self.Ref.Pg)
         self.bflux = buoyancy_flux(self.shf, self.lhf, T_1, q_tot_1, α_0_surf)
 
-        if not self.ustar_fixed:
-            # Correction to windspeed for free convective cases (Beljaars, QJRMS (1994), 121, pp. 255-270)
-            # Value 1.2 is empirical, but should be O(1)
-            if self.windspeed < 0.1:  # Limit here is heuristic
-                if self.bflux > 0.0:
-                   self.free_convection_windspeed(grid, q, tmp)
-                else:
-                    print('WARNING: Low windspeed + stable conditions, need to check ustar computation')
-                    print('self.bflux ==>', self.bflux)
-                    print('self.shf ==>', self.shf)
-                    print('self.lhf ==>', self.lhf)
-                    print('U_1  ==>', U_1)
-                    print('V_1  ==>', V_1)
-                    print('q_tot_1 ==>', q_tot_1)
-                    print('α_0_surf ==>', α_0_surf)
-
-            self.ustar = compute_ustar(self.windspeed, self.bflux, self.zrough, z_1)
-
         self.obukhov_length = compute_MO_len(self.ustar, self.bflux)
         self.rho_uflux = - ρ_0_surf *  self.ustar * self.ustar / self.windspeed * U_1
         self.rho_vflux = - ρ_0_surf *  self.ustar * self.ustar / self.windspeed * V_1

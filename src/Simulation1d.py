@@ -163,7 +163,6 @@ class Simulation1d:
         distribute(self.grid, self.q, ('q_tot','θ_liq'))
         distribute(self.grid, self.tmp, ('q_liq','T'))
         diagnose_environment(self.grid, self.q)
-        apply_bcs(self.grid, self.q)
 
         self.initialize_io()
         self.export_data()
@@ -177,6 +176,7 @@ class Simulation1d:
 
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
         self.UpdVar, self.Case, self.TS, self.tri_diag)
+        apply_bcs(self.grid, self.q, self.UpdVar)
 
         for k in self.grid.over_elems(Center()):
             self.q['tke', en][k]            = self.q['tke', gm][k]
