@@ -63,63 +63,7 @@ def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, entr_detr_fp, ws
     return
 
 class EDMF_PrognosticTKE:
-    def __init__(self, namelist, paramlist, grid):
-
-        self.n_updrafts             = namelist['turbulence']['EDMF_PrognosticTKE']['updraft_number']
-        self.use_local_micro        = namelist['turbulence']['EDMF_PrognosticTKE']['use_local_micro']
-        self.similarity_diffusivity = namelist['turbulence']['EDMF_PrognosticTKE']['use_similarity_diffusivity']
-        self.prandtl_number         = paramlist['turbulence']['prandtl_number']
-        self.Ri_bulk_crit           = paramlist['turbulence']['Ri_bulk_crit']
-        self.surface_area           = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
-        self.max_area_factor        = paramlist['turbulence']['EDMF_PrognosticTKE']['max_area_factor']
-        self.entrainment_factor     = paramlist['turbulence']['EDMF_PrognosticTKE']['entrainment_factor']
-        self.detrainment_factor     = paramlist['turbulence']['EDMF_PrognosticTKE']['detrainment_factor']
-        self.pressure_buoy_coeff    = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_buoy_coeff']
-        self.pressure_drag_coeff    = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_drag_coeff']
-        self.pressure_plume_spacing = paramlist['turbulence']['EDMF_PrognosticTKE']['pressure_plume_spacing']
-        self.tke_ed_coeff           = paramlist['turbulence']['EDMF_PrognosticTKE']['tke_ed_coeff']
-        self.tke_diss_coeff         = paramlist['turbulence']['EDMF_PrognosticTKE']['tke_diss_coeff']
-        self.max_supersaturation    = paramlist['turbulence']['updraft_microphysics']['max_supersaturation']
-        self.updraft_fraction       = paramlist['turbulence']['EDMF_PrognosticTKE']['surface_area']
-        self.vel_pressure_coeff = self.pressure_drag_coeff/self.pressure_plume_spacing
-        self.vel_buoy_coeff = 1.0-self.pressure_buoy_coeff
-        self.minimum_area = 1e-3
-
-        self.params = type('', (), {})()
-        self.params.minimum_area           = self.minimum_area
-        self.params.n_updrafts             = self.n_updrafts
-        self.params.use_local_micro        = self.use_local_micro
-        self.params.similarity_diffusivity = self.similarity_diffusivity
-        self.params.prandtl_number         = self.prandtl_number
-        self.params.Ri_bulk_crit           = self.Ri_bulk_crit
-        self.params.surface_area           = self.surface_area
-        self.params.max_area_factor        = self.max_area_factor
-        self.params.entrainment_factor     = self.entrainment_factor
-        self.params.detrainment_factor     = self.detrainment_factor
-        self.params.pressure_buoy_coeff    = self.pressure_buoy_coeff
-        self.params.pressure_drag_coeff    = self.pressure_drag_coeff
-        self.params.pressure_plume_spacing = self.pressure_plume_spacing
-        self.params.tke_ed_coeff           = self.tke_ed_coeff
-        self.params.tke_diss_coeff         = self.tke_diss_coeff
-        self.params.max_supersaturation    = self.max_supersaturation
-        self.params.updraft_fraction       = self.updraft_fraction
-        self.params.vel_pressure_coeff     = self.vel_pressure_coeff
-        self.params.vel_buoy_coeff         = self.vel_buoy_coeff
-        self.params.a_bounds               = [self.minimum_area, 1.0-self.minimum_area]
-        self.params.w_bounds               = [0.0, 1000.0]
-        self.params.q_bounds               = [0.0, 1.0]
-        # self.params.w_bounds               = [10.0*np.finfo(float).eps, 1000.0]
-        # self.params.w_bounds               = [0.000001, 1000.0]
-
-        entr_src = namelist['turbulence']['EDMF_PrognosticTKE']['entrainment']
-        if str(entr_src) == 'inverse_z':        self.entr_detr_fp = entr_detr_inverse_z
-        elif str(entr_src) == 'dry':            self.entr_detr_fp = entr_detr_dry
-        elif str(entr_src) == 'b_w2':           self.entr_detr_fp = entr_detr_b_w2
-        elif str(entr_src) == 'entr_detr_tke':  self.entr_detr_fp = entr_detr_tke
-        elif str(entr_src) == 'entr_detr_tke2': self.entr_detr_fp = entr_detr_tke2
-        elif str(entr_src) == 'suselj':         self.entr_detr_fp = entr_detr_suselj
-        elif str(entr_src) == 'none':           self.entr_detr_fp = entr_detr_none
-        else: raise ValueError('Bad entr_detr_fp in Turbulence_PrognosticTKE.py')
+    def __init__(self):
         return
 
     def initialize_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag, params):
@@ -128,7 +72,7 @@ class EDMF_PrognosticTKE:
         for k in grid.over_elems_real(Center()):
             ts = ActiveThermoState(q, tmp, gm, k)
             tmp['θ_ρ'][k] = virtual_pottemp(ts)
-        self.zi = compute_inversion_height(grid, q, tmp, self.Ri_bulk_crit)
+        self.zi = compute_inversion_height(grid, q, tmp, params.Ri_bulk_crit)
 
         zs = self.zi
         self.wstar = compute_convective_velocity(Case.Sur.bflux, zs)
@@ -159,8 +103,8 @@ class EDMF_PrognosticTKE:
 
         update_dt(grid, TS, q)
 
-        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar,
-            self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
+        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params.entr_detr_fp, self.wstar,
+            params.tke_ed_coeff, params.entrainment_factor, params.detrainment_factor)
         compute_cloud_phys(grid, q, tmp)
         compute_buoyancy(grid, q, tmp, params)
 
@@ -169,20 +113,20 @@ class EDMF_PrognosticTKE:
         for k in grid.over_elems_real(Center()):
             ts = ActiveThermoState(q, tmp, gm, k)
             tmp['θ_ρ'][k] = virtual_pottemp(ts)
-        self.zi = compute_inversion_height(grid, q, tmp, self.Ri_bulk_crit)
+        self.zi = compute_inversion_height(grid, q, tmp, params.Ri_bulk_crit)
 
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
         compute_cv_gm(grid, q, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         compute_mf_gm(grid, q, TS, tmp)
         compute_eddy_diffusivities_tke(grid, q, tmp, Case, self.zi, self.wstar,
-            self.prandtl_number, self.tke_ed_coeff, self.similarity_diffusivity)
+            params.prandtl_number, params.tke_ed_coeff, params.similarity_diffusivity)
 
         compute_tke_buoy(grid, q, tmp, tmp_O2, 'tke')
         compute_covariance_entr(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         compute_covariance_shear(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke')
         compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
-        compute_tke_pressure(grid, q, tmp, tmp_O2, self.pressure_buoy_coeff,
-            self.pressure_drag_coeff, self.pressure_plume_spacing, 'tke')
+        compute_tke_pressure(grid, q, tmp, tmp_O2, params.pressure_buoy_coeff,
+            params.pressure_drag_coeff, params.pressure_plume_spacing, 'tke')
 
         reset_surface_covariance(grid, q, tmp, Case, self.wstar)
 
@@ -203,17 +147,17 @@ class EDMF_PrognosticTKE:
         compute_tendencies_ud(grid, q_tendencies, q, tmp, TS, params)
 
         compute_new_ud_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
-        apply_bcs(grid, q_new, tmp, UpdVar, Case, self.surface_area, self.n_updrafts)
+        apply_bcs(grid, q_new, tmp, UpdVar, Case, params.surface_area, params.n_updrafts)
 
         compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, params)
         compute_new_ud_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
 
-        apply_bcs(grid, q_new, tmp, UpdVar, Case, self.surface_area, self.n_updrafts)
+        apply_bcs(grid, q_new, tmp, UpdVar, Case, params.surface_area, params.n_updrafts)
 
-        compute_new_en_O2(grid, q_new, q, q_tendencies, tmp, tmp_O2, TS, 'tke', tri_diag, self.tke_diss_coeff)
+        compute_new_en_O2(grid, q_new, q, q_tendencies, tmp, tmp_O2, TS, 'tke', tri_diag, params.tke_diss_coeff)
         compute_new_gm_scalars(grid, q_new, q, q_tendencies, TS, tmp, tri_diag)
 
         assign_values_to_new(grid, q, q_new, tmp)
-        apply_bcs(grid, q, tmp, UpdVar, Case, self.surface_area, self.n_updrafts)
+        apply_bcs(grid, q, tmp, UpdVar, Case, params.surface_area, params.n_updrafts)
 
         return

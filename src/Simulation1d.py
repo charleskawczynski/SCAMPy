@@ -8,6 +8,7 @@ from Cases import CasesFactory
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from StateVec import StateVec
+from InitParams import *
 from ReferenceState import ReferenceState
 import matplotlib.pyplot as plt
 import Cases
@@ -137,8 +138,9 @@ class Simulation1d:
 
         self.Ref        = ReferenceState(self.grid)
         self.Case       = CasesFactory(namelist, paramlist)
-        self.Turb       = EDMF_PrognosticTKE(namelist, paramlist, self.grid)
-        self.UpdVar     = [UpdraftVariables(0, self.Turb.surface_area, self.n_updrafts) for i in self.q.idx.alldomains()]
+        self.Turb       = EDMF_PrognosticTKE()
+        self.params     = init_params(namelist, paramlist)
+        self.UpdVar     = [UpdraftVariables(0, self.params.surface_area, self.n_updrafts) for i in self.q.idx.alldomains()]
         self.TS         = TimeStepping(namelist)
         self.Stats      = NetCDFIO_Stats(namelist, paramlist, self.grid, root_dir)
         self.tri_diag   = type('', (), {})()
@@ -159,7 +161,7 @@ class Simulation1d:
         self.Case.initialize_surface(self.grid, self.Ref, self.tmp)
         self.Case.initialize_forcing(self.grid, self.Ref, self.tmp)
 
-        initialize_updrafts(self.grid, self.tmp, self.q, self.Turb.params, self.Turb.updraft_fraction)
+        initialize_updrafts(self.grid, self.tmp, self.q, self.params, self.params.updraft_fraction)
         distribute(self.grid, self.q, ('q_tot','θ_liq'))
         distribute(self.grid, self.tmp, ('q_liq','T'))
         diagnose_environment(self.grid, self.q)
@@ -175,9 +177,9 @@ class Simulation1d:
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
 
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
-        self.UpdVar, self.Case, self.TS, self.tri_diag, self.Turb.params)
+        self.UpdVar, self.Case, self.TS, self.tri_diag, self.params)
 
-        apply_bcs(self.grid, self.q, self.tmp, self.UpdVar, self.Case, self.Turb.surface_area, self.Turb.n_updrafts)
+        apply_bcs(self.grid, self.q, self.tmp, self.UpdVar, self.Case, self.params.surface_area, self.params.n_updrafts)
 
         for k in self.grid.over_elems(Center()):
             self.q['tke', en][k]            = self.q['tke', gm][k]
@@ -204,7 +206,7 @@ class Simulation1d:
             self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
             self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
             self.Turb.update(self.grid, self.q_new, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
-                             self.UpdVar, self.Case, self.TS, self.tri_diag, self.Turb.params)
+                             self.UpdVar, self.Case, self.TS, self.tri_diag, self.params)
 
             self.TS.update()
             compute_grid_means(self.grid, self.q, self.tmp)
@@ -291,7 +293,7 @@ class Simulation1d:
         self.Stats.open_files()
         self.Stats.write_simulation_time(self.TS.t)
         self.Case.export_data(self.Stats)
-        pre_export_data_compute(self.grid, self.q, self.tmp, self.tmp_O2, self.Stats, self.Turb.tke_diss_coeff)
+        pre_export_data_compute(self.grid, self.q, self.tmp, self.tmp_O2, self.Stats, self.params.tke_diss_coeff)
         export_data_updrafts(self.grid, self.UpdVar, self.q, self.tmp, self.Stats)
 
         lwp = 0.0
