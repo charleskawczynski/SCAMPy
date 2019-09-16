@@ -222,15 +222,6 @@ def compute_covariance_dissipation(grid, q, tmp, tmp_O2, tke_diss_coeff, cv):
         tmp_O2[cv]['dissipation'][k] = (tmp['ρ_0'][k] * ae[k] * q[cv, en][k] * pow(tke_env, 0.5)/l_mix * tke_diss_coeff)
     return
 
-def reset_surface_covariance(grid, q, tmp, Case, params):
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    flux1 = Case.Sur.ρθ_liq_flux
-    flux2 = Case.Sur.ρq_tot_flux
-    k_1 = grid.first_interior(Zmin())
-    zLL = grid.z_half[k_1]
-    q['tke', gm][k_1]            = surface_tke(Case.Sur.ustar, params.wstar, zLL, Case.Sur.obukhov_length)
-    return
-
 def compute_windspeed(grid, q, windspeed_min):
     gm, en, ud, sd, al = q.idx.allcombinations()
     k_1 = grid.first_interior(Zmin())
@@ -357,6 +348,7 @@ def apply_bcs(grid, q, tmp, UpdVar, Case, params):
         q['q_tot', i].apply_bc(grid, 0.0)
     q['w', en].apply_bc(grid, 0.0)
     q['tke', gm].apply_bc(grid, 0.0)
+    q['tke', gm][k_1]            = surface_tke(Case.Sur.ustar, params.wstar, zLL, Case.Sur.obukhov_length)
 
 def cleanup_covariance(grid, q):
     gm, en, ud, sd, al = q.idx.allcombinations()

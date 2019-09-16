@@ -79,7 +79,7 @@ class EDMF_PrognosticTKE:
         ws3 = ws**3.0
         us3 = Case.Sur.ustar**3.0
         k_1 = grid.first_interior(Zmin())
-        reset_surface_covariance(grid, q, tmp, Case, params)
+        apply_bcs(grid, q, tmp, UpdVar, Case, params)
         if ws > 0.0:
             for k in grid.over_elems_real(Center())[1:]:
                 z = grid.z_half[k]
@@ -123,7 +123,7 @@ class EDMF_PrognosticTKE:
         compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         compute_tke_pressure(grid, q, tmp, tmp_O2, 'tke', params)
 
-        reset_surface_covariance(grid, q, tmp, Case, params)
+        apply_bcs(grid, q, tmp, UpdVar, Case, params)
 
         compute_cv_env(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
 
