@@ -204,7 +204,6 @@ class EDMF_PrognosticTKE:
         compute_cv_env(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
 
         cleanup_covariance(grid, q)
-        set_updraft_surface_bc(grid, q, tmp, UpdVar, Case, self.surface_area, self.n_updrafts)
 
     def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
 
@@ -219,17 +218,17 @@ class EDMF_PrognosticTKE:
         compute_tendencies_ud(grid, q_tendencies, q, tmp, TS, self.params)
 
         compute_new_ud_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
-        apply_bcs(grid, q_new, UpdVar)
+        apply_bcs(grid, q_new, tmp, UpdVar, Case, self.surface_area, self.n_updrafts)
 
         compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, self.params)
         compute_new_ud_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
 
-        apply_bcs(grid, q_new, UpdVar)
+        apply_bcs(grid, q_new, tmp, UpdVar, Case, self.surface_area, self.n_updrafts)
 
         compute_new_en_O2(grid, q_new, q, q_tendencies, tmp, tmp_O2, TS, 'tke', tri_diag, self.tke_diss_coeff)
         compute_new_gm_scalars(grid, q_new, q, q_tendencies, TS, tmp, tri_diag)
 
         assign_values_to_new(grid, q, q_new, tmp)
-        apply_bcs(grid, q, UpdVar)
+        apply_bcs(grid, q, tmp, UpdVar, Case, self.surface_area, self.n_updrafts)
 
         return

@@ -125,7 +125,7 @@ class StateVec:
     def export_state(self, grid, directory, filename, ExportType = UseDat()):
         domain = grid.over_elems(Center())
         vn = self.var_names
-        # vars_exclude = ['ρ_0','p_0']
+        vars_exclude = ['ρ_0','p_0']
         vars_exclude = []
         if len(vn)==7:
             vn = vn[0:5]

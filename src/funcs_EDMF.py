@@ -330,8 +330,8 @@ def compute_tke_buoy(grid, q, tmp, tmp_O2, cv):
         tmp_O2[cv]['buoy'][k] = g / tmp['α_0'][k] * ae[k] * tmp['ρ_0'][k] * (term_1 + term_2)
     return
 
-def set_updraft_surface_bc(grid, q, tmp, UpdVar, Case, surface_area, n_updrafts):
-    gm, en, ud, sd, al = tmp.idx.allcombinations()
+def apply_bcs(grid, q, tmp, UpdVar, Case, surface_area, n_updrafts):
+    gm, en, ud, sd, al = q.idx.allcombinations()
     k_1 = grid.first_interior(Zmin())
     zLL = grid.z_half[k_1]
     θ_liq_1 = q['θ_liq', gm][k_1]
@@ -345,11 +345,6 @@ def set_updraft_surface_bc(grid, q, tmp, UpdVar, Case, surface_area, n_updrafts)
         UpdVar[i].w_surface_bc = 0.0
         UpdVar[i].θ_liq_surface_bc = (θ_liq_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_θ_liq))
         UpdVar[i].q_tot_surface_bc = (q_tot_1 + UpdVar[i].surface_scalar_coeff * np.sqrt(cv_q_tot))
-    return
-
-def apply_bcs(grid, q, UpdVar):
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    k_1 = grid.first_interior(Zmin())
     for i in ud:
         q['a', i][k_1] = UpdVar[i].area_surface_bc
     for i in ud:

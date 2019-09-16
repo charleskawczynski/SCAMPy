@@ -176,7 +176,8 @@ class Simulation1d:
 
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
         self.UpdVar, self.Case, self.TS, self.tri_diag)
-        apply_bcs(self.grid, self.q, self.UpdVar)
+
+        apply_bcs(self.grid, self.q, self.tmp, self.UpdVar, self.Case, self.Turb.surface_area, self.Turb.n_updrafts)
 
         for k in self.grid.over_elems(Center()):
             self.q['tke', en][k]            = self.q['tke', gm][k]
