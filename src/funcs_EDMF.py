@@ -586,3 +586,26 @@ def top_of_updraft(grid, q, params):
         z_star_a[i] = np.min([grid.z[k] if not inside_bounds(q['a', i][k], params.a_bounds) else grid.z[k_2+1] for k in grid.over_elems_real(Center())])
         z_star_w[i] = np.min([grid.z[k] if not inside_bounds(q['w', i][k], params.w_bounds) else grid.z[k_2+1] for k in grid.over_elems_real(Center())])
     return z_star_a, z_star_w
+
+def update_dt(grid, TS, q):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    u_max = np.max([q['w', i][k] for i in ud for k in grid.over_elems(Center())])
+    TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
+    TS.Δti_up = 1.0/TS.Δt_up
+
+def filter_scalars(grid, q, tmp, params):
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    z_star_a, z_star_w = top_of_updraft(grid, q, params)
+    for i in ud:
+        for k in grid.over_elems_real(Center()):
+            tmp['HVSD_a', i][k] = 1.0 - np.heaviside(grid.z[k] - z_star_a[i], 1.0)
+            tmp['HVSD_w', i][k] = 1.0 - np.heaviside(grid.z[k] - z_star_w[i], 1.0)
+
+    for i in ud:
+        for k in grid.over_elems_real(Center())[1:]:
+            q['w', i][k] = bound(q['w', i][k]*tmp['HVSD_w', i][k], params.w_bounds)
+            q['a', i][k] = bound(q['a', i][k]*tmp['HVSD_w', i][k], params.a_bounds)
+
+            weight = tmp['HVSD_w', i][k]
+            q['θ_liq', i][k] = weight*q['θ_liq', i][k] + (1.0-weight)*q['θ_liq', gm][k]
+            q['q_tot', i][k] = weight*q['q_tot', i][k] + (1.0-weight)*q['q_tot', gm][k]

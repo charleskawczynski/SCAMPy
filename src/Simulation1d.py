@@ -175,7 +175,7 @@ class Simulation1d:
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
 
         self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
-        self.UpdVar, self.Case, self.TS, self.tri_diag)
+        self.UpdVar, self.Case, self.TS, self.tri_diag, self.Turb.params)
 
         apply_bcs(self.grid, self.q, self.tmp, self.UpdVar, self.Case, self.Turb.surface_area, self.Turb.n_updrafts)
 
@@ -204,8 +204,7 @@ class Simulation1d:
             self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
             self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
             self.Turb.update(self.grid, self.q_new, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
-                             self.UpdVar,
-                             self.Case, self.TS, self.tri_diag)
+                             self.UpdVar, self.Case, self.TS, self.tri_diag, self.Turb.params)
 
             self.TS.update()
             compute_grid_means(self.grid, self.q, self.tmp)

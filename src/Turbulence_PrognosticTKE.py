@@ -122,7 +122,7 @@ class EDMF_PrognosticTKE:
         else: raise ValueError('Bad entr_detr_fp in Turbulence_PrognosticTKE.py')
         return
 
-    def initialize_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
+    def initialize_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag, params):
         gm, en, ud, sd, al = q.idx.allcombinations()
 
         for k in grid.over_elems_real(Center()):
@@ -143,7 +143,7 @@ class EDMF_PrognosticTKE:
                 temp = ws * 1.3 * np.cbrt(us3/ws3 + 0.6 * z/zs) * np.sqrt(np.fmax(1.0-z/zs,0.0))
                 q['tke', gm][k] = temp
             compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, self.zi, self.wstar)
-        self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
+        self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag, params)
         # print('')
         # print('zi          = ',self.zi)
         # print('wstar       = ',self.wstar)
@@ -151,37 +151,20 @@ class EDMF_PrognosticTKE:
         # raise NameError("Done")
         return
 
-    def pre_compute_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
+    def pre_compute_vars(self, grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag, params):
         gm, en, ud, sd, al = q.idx.allcombinations()
-
-        k_1 = grid.first_interior(Zmin())
 
         diagnose_environment(grid, q)
         saturation_adjustment_sd(grid, q, tmp)
 
-        u_max = np.max([q['w', i][k] for i in ud for k in grid.over_elems(Center())])
-        TS.Δt_up = np.minimum(TS.Δt, 0.5 * grid.dz/np.fmax(u_max,1e-10))
-        TS.Δti_up = 1.0/TS.Δt_up
+        update_dt(grid, TS, q)
 
-        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar, self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
+        compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, self.entr_detr_fp, self.wstar,
+            self.tke_ed_coeff, self.entrainment_factor, self.detrainment_factor)
         compute_cloud_phys(grid, q, tmp)
-        compute_buoyancy(grid, q, tmp, self.params)
+        compute_buoyancy(grid, q, tmp, params)
 
-        z_star_a, z_star_w = top_of_updraft(grid, q, self.params)
-
-        for i in ud:
-            for k in grid.over_elems_real(Center()):
-                tmp['HVSD_a', i][k] = 1.0 - np.heaviside(grid.z[k] - z_star_a[i], 1.0)
-                tmp['HVSD_w', i][k] = 1.0 - np.heaviside(grid.z[k] - z_star_w[i], 1.0)
-
-        for i in ud:
-            for k in grid.over_elems_real(Center())[1:]:
-                q['w', i][k] = bound(q['w', i][k]*tmp['HVSD_w', i][k], self.params.w_bounds)
-                q['a', i][k] = bound(q['a', i][k]*tmp['HVSD_w', i][k], self.params.a_bounds)
-
-                weight = tmp['HVSD_w', i][k]
-                q['θ_liq', i][k] = weight*q['θ_liq', i][k] + (1.0-weight)*q['θ_liq', gm][k]
-                q['q_tot', i][k] = weight*q['q_tot', i][k] + (1.0-weight)*q['q_tot', gm][k]
+        filter_scalars(grid, q, tmp, params)
 
         for k in grid.over_elems_real(Center()):
             ts = ActiveThermoState(q, tmp, gm, k)
@@ -191,13 +174,15 @@ class EDMF_PrognosticTKE:
         self.wstar = compute_convective_velocity(Case.Sur.bflux, self.zi)
         compute_cv_gm(grid, q, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         compute_mf_gm(grid, q, TS, tmp)
-        compute_eddy_diffusivities_tke(grid, q, tmp, Case, self.zi, self.wstar, self.prandtl_number, self.tke_ed_coeff, self.similarity_diffusivity)
+        compute_eddy_diffusivities_tke(grid, q, tmp, Case, self.zi, self.wstar,
+            self.prandtl_number, self.tke_ed_coeff, self.similarity_diffusivity)
 
         compute_tke_buoy(grid, q, tmp, tmp_O2, 'tke')
         compute_covariance_entr(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
         compute_covariance_shear(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke')
         compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w'    , 'w'    , 'tke'           , 0.5, Half.Identity)
-        compute_tke_pressure(grid, q, tmp, tmp_O2, self.pressure_buoy_coeff, self.pressure_drag_coeff, self.pressure_plume_spacing, 'tke')
+        compute_tke_pressure(grid, q, tmp, tmp_O2, self.pressure_buoy_coeff,
+            self.pressure_drag_coeff, self.pressure_plume_spacing, 'tke')
 
         reset_surface_covariance(grid, q, tmp, Case, self.wstar)
 
@@ -205,23 +190,23 @@ class EDMF_PrognosticTKE:
 
         cleanup_covariance(grid, q)
 
-    def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag):
+    def update(self, grid, q_new, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag, params):
 
         gm, en, ud, sd, al = q.idx.allcombinations()
-        k_1 = grid.first_interior(Zmin())
-        self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag)
+
+        self.pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag, params)
 
         assign_new_to_values(grid, q_new, q, tmp)
 
         compute_tendencies_en_O2(grid, q_tendencies, tmp_O2, 'tke')
         compute_tendencies_gm_scalars(grid, q_tendencies, q, tmp, Case, TS)
-        compute_tendencies_ud(grid, q_tendencies, q, tmp, TS, self.params)
+        compute_tendencies_ud(grid, q_tendencies, q, tmp, TS, params)
 
-        compute_new_ud_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+        compute_new_ud_a(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
         apply_bcs(grid, q_new, tmp, UpdVar, Case, self.surface_area, self.n_updrafts)
 
-        compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, self.params)
-        compute_new_ud_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, self.params)
+        compute_new_ud_w(grid, q_new, q, q_tendencies, tmp, TS, params)
+        compute_new_ud_scalars(grid, q_new, q, q_tendencies, tmp, UpdVar, TS, params)
 
         apply_bcs(grid, q_new, tmp, UpdVar, Case, self.surface_area, self.n_updrafts)
 
