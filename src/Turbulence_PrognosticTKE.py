@@ -14,53 +14,6 @@ from EDMF_Updrafts import *
 from funcs_EDMF import *
 from funcs_turbulence import *
 
-def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params):
-    quadrature_order = 3
-    gm, en, ud, sd, al = q.idx.allcombinations()
-    compute_cloud_base_top_cover(grid, q, tmp, UpdVar)
-    k_1 = grid.first_interior(Zmin())
-    dzi = grid.dzi
-    n_updrafts = len(ud)
-    input_st = type('', (), {})()
-    input_st.wstar = params.wstar
-    input_st.b_mean = 0
-    input_st.dz = grid.dz
-    for i in ud:
-        input_st.zi = UpdVar[i].cloud_base
-        for k in grid.over_elems_real(Center()):
-            input_st.quadrature_order = quadrature_order
-            input_st.z                = grid.z_half[k]
-            input_st.ml               = tmp['l_mix'][k]
-            input_st.b                = tmp['buoy', i][k]
-            input_st.w                = q['w', i][k]
-            input_st.af               = q['a', i][k]
-            input_st.tke              = q['tke', en][k]
-            input_st.qt_env           = q['q_tot', en][k]
-            input_st.q_liq_env        = tmp['q_liq', en][k]
-            input_st.θ_liq_env        = q['θ_liq', en][k]
-            input_st.b_env            = tmp['buoy', en][k]
-            input_st.w_env            = q['w', en].Mid(k)
-            input_st.θ_liq_up         = q['θ_liq', i][k]
-            input_st.qt_up            = q['q_tot', i][k]
-            input_st.p0               = tmp['p_0'][k]
-            input_st.alpha0           = tmp['α_0'][k]
-            input_st.tke              = q['tke', en][k]
-            input_st.tke_ed_coeff     = params.tke_ed_coeff
-            input_st.L                = 20000.0 # need to define the scale of the GCM grid resolution
-            input_st.n_up             = n_updrafts
-            w_cut = q['w', i].Cut(k)
-            w_env_cut = q['w', en].Cut(k)
-            a_cut = q['a', i].Cut(k)
-            a_env_cut = (1.0-q['a', i].Cut(k))
-            aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
-            input_st.dwdz = grad(aw_cut, grid)
-            ret = params.entr_detr_fp(input_st)
-            tmp['ε_model', i][k] = ret.entr_sc * params.entrainment_factor
-            tmp['δ_model', i][k] = ret.detr_sc * params.detrainment_factor
-        tmp['ε_model', i][k_1] = 2.0 * dzi
-        tmp['δ_model', i][k_1] = 0.0
-    return
-
 def pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_diag, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
 
@@ -87,13 +40,10 @@ def pre_compute_vars(grid, q, q_tendencies, tmp, tmp_O2, UpdVar, Case, TS, tri_d
     compute_eddy_diffusivities_tke(grid, q, tmp, Case, params)
 
     compute_tke_buoy(grid, q, tmp, tmp_O2, 'tke')
-    compute_covariance_entr(grid, q, tmp, tmp_O2, 'w', 'w', 'tke', 0.5, Half.Identity)
-    compute_covariance_shear(grid, q, tmp, tmp_O2, 'w', 'w', 'tke')
-    compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, 'w', 'w', 'tke', 0.5, Half.Identity)
+    compute_cv_entr(grid, q, tmp, tmp_O2, 'w', 'w', 'tke', 0.5, Half.Identity)
+    compute_cv_shear(grid, q, tmp, tmp_O2, 'w', 'w', 'tke')
+    compute_cv_interdomain_src(grid, q, tmp, tmp_O2, 'w', 'w', 'tke', 0.5, Half.Identity)
     compute_tke_pressure(grid, q, tmp, tmp_O2, 'tke', params)
-
-    apply_bcs(grid, q, tmp, UpdVar, Case, params)
-
     compute_cv_env(grid, q, tmp, tmp_O2, 'w', 'w', 'tke', 0.5, Half.Identity)
 
     cleanup_covariance(grid, q)

@@ -3,7 +3,6 @@ from parameters import *
 from funcs_micro import  *
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
-from funcs_EDMF import *
 from NetCDFIO import NetCDFIO_Stats
 from funcs_utility import *
 import pylab as plt

@@ -8,6 +8,7 @@ from Operators import advect, grad, Laplacian, grad_pos, grad_neg
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
 from TimeStepping import TimeStepping
+from EDMF_Updrafts import *
 from MoistThermodynamics import  *
 from funcs_turbulence import  *
 from funcs_micro import *
@@ -258,24 +259,11 @@ def compute_mixing_length(grid, q, tmp, obukhov_length, params):
 
 def compute_eddy_diffusivities_tke(grid, q, tmp, Case, params):
     gm, en, ud, sd, al = q.idx.allcombinations()
-    wstar = params.wstar
-    zi = params.zi
-    compute_mixing_length(grid, q, tmp, Case.Sur.obukhov_length, params)
-    if params.similarity_diffusivity:
-        ustar = Case.Sur.ustar
-        for k in grid.over_elems_real(Center()):
-            zzi = grid.z_half[k]/zi
-            tmp['K_h'][k] = 0.0
-            tmp['K_m'][k] = 0.0
-            if zzi <= 1.0 and not (wstar<1e-6):
-                tmp['K_h'][k] = vkb * ( (ustar/wstar)**3.0 + 39.0*vkb*zzi)**(1.0/3.0) * zzi * (1.0-zzi) * (1.0-zzi) * wstar * zi
-                tmp['K_m'][k] = tmp['K_h'][k] * params.prandtl_number
-    else:
-        for k in grid.over_elems_real(Center()):
-            lm = tmp['l_mix'][k]
-            K_m_k = params.tke_ed_coeff * lm * np.sqrt(np.fmax(q['tke', en][k],0.0) )
-            tmp['K_m'][k] = K_m_k
-            tmp['K_h'][k] = K_m_k / params.prandtl_number
+    for k in grid.over_elems_real(Center()):
+        lm = tmp['l_mix'][k]
+        K_m_k = params.tke_ed_coeff * lm * np.sqrt(np.fmax(q['tke', en][k],0.0) )
+        tmp['K_m'][k] = K_m_k
+        tmp['K_h'][k] = K_m_k / params.prandtl_number
     return
 
 def compute_tke_buoy(grid, q, tmp, tmp_O2, cv):
@@ -367,12 +355,10 @@ def compute_grid_means(grid, q, tmp):
 def diagnose_environment(grid, q):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for k in grid.over_elems(Center()):
-        q['a', en][k] = 1.0 - np.sum([q['a', i][k] for i in ud])
+        q['a', en][k] = q['a', gm][k] - np.sum([q['a', i][k] for i in ud])
         a_env = q['a', en][k]
-        q['q_tot', en][k] = (q['q_tot', gm][k] - np.sum([q['a', i][k]*q['q_tot', i][k] for i in ud]))/a_env
-        q['θ_liq', en][k] = (q['θ_liq', gm][k] - np.sum([q['a', i][k]*q['θ_liq', i][k] for i in ud]))/a_env
-        # Assuming w_gm = 0!
-        q['w', en][k] = (0.0 - np.sum([q['a', i][k]*q['w', i][k] for i in ud]))/a_env
+        for name in ('q_tot', 'θ_liq', 'w'):
+            q[name, en][k] = (q[name, gm][k] - np.sum([q['a', i][k]*q[name, i][k] for i in ud]))/a_env
     return
 
 def distribute(grid, q, var_names):
@@ -396,7 +382,7 @@ def compute_cv_gm(grid, q, ϕ, ψ, cv, tke_factor, interp_func):
             q[cv, gm][k] += tke_factor * q['a', i][k] * Δϕ * Δψ
     return
 
-def compute_covariance_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
+def compute_cv_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for k in grid.over_elems_real(Center()):
         tmp_O2[cv]['entr_gain'][k] = 0.0
@@ -407,7 +393,7 @@ def compute_covariance_entr(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp
         tmp_O2[cv]['entr_gain'][k] *= tmp['ρ_0'][k]
     return
 
-def compute_covariance_shear(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
+def compute_cv_shear(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
     gm, en, ud, sd, al = q.idx.allcombinations()
     ae = q['a', en]
     is_tke = cv=='tke'
@@ -427,7 +413,7 @@ def compute_covariance_shear(grid, q, tmp, tmp_O2, ϕ, ψ, cv):
         tmp_O2[cv]['shear'][k] = tke_factor*2.0*ρaK * (grad_ϕ*grad_ψ + grad_u**2.0 + grad_v**2.0)
     return
 
-def compute_covariance_interdomain_src(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
+def compute_cv_interdomain_src(grid, q, tmp, tmp_O2, ϕ, ψ, cv, tke_factor, interp_func):
     gm, en, ud, sd, al = q.idx.allcombinations()
     for k in grid.over_elems(Center()):
         tmp_O2[cv]['interdomain'][k] = 0.0
@@ -602,3 +588,50 @@ def filter_scalars(grid, q, tmp, params):
             weight = tmp['HVSD_w', i][k]
             q['θ_liq', i][k] = weight*q['θ_liq', i][k] + (1.0-weight)*q['θ_liq', gm][k]
             q['q_tot', i][k] = weight*q['q_tot', i][k] + (1.0-weight)*q['q_tot', gm][k]
+
+def compute_entrainment_detrainment(grid, UpdVar, Case, tmp, q, params):
+    quadrature_order = 3
+    gm, en, ud, sd, al = q.idx.allcombinations()
+    compute_cloud_base_top_cover(grid, q, tmp, UpdVar)
+    k_1 = grid.first_interior(Zmin())
+    dzi = grid.dzi
+    n_updrafts = len(ud)
+    input_st = type('', (), {})()
+    input_st.wstar = params.wstar
+    input_st.b_mean = 0
+    input_st.dz = grid.dz
+    for i in ud:
+        input_st.zi = UpdVar[i].cloud_base
+        for k in grid.over_elems_real(Center()):
+            input_st.quadrature_order = quadrature_order
+            input_st.z                = grid.z_half[k]
+            input_st.ml               = tmp['l_mix'][k]
+            input_st.b                = tmp['buoy', i][k]
+            input_st.w                = q['w', i][k]
+            input_st.af               = q['a', i][k]
+            input_st.tke              = q['tke', en][k]
+            input_st.qt_env           = q['q_tot', en][k]
+            input_st.q_liq_env        = tmp['q_liq', en][k]
+            input_st.θ_liq_env        = q['θ_liq', en][k]
+            input_st.b_env            = tmp['buoy', en][k]
+            input_st.w_env            = q['w', en].Mid(k)
+            input_st.θ_liq_up         = q['θ_liq', i][k]
+            input_st.qt_up            = q['q_tot', i][k]
+            input_st.p0               = tmp['p_0'][k]
+            input_st.alpha0           = tmp['α_0'][k]
+            input_st.tke              = q['tke', en][k]
+            input_st.tke_ed_coeff     = params.tke_ed_coeff
+            input_st.L                = 20000.0 # need to define the scale of the GCM grid resolution
+            input_st.n_up             = n_updrafts
+            w_cut = q['w', i].Cut(k)
+            w_env_cut = q['w', en].Cut(k)
+            a_cut = q['a', i].Cut(k)
+            a_env_cut = (1.0-q['a', i].Cut(k))
+            aw_cut = a_cut * w_cut + a_env_cut * w_env_cut
+            input_st.dwdz = grad(aw_cut, grid)
+            ret = params.entr_detr_fp(input_st)
+            tmp['ε_model', i][k] = ret.entr_sc * params.entrainment_factor
+            tmp['δ_model', i][k] = ret.detr_sc * params.detrainment_factor
+        tmp['ε_model', i][k_1] = 2.0 * dzi
+        tmp['δ_model', i][k_1] = 0.0
+    return
