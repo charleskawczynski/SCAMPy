@@ -347,15 +347,14 @@ def apply_bcs(grid, q, tmp, UpdVar, Case, params):
         q['θ_liq', i].apply_bc(grid, 0.0)
         q['q_tot', i].apply_bc(grid, 0.0)
     q['w', en].apply_bc(grid, 0.0)
-    q['tke', gm].apply_bc(grid, 0.0)
-    q['tke', gm][k_1]            = surface_tke(Case.Sur.ustar, params.wstar, zLL, Case.Sur.obukhov_length)
+    q['tke', en].apply_bc(grid, 0.0)
+    q['tke', en][k_1]            = surface_tke(Case.Sur.ustar, params.wstar, zLL, Case.Sur.obukhov_length)
 
 def cleanup_covariance(grid, q):
     gm, en, ud, sd, al = q.idx.allcombinations()
     tmp_eps = 1e-18
     slice_real_c = grid.slice_real(Center())
     domain = grid.over_elems_real(Center())
-    q['tke', gm][slice_real_c] = [0.0 if q['tke', gm][k] < tmp_eps else q['tke', gm][k] for k in domain]
     q['tke', en][slice_real_c] = [0.0 if q['tke', en][k] < tmp_eps else q['tke', en][k] for k in domain]
 
 def compute_grid_means(grid, q, tmp):

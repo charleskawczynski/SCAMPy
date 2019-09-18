@@ -3,7 +3,7 @@ import copy
 import numpy as np
 from funcs_EDMF import *
 from EDMF_Updrafts import *
-from Turbulence_PrognosticTKE import EDMF_PrognosticTKE, compute_grid_means
+from Turbulence_PrognosticTKE import *
 from Cases import CasesFactory
 from Grid import Grid, Zmin, Zmax, Center, Node, Cut, Dual, Mid
 from Field import Field, Full, Half, Dirichlet, Neumann, nice_name
@@ -73,7 +73,7 @@ class Simulation1d:
          ('w'             , dss_all, Center() , Dirichlet() ),
          ('q_tot'         , dss_all, Center() , Neumann() ),
          ('θ_liq'         , dss_all, Center() , Neumann() ),
-         ('tke'           , dss_all, Center() , Neumann() ), # Yair: gm, en
+         ('tke'           , DomainSubSet(en=True), Center() , Neumann() ),
          ('u'             , dss_all, Center() , Neumann() ),
          ('v'             , dss_all, Center() , Neumann() ),
         )
@@ -138,7 +138,6 @@ class Simulation1d:
 
         self.Ref        = ReferenceState(self.grid)
         self.Case       = CasesFactory(namelist, paramlist)
-        self.Turb       = EDMF_PrognosticTKE()
         self.params     = init_params(namelist, paramlist)
         self.UpdVar     = [UpdraftVariables(0, self.params.surface_area, self.n_updrafts) for i in self.q.idx.alldomains()]
         self.TS         = TimeStepping(namelist)
@@ -176,15 +175,13 @@ class Simulation1d:
         self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
         self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
 
-        self.Turb.initialize_vars(self.grid, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
-        self.UpdVar, self.Case, self.TS, self.tri_diag, self.params)
-        self.Turb.pre_compute_vars(self.grid, self.q, self.q_tendencies, self.tmp,
+        pre_compute_vars(self.grid, self.q, self.q_tendencies, self.tmp,
             self.tmp_O2, self.UpdVar, self.Case, self.TS, self.tri_diag, self.params)
 
         apply_bcs(self.grid, self.q, self.tmp, self.UpdVar, self.Case, self.params)
 
         for k in self.grid.over_elems(Center()):
-            self.q['tke', en][k]            = self.q['tke', gm][k]
+            self.q['tke', en][k]            = self.q['tke', en][k]
 
         gm, en, ud, sd, al = self.q.idx.allcombinations()
         for i in sd:
@@ -207,9 +204,9 @@ class Simulation1d:
             self.q_tendencies.assign(self.grid, ('u', 'v', 'q_tot', 'θ_liq'), 0.0)
             self.Case.update_surface(self.grid, self.q, self.TS, self.tmp)
             self.Case.update_forcing(self.grid, self.q, self.q_tendencies, self.TS, self.tmp)
-            self.Turb.pre_compute_vars(self.grid, self.q, self.q_tendencies, self.tmp,
+            pre_compute_vars(self.grid, self.q, self.q_tendencies, self.tmp,
                 self.tmp_O2, self.UpdVar, self.Case, self.TS, self.tri_diag, self.params)
-            self.Turb.update(self.grid, self.q_new, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
+            update(self.grid, self.q_new, self.q, self.q_tendencies, self.tmp, self.tmp_O2,
                              self.UpdVar, self.Case, self.TS, self.tri_diag, self.params)
 
             self.TS.update()
